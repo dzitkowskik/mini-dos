@@ -2,10 +2,17 @@
 Our github repository is: [https://github.com/dzitkowskik/mini-dos](https://github.com/dzitkowskik/mini-dos)
 
 0. Usually before using git you must set your username and email
+
 	```bash
 	$ git config --global user.email "you@example.com"
   	$ git config --global user.name "Your Name"
 	```
+	one can also set password cache to avoid constant password prompts:
+
+	```bash
+	$ git config --global credential.helper cache
+	$ git config --global credential.helper 'cache --timeout=3600'
+	```	
 
 1. To clone repository type:
 	
