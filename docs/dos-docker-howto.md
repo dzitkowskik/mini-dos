@@ -42,18 +42,22 @@
    ```
 3. Get default ubuntu:14.04 container
 
-	$ docker pull ubuntu:trusty
-	$ docker images
+   ```bash
+   $ docker pull ubuntu:trusty
+   $ docker images
+   ```
+   you should see sth like:
 
-	you should see sth like:
+   |REPOSITORY      |    TAG       |          IMAGE ID     |       CREATED      |       VIRTUAL SIZE |
+   |----------------|--------------|-----------------------|--------------------|-----------------|
+   |ubuntu        |      trusty      |        1d073211c498     |   12 days ago      |   187.9 MB	 |
+   |hello-world    |     latest       |       0a6ba66e537a      |  3 weeks ago       |  960 B	 |
 
-	REPOSITORY          TAG                 IMAGE ID            CREATED             VIRTUAL SIZE
-	ubuntu              trusty              1d073211c498        12 days ago         187.9 MB
-	hello-world         latest              0a6ba66e537a        3 weeks ago         960 B
-
-	to run the container type:
-
-	$ docker run -t -i ubuntu:trusty bash
+   to run the container type:
+   
+   ```bash
+   $ docker run -t -i ubuntu:trusty bash
+   ```
 
 4. in docker install JAVA
 
