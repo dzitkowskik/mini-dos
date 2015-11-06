@@ -158,23 +158,27 @@
 	}
 	```
 	* After that we run logstash docker:
-		```bash	
-		$ sudo docker run -d --name logstash --expose 25826 -p 25826:25826 -p 25826:25826/udp -v $PWD/conf:/conf --link elasticsearch:db logstash logstash -f /conf/syslog.conf
-		```
+	   
+	   ```bash	
+	   $ sudo docker run -d --name logstash --expose 25826 -p 25826:25826 -p 25826:25826/udp -v $PWD/conf:/conf --link elasticsearch:db logstash logstash -f /conf/syslog.conf
+           ```
 	* Next we set up config for rsyslog:
-		```bash
-		$ sudo echo "*.* @@<system ip>:25826" /etc/rsyslog.d/10-logstash.conf
-		$ sudo service rsyslog restart
-		```
+	   
+	   ```bash
+	   $ sudo echo "*.* @@<system ip>:25826" /etc/rsyslog.d/10-logstash.conf
+	   $ sudo service rsyslog restart
+	   ```
    * Kibana
-	```bash
-	$ sudo docker run -d --name kibana -p 5601:5601 --link elasticsearch:elasticsearch kibana
-	```
-	For sample kibana config we can use:
-	```bash
-	$ sudo docker run --rm -v $PWD/conf:/data vfarcic/elastic-dump --input=/data/es-kibana.json --output=http://<system ip>:9200/.kibana --type=data
-	```
-	kibana will be available at: http://localhost:5601
+      
+      ```bash
+      $ sudo docker run -d --name kibana -p 5601:5601 --link elasticsearch:elasticsearch kibana
+      ```
+      For sample kibana config we can use:
+      
+      ```bash
+      $ sudo docker run --rm -v $PWD/conf:/data vfarcic/elastic-dump --input=/data/es-kibana.json --output=http://<system ip>:9200/.kibana --type=data
+      ```
+      kibana will be available at: http://localhost:5601
 
 
 ## TO LOG THINGS FROM CONTAINER:
