@@ -1,6 +1,12 @@
 # GIT INSTRUCTION:
 Our github repository is: [https://github.com/dzitkowskik/mini-dos](https://github.com/dzitkowskik/mini-dos)
 
+0. Usually before using git you must set your username and email
+	```bash
+	$ git config --global user.email "you@example.com"
+  	$ git config --global user.name "Your Name"
+	```
+
 1. To clone repository type:
 	
 	```bash
