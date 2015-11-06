@@ -113,6 +113,7 @@
       
    * LogStash
       * We must create config file:
+      
          ```bash
          $ cd conf
          $ sudo touch syslog.conf
@@ -120,6 +121,7 @@
          $ sudo gedit syslog.conf
          ```
       * paste inside this content and save:
+      
          ```
 	input {
 	  syslog {
