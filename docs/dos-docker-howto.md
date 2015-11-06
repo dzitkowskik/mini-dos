@@ -5,7 +5,7 @@
    $ sudo m-a prepare
    ```
    
-   Now click "Devices > Insert guest additions CD image" in the virtualbox window.
+   Now click "Devices > Insert guest additions CD image" in the virtualbox window.    
    Install guest additions:)
 	
    ```bash
@@ -19,9 +19,9 @@
    $ sudo vim /etc/apt/sources.list.d/docker.list
    ```
    
-   press "i" to insert text
-   write: deb https://apt.dockerproject.org/repo ubuntu-trusty main
-   press esc and then type ":wq" [enter]
+   * press "i" to insert text
+   * write: deb https://apt.dockerproject.org/repo ubuntu-trusty main
+   * press esc and then type ":wq" [enter]
 
    ```bash
    $ sudo apt-get update
@@ -61,90 +61,107 @@
 
 4. in docker install JAVA
 
-	$ sudo apt-get update
-	$ sudo apt-get install default-jre
-	$ sudo apt-get install default-jdk
-	$ sudo vi /etc/environment
-	add line: JAVA_HOME="/usr/lib/jvm/java-7-openjdk-amd64"
-	save
+   ```bash
+   $ sudo apt-get update
+   $ sudo apt-get install default-jre
+   $ sudo apt-get install default-jdk
+   $ sudo vi /etc/environment
+   ```
 
-	// Install additional things
-	sudo apt-get install curl wget ...
+   add line: JAVA_HOME="/usr/lib/jvm/java-7-openjdk-amd64" and save
 
 5. go to another console and commit docker image
 
-	$ docker commit -a "Karol Dzitkowski <k.dzitkowski@gmail.com>" -m "Initial docker image for DOS project on MINI (Warsaw University of Technology" <image id> <repository name>
+   ```bash
+   $ docker commit -a "Karol Dzitkowski <k.dzitkowski@gmail.com>" -m "Initial docker image for DOS project on MINI (Warsaw University of Technology" <image id> <repository name>
+   ```
+   
+   where <repository name> is for example mini-dos/server or mini-dos/node     
+   to inspect commits write:
 
-	where <repository name> is for example mini-dos/server or mini-dos/node
-
-	to inspect commits write:
-	$ docker images -a --no-trunc | head -n4 | grep -v "IMAGE ID" | awk '{ print $3 }' | xargs docker inspect
+   ```bash
+   $ docker images -a --no-trunc | head -n4 | grep -v "IMAGE ID" | awk '{ print $3 }' | xargs docker inspect
+   ```
 
 6. Mount folder and run java application
+   * create folder for app on your fs
 
-	a) create folder for app on your fs
-		$ mkdir ~/mini-dos/server
-	b) write simple HelloWorld.java file with one class:
-		public class HelloWorld {
-		    public static void main(String[] args) {
-		        System.out.println("Hello World!");
-		    }
-		}
-	c) docker run -it -v ~/mini-dos/server:/server mini-dos/server sh -c 'cd server;javac HelloWorld.java;java -cp . HelloWorld'
+      ```bash
+      $ mkdir ~/mini-dos/server
+      ```
+
+   * write simple HelloWorld.java file with one class:
+      ```java
+      public class HelloWorld {
+          public static void main(String[] args) {
+              System.out.println("Hello World!");
+          }
+      }
+      ```
+
+   * then run your program like that:
+      ```bash
+      $ docker run -it -v ~/mini-dos/server:/server mini-dos/server sh -c 'cd server;javac HelloWorld.java;java -cp . HelloWorld'
+      ```
 
 7. Logging ELK
-
-	a) ElasticSearch
-		$ sudo mkdir -p /data/elasticsearch
-		$ sudo docker run -d --name elasticsearch -p 9200:9200 -v /data/elasticsearch:/usr/share/elasticsearch/data elasticsearch -Des.network.host=0.0.0.0
-	b) LogStash
-		Next we must create config file:
-		$ cd conf
-		$ sudo touch syslog.conf
-		$ sudo chmod 764 syslog.conf
-		$ sudo gedit syslog.conf
-
-		paste inside this content and save:
-
-		input {
-		  syslog {
-		    type => syslog
-		    port => 25826
-		  }
-		}
-		 
-		filter {
-		  if "docker/" in [program] {
-		    mutate {
-		      add_field => {
-		        "container_id" => "%{program}"
-		      }
-		    }
-		    mutate {
-		      gsub => [
-		        "container_id", "docker/", ""
-		      ]
-		    }
-		    mutate {
-		      update => [
-		        "program", "docker"
-		      ]
-		    }
-		  }
-		}
-		 
-		output {
-		  stdout {
-		    codec => rubydebug
-		  }
-		  elasticsearch {
-		    hosts => db
-		  }
-		}
-
-		After that we run logstash docker:
+   * ElasticSearch
+      ```bash	
+      $ sudo mkdir -p /data/elasticsearch
+      $ sudo docker run -d --name elasticsearch -p 9200:9200 -v /data/elasticsearch:/usr/share/elasticsearch/data elasticsearch -Des.network.host=0.0.0.0
+      ```
+      
+   * LogStash
+      * We must create config file:
+         ```bash
+         $ cd conf
+         $ sudo touch syslog.conf
+         $ sudo chmod 764 syslog.conf
+         $ sudo gedit syslog.conf
+         ```
+      * paste inside this content and save:
+         ```
+	input {
+	  syslog {
+	    type => syslog
+	    port => 25826
+	  }
+	}
+	 
+	filter {
+	  if "docker/" in [program] {
+	    mutate {
+	      add_field => {
+	        "container_id" => "%{program}"
+	      }
+	    }
+	    mutate {
+	      gsub => [
+	        "container_id", "docker/", ""
+	      ]
+	    }
+	    mutate {
+	      update => [
+	        "program", "docker"
+	      ]
+	    }
+	  }
+	}
+	 
+	output {
+	  stdout {
+	    codec => rubydebug
+	  }
+	  elasticsearch {
+	    hosts => db
+	  }
+	}
+	```
+		
+	* After that we run logstash docker:
+		```bash	
 		$ sudo docker run -d --name logstash --expose 25826 -p 25826:25826 -p 25826:25826/udp -v $PWD/conf:/conf --link elasticsearch:db logstash logstash -f /conf/syslog.conf
-
+		```
 		Next we set up config for rsyslog:
 		$ sudo echo "*.* @@<system ip>:25826" /etc/rsyslog.d/10-logstash.conf
 		$ sudo service rsyslog restart
