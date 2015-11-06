@@ -41,10 +41,12 @@ Our github repository is: [https://github.com/dzitkowskik/mini-dos](https://gith
 	if you get an error message:
  	* [rejected]        master -> master (non-fast-forward) - then you must pull the changes using `$ git pull` and merge conflicts if necessary
  	* fatal: No configured push destination - then you must set push destination:
+ 	
  		```bash
  		$ git push -u origin master
  		```
  		or
+ 		
  		```bash
  		$ git branch --set-upstream-to <remote-name>
  		```
