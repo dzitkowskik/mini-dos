@@ -1,36 +1,45 @@
 1. Ubuntu 14.04 on VB installation:
 
-	$ sudo apt-get install build-essential module-assistant
-	$ sudo m-a prepare
-
-	Now click "Devices > Insert guest additions CD image" in the virtualbox window.
-	Install guest additions:)
-
-	$ sudo apt-get install vim
-	$ sudo reboot
-
+   ```bash
+   $ sudo apt-get install build-essential module-assistant
+   $ sudo m-a prepare
+   ```
+   
+   Now click "Devices > Insert guest additions CD image" in the virtualbox window.
+   Install guest additions:)
+	
+   ```bash
+   $ sudo apt-get install vim
+   $ sudo reboot
+   ```
 2. Docker installation: (instructions on: http://docs.docker.com/engine/installation/ubuntulinux/)
 
-	$ sudo apt-key adv --keyserver hkp://pgp.mit.edu:80 --recv-keys 58118E89F3A912897C070ADBF76221572C52609D
-	$ sudo vim /etc/apt/sources.list.d/docker.list
+   ```bash
+   $ sudo apt-key adv --keyserver hkp://pgp.mit.edu:80 --recv-keys 58118E89F3A912897C070ADBF76221572C52609D
+   $ sudo vim /etc/apt/sources.list.d/docker.list
+   ```
+   
+   press "i" to insert text
+   write: deb https://apt.dockerproject.org/repo ubuntu-trusty main
+   press esc and then type ":wq" [enter]
 
-	press "i" to insert text
-	write: deb https://apt.dockerproject.org/repo ubuntu-trusty main
-	press esc and then type ":wq" [enter]
+   ```bash
+   $ sudo apt-get update
+   $ sudo apt-get purge lxc-docker*
+   $ sudo apt-cache policy docker-engine
+   ```
+   ```bash
+   $ sudo apt-get install docker-engine
+   $ sudo service docker start
+   $ sudo docker run hello-world
+   ```
 
-	$ sudo apt-get update
-	$ sudo apt-get purge lxc-docker*
-	$ sudo apt-cache policy docker-engine
+   you should see Hello from Docker.
 
-	$ sudo apt-get install docker-engine
-	$ sudo service docker start
-	$ sudo docker run hello-world
-
-	you should see Hello from Docker.
-
-	$ sudo usermod -aG docker <username>
-	$ sudo reboot
-
+   ```bash
+   $ sudo usermod -aG docker <username>
+   $ sudo reboot
+   ```
 3. Get default ubuntu:14.04 container
 
 	$ docker pull ubuntu:trusty
