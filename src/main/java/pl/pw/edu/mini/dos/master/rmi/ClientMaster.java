@@ -3,6 +3,7 @@ package pl.pw.edu.mini.dos.master.rmi;
 import pl.pw.edu.mini.dos.communication.clientmaster.ClientMasterInterface;
 import pl.pw.edu.mini.dos.communication.clientmaster.ExecuteSQLRequest;
 import pl.pw.edu.mini.dos.communication.clientmaster.ExecuteSQLResponse;
+import pl.pw.edu.mini.dos.master.Master;
 
 import java.rmi.RemoteException;
 import java.rmi.server.UnicastRemoteObject;
@@ -10,10 +11,11 @@ import java.rmi.server.UnicastRemoteObject;
 public class ClientMaster extends UnicastRemoteObject
         implements ClientMasterInterface {
     private static final long serialVersionUID = 1L;
+    Master master;
 
-    protected ClientMaster() throws RemoteException {
+    protected ClientMaster(Master master) throws RemoteException {
         super();
-        // TODO Auto-generated constructor stub
+        this.master = master;
     }
 
     @Override

@@ -19,7 +19,7 @@ public class RMIServer implements Communication{
     Registry registry = null;
     String name;
     String host;
-    int registryPort = 1099;
+    int registryPort;
 
     public RMIServer() throws UnknownHostException {
         this.name = Communication.RMI_MASTER_ID;

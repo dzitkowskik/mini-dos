@@ -1,6 +1,7 @@
 package pl.pw.edu.mini.dos.master.rmi;
 
 import pl.pw.edu.mini.dos.communication.nodemaster.*;
+import pl.pw.edu.mini.dos.master.Master;
 
 import java.rmi.RemoteException;
 import java.rmi.server.UnicastRemoteObject;
@@ -8,9 +9,11 @@ import java.rmi.server.UnicastRemoteObject;
 public class NodeMaster extends UnicastRemoteObject
         implements NodeMasterInterface {
     private static final long serialVersionUID = 1L;
+    Master master;
 
-    protected NodeMaster() throws RemoteException {
+    protected NodeMaster(Master master) throws RemoteException {
         super();
+        this.master = master;
     }
 
     @Override
