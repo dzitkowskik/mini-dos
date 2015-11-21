@@ -42,7 +42,17 @@ public class Master {
         try {
             Master master = new Master();
             RMIServer server = new RMIServer(master);
-            
+
+            System.out.print("*Enter 'q' to stop master.");
+            Scanner scanner = new Scanner (System.in);
+            while(scanner.hasNext()) {
+                String text = scanner.next();
+                if(text.equals("q")) {
+                    break;
+                }
+                // operate
+            }
+            server.close();
             logger.info("Server closed!");
         } catch (UnknownHostException e) {
             e.printStackTrace();
