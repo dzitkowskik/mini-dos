@@ -36,15 +36,17 @@ public class Master {
     }
 
     public static void main(String[] args) {
-        System.setProperty("java.rmi.server.hostname", "localhost");
-        System.setProperty("java.security.policy", "/home/ghash/Dokumenty/mini-dos/src/main/resources/client.policy");
+//        System.setProperty("java.rmi.server.hostname", "localhost");
+//        System.setProperty("java.security.policy", "/home/ghash/Dokumenty/mini-dos/src/main/resources/client.policy");
+
         logger.info("Server started!");
+
         try {
             Master master = new Master();
             RMIServer server = new RMIServer(master);
 
-            System.out.print("*Enter 'q' to stop master.");
             Scanner scanner = new Scanner (System.in);
+            System.out.println("*Enter 'q' to stop master.");
             while(scanner.hasNext()) {
                 String text = scanner.next();
                 if(text.equals("q")) {
@@ -55,11 +57,11 @@ public class Master {
             server.close();
             logger.info("Server closed!");
         } catch (UnknownHostException e) {
-            e.printStackTrace();
             logger.error(e.getMessage().toString());
+            logger.error(e.getStackTrace().toString());
         } catch (RemoteException e) {
-            e.printStackTrace();
             logger.error(e.getMessage().toString());
+            logger.error(e.getStackTrace().toString());
         }
     }
 }

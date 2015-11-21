@@ -33,16 +33,16 @@ public class RMIServer implements Communication {
     }
 
     private void setUp(int port) {
-        if (System.getSecurityManager() == null) {
-            System.setSecurityManager(new SecurityManager());
-        }
-        try {
-            System.getSecurityManager().checkPermission(new AllPermission());
-        } catch (AccessControlException e) {
-            logger.error("client.policy file probably doesn't exist or path is not valid.");
-            logger.error(e.getStackTrace().toString());
-            return;
-        }
+//        if (System.getSecurityManager() == null) {
+//            System.setSecurityManager(new SecurityManager());
+//        }
+//        try {
+//            System.getSecurityManager().checkPermission(new AllPermission());
+//        } catch (AccessControlException e) {
+//            logger.error("client.policy file probably doesn't exist or path is not valid.");
+//            logger.error(e.getStackTrace().toString());
+//            return;
+//        }
 
         getOrCreateRegistry(host, port);
 
@@ -50,13 +50,8 @@ public class RMIServer implements Communication {
             ClientMaster clientMaster = new ClientMaster(master);
             NodeMaster nodeMaster = new NodeMaster(master);
 
-            ClientMaster clientMasterStub = (ClientMaster)
-                    UnicastRemoteObject.exportObject(clientMaster, port);
-            NodeMaster nodeMasterStub = (NodeMaster)
-                    UnicastRemoteObject.exportObject(nodeMaster, port);
-
-            registry.rebind(name, clientMasterStub);
-            registry.rebind(name, nodeMasterStub);
+            registry.rebind(name, clientMaster);
+            registry.rebind(name, nodeMaster);
 
             logger.debug("RMIServer running...");
         } catch (Exception e) {
