@@ -13,9 +13,8 @@ public class ClientMaster extends UnicastRemoteObject
     private static final long serialVersionUID = 1L;
     Master master;
 
-    protected ClientMaster(Master master) throws RemoteException {
+    protected ClientMaster() throws RemoteException {
         super();
-        this.master = master;
     }
 
     @Override

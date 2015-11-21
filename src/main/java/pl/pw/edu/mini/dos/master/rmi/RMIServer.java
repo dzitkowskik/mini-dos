@@ -10,18 +10,17 @@ import java.rmi.NotBoundException;
 import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
-import java.rmi.server.UnicastRemoteObject;
 import java.security.AccessControlException;
 import java.security.AllPermission;
 
-public class RMIServer implements Communication{
+public class RMIServer implements Communication {
     private static final Logger logger = LoggerFactory.getLogger(RMIServer.class);
     Registry registry = null;
     String name;
     String host;
     int registryPort;
 
-    public RMIServer() throws UnknownHostException {
+    public RMIServer() throws RemoteException, UnknownHostException {
         this.name = Communication.RMI_MASTER_ID;
         this.host =  InetAddress.getLocalHost().getHostAddress();
         this.registryPort = Communication.RMI_PORT;
@@ -45,19 +44,11 @@ public class RMIServer implements Communication{
 
         try {
             ClientMaster clientMaster = new ClientMaster();
-            NodeMaster nodeMaster = new NodeMaster();
-
-            ClientMaster clientMasterStub = (ClientMaster)
-                    UnicastRemoteObject.exportObject(clientMaster, port);
-            NodeMaster nodeMasterStub = (NodeMaster)
-                    UnicastRemoteObject.exportObject(nodeMaster, port);
-
-            registry.rebind(name, clientMasterStub);
-            registry.rebind(name, nodeMasterStub);
+            registry.bind(name, clientMaster);
 
             logger.debug("RMIServer running...");
         } catch (Exception e) {
-            logger.error("RMIServer exception:");
+            logger.error("RMIServer exception: {}", e.getMessage());
             logger.error(e.getStackTrace().toString());
         }
     }

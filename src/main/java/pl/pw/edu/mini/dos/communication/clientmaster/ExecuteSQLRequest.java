@@ -1,6 +1,8 @@
 package pl.pw.edu.mini.dos.communication.clientmaster;
 
-public class ExecuteSQLRequest {
+import java.io.Serializable;
+
+public class ExecuteSQLRequest implements Serializable {
     public String sql;
 
     public ExecuteSQLRequest(String sql) {
