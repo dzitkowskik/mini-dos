@@ -8,4 +8,8 @@ public class ExecuteSQLResponse implements Serializable {
     public ExecuteSQLResponse(String response) {
         this.response = response;
     }
+
+    public String getResponse() {
+        return response;
+    }
 }

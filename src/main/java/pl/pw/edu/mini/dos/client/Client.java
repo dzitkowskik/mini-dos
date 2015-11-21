@@ -16,28 +16,32 @@ public class Client {
     private static final Logger logger = LoggerFactory.getLogger(Client.class);
 
     public static void main(String[] args) {
-        System.setProperty("java.rmi.server.hostname", "localhost");
-        System.setProperty("java.security.policy", "/home/ghash/Dokumenty/mini-dos/src/main/resources/client.policy");
+//        System.setProperty("java.rmi.server.hostname", "localhost");
+//        System.setProperty("java.security.policy", "/home/ghash/Dokumenty/mini-dos/src/main/resources/client.policy");
 
         logger.info("Client started!");
 
         ClientRmi client = new ClientRmi();
 
-        Scanner scanner = new Scanner(System.in);
-        String command = "";
-        do {
-            command = scanner.nextLine();
-            logger.info("Execute command: {}", command);
+        Scanner scanner = new Scanner (System.in);
+        System.out.println("Type the query or enter 'q' to exit:");
+
+        while(scanner.hasNext()) {
+            String command = scanner.next();
+            logger.debug("Command: " + command);
+
+            if(command.equals("q")) {
+                break;
+            }
 
             try {
                 ExecuteSQLResponse response = client.Execute(new ExecuteSQLRequest(command));
-                logger.info("Response: {}", response.response);
+                logger.debug("Response: " + response.getResponse());
             } catch (RemoteException e) {
-                e.printStackTrace();
-                logger.error(e.getMessage());
+                logger.error("Exception while remote method was being executed");
+                logger.error(e.getStackTrace().toString());
             }
-        } while (!command.startsWith("q"));
-
+        }
         logger.info("Client quit");
     }
 }

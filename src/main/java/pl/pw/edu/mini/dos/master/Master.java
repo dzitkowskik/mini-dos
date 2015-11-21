@@ -31,7 +31,9 @@ public class Master {
     public ErrorEnum addNode(String host){
         Node newNode = new Node(host);
         // TODO check status
-        nodes.put(host, new Node(host));
+        synchronized (nodes){
+            nodes.put(host, new Node(host));
+        }
         return ErrorEnum.SUCCESS;
     }
 
