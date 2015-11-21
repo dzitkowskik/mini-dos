@@ -8,4 +8,8 @@ public class RegisterResponse {
     public RegisterResponse(ErrorEnum error) {
         this.error = error;
     }
+
+    public ErrorEnum getError() {
+        return error;
+    }
 }

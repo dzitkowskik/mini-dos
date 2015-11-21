@@ -1,5 +1,6 @@
 package pl.pw.edu.mini.dos.master.rmi;
 
+import pl.pw.edu.mini.dos.communication.ErrorEnum;
 import pl.pw.edu.mini.dos.communication.nodemaster.*;
 import pl.pw.edu.mini.dos.master.Master;
 
@@ -18,7 +19,8 @@ public class NodeMaster extends UnicastRemoteObject
 
     @Override
     public RegisterResponse register(RegisterRequest registerRequest) throws RemoteException {
-        return null;
+        ErrorEnum status = master.addNode(registerRequest.getHost());
+        return new RegisterResponse(status);
     }
 
     @Override
