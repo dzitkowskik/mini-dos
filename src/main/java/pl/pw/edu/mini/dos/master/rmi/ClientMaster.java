@@ -20,6 +20,7 @@ public class ClientMaster extends UnicastRemoteObject
 
     @Override
     public ExecuteSQLResponse executeSQL(ExecuteSQLRequest executeSQLRequest) throws RemoteException {
+        String query = executeSQLRequest.getSql();
         // TODO
         return new ExecuteSQLResponse("Your result :)");
     }

@@ -1,6 +1,5 @@
 package pl.pw.edu.mini.dos.master;
 
-import javafx.scene.paint.Material;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import pl.pw.edu.mini.dos.master.rmi.RMIServer;
@@ -29,26 +28,46 @@ public class Master {
      * @return ErrorEnum
      */
     public ErrorEnum addNode(String host){
+        ErrorEnum ok;
+
+        // Create node
         Node newNode = new Node(host);
-        // TODO check status
+
+        // Conect to node
+        ok = newNode.connect();
+        if(!ok.equals(ErrorEnum.NO_ERROR)){
+            return ok;
+        }
+
+        // Check status
+        ok = newNode.checkStatus();
+        if(!ok.equals(ErrorEnum.NO_ERROR)){
+            return ok;
+        }
+
+        // Add to map of nodes
         synchronized (nodes){
             nodes.put(host, new Node(host));
         }
-        return ErrorEnum.SUCCESS;
+        return ErrorEnum.NO_ERROR;
     }
 
     public static void main(String[] args) {
 //        System.setProperty("java.rmi.server.hostname", "localhost");
 //        System.setProperty("java.security.policy", "/home/ghash/Dokumenty/mini-dos/src/main/resources/client.policy");
 
+        Master master;
+        RMIServer server = null;
+        Scanner scanner = null;
+
         logger.info("Server started!");
+        System.out.println("*Enter 'q' to stop master.");
 
         try {
-            Master master = new Master();
-            RMIServer server = new RMIServer(master);
+            master = new Master();
+            server = new RMIServer(master);
+            scanner = new Scanner (System.in);
 
-            Scanner scanner = new Scanner (System.in);
-            System.out.println("*Enter 'q' to stop master.");
             while(scanner.hasNext()) {
                 String text = scanner.next();
                 if(text.equals("q")) {
@@ -56,14 +75,16 @@ public class Master {
                 }
                 // operate
             }
-            server.close();
-            logger.info("Server closed!");
         } catch (UnknownHostException e) {
             logger.error(e.getMessage().toString());
             logger.error(e.getStackTrace().toString());
         } catch (RemoteException e) {
             logger.error(e.getMessage().toString());
             logger.error(e.getStackTrace().toString());
+        } finally {
+            scanner.close();
+            server.close();
+            logger.info("Server closed!");
         }
     }
 }

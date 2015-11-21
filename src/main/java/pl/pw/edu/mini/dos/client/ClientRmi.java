@@ -29,7 +29,7 @@ public class ClientRmi {
 //            System.setSecurityManager(new SecurityManager());
 //        }
         try {
-            Registry registry = LocateRegistry.getRegistry("localhost", Communication.RMI_PORT);
+            Registry registry = LocateRegistry.getRegistry("localhost", Communication.RMI_PORT_M_C);
             executor = (ClientMasterInterface) registry.lookup(Communication.RMI_MASTER_ID);
         } catch (AccessException e) {
             logger.error("No permissions to call remote method");
@@ -43,7 +43,7 @@ public class ClientRmi {
         }
     }
 
-    public ExecuteSQLResponse Execute(ExecuteSQLRequest request)
+    public ExecuteSQLResponse execute(ExecuteSQLRequest request)
             throws RemoteException {
         return executor.executeSQL(request);
     }

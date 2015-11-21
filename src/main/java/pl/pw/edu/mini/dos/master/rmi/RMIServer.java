@@ -5,34 +5,40 @@ import org.slf4j.LoggerFactory;
 import pl.pw.edu.mini.dos.communication.Communication;
 import pl.pw.edu.mini.dos.master.Master;
 
-import java.net.InetAddress;
 import java.net.UnknownHostException;
+import java.rmi.NoSuchObjectException;
 import java.rmi.NotBoundException;
 import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
 import java.rmi.server.UnicastRemoteObject;
-import java.security.AccessControlException;
-import java.security.AllPermission;
 
 public class RMIServer implements Communication {
+    /** Logger */
     private static final Logger logger = LoggerFactory.getLogger(RMIServer.class);
+
     Master master;
-    Registry registry = null;
+    Registry[] registrys;
     String name;
     String host;
-    int registryPort;
+    int[] ports;
+    ClientMaster clientMaster;
+    NodeMaster nodeMaster;
+
 
     public RMIServer(Master master) throws RemoteException, UnknownHostException {
         this.master = master;
         this.name = Communication.RMI_MASTER_ID;
-        this.host =  InetAddress.getLocalHost().getHostAddress();
-        this.registryPort = Communication.RMI_PORT;
+        //this.host =  InetAddress.getLocalHost().getHostAddress();
+        this.host = "localhost";
+        ports = new int[2];
+        ports[0] = Communication.RMI_PORT_M_C;
+        ports[1] = Communication.RMI_PORT_M_N;
 
-        setUp(registryPort);
+        setUp(ports);
     }
 
-    private void setUp(int port) {
+    private void setUp(int[] ports) {
 //        if (System.getSecurityManager() == null) {
 //            System.setSecurityManager(new SecurityManager());
 //        }
@@ -44,14 +50,14 @@ public class RMIServer implements Communication {
 //            return;
 //        }
 
-        getOrCreateRegistry(host, port);
+        registrys = getOrCreateRegistry(host, ports);
 
         try {
-            ClientMaster clientMaster = new ClientMaster(master);
-            NodeMaster nodeMaster = new NodeMaster(master);
+            this.clientMaster = new ClientMaster(master);
+            this.nodeMaster = new NodeMaster(master);
 
-            registry.rebind(name, clientMaster);
-            registry.rebind(name, nodeMaster);
+            registrys[0].rebind(name, clientMaster);
+            registrys[1].rebind(name, nodeMaster);
 
             logger.debug("RMIServer running...");
         } catch (Exception e) {
@@ -60,29 +66,41 @@ public class RMIServer implements Communication {
         }
     }
 
-    private void getOrCreateRegistry(String host, int registryPort) {
-        try {
-            logger.trace("Try get registry...");
-            registry = LocateRegistry.getRegistry(host, registryPort);
-            logger.debug(registry.list().toString());
-            logger.trace("Registry got.");
-        } catch (RemoteException e) {
+    private Registry[] getOrCreateRegistry(String host, int[] ports) {
+        Registry[] regs = new Registry[ports.length];
+        for(int i = 0; i < ports.length; i++){
             try {
-                logger.trace("Try create registry...");
-                registry = LocateRegistry.createRegistry(registryPort);
-                logger.trace("Registry created.");
-            } catch (RemoteException e1) {
-                logger.error(e1.getStackTrace().toString());
+                logger.trace("Try get registry...");
+                regs[i] = LocateRegistry.getRegistry(host, ports[i]);
+                logger.debug(regs[i].list().toString());
+                logger.trace("Registry got.");
+            } catch (RemoteException e) {
+                try {
+                    logger.trace("Try create registry...");
+                    regs[i] = LocateRegistry.createRegistry(ports[i]);
+                    logger.trace("Registry created.");
+                } catch (RemoteException e1) {
+                    logger.error(e1.getStackTrace().toString());
+                }
             }
         }
+        return regs;
     }
 
     public void close() {
         try {
-            registry.unbind(name);
-        } catch (RemoteException | NotBoundException e) {
+            UnicastRemoteObject.unexportObject(this.clientMaster,true);
+            UnicastRemoteObject.unexportObject(this.nodeMaster,true);
+        } catch (NoSuchObjectException e) {
             logger.error(e.getStackTrace().toString());
         }
-    }
 
+        for(int i = 0; i < this.registrys.length; i++){
+            try {
+                registrys[i].unbind(name);
+            } catch (RemoteException | NotBoundException e) {
+                logger.error(e.getStackTrace().toString());
+            }
+        }
+    }
 }

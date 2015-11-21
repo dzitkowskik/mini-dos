@@ -35,7 +35,7 @@ public class Client {
             }
 
             try {
-                ExecuteSQLResponse response = client.Execute(new ExecuteSQLRequest(command));
+                ExecuteSQLResponse response = client.execute(new ExecuteSQLRequest(command));
                 logger.debug("Response: " + response.getResponse());
             } catch (RemoteException e) {
                 logger.error("Exception while remote method was being executed");
