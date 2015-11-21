@@ -3,6 +3,7 @@ package pl.pw.edu.mini.dos.master.rmi;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import pl.pw.edu.mini.dos.communication.Communication;
+import pl.pw.edu.mini.dos.master.Master;
 
 import java.net.InetAddress;
 import java.net.UnknownHostException;
@@ -14,14 +15,16 @@ import java.rmi.server.UnicastRemoteObject;
 import java.security.AccessControlException;
 import java.security.AllPermission;
 
-public class RMIServer implements Communication{
+public class RMIServer implements Communication {
     private static final Logger logger = LoggerFactory.getLogger(RMIServer.class);
+    Master master;
     Registry registry = null;
     String name;
     String host;
     int registryPort;
 
-    public RMIServer() throws UnknownHostException {
+    public RMIServer(Master master) throws RemoteException, UnknownHostException {
+        this.master = master;
         this.name = Communication.RMI_MASTER_ID;
         this.host =  InetAddress.getLocalHost().getHostAddress();
         this.registryPort = Communication.RMI_PORT;
@@ -44,8 +47,8 @@ public class RMIServer implements Communication{
         getOrCreateRegistry(host, port);
 
         try {
-            ClientMaster clientMaster = new ClientMaster();
-            NodeMaster nodeMaster = new NodeMaster();
+            ClientMaster clientMaster = new ClientMaster(master);
+            NodeMaster nodeMaster = new NodeMaster(master);
 
             ClientMaster clientMasterStub = (ClientMaster)
                     UnicastRemoteObject.exportObject(clientMaster, port);
@@ -57,7 +60,7 @@ public class RMIServer implements Communication{
 
             logger.debug("RMIServer running...");
         } catch (Exception e) {
-            logger.error("RMIServer exception:");
+            logger.error("RMIServer exception: {}", e.getMessage());
             logger.error(e.getStackTrace().toString());
         }
     }

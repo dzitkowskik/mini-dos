@@ -1,7 +1,13 @@
 package pl.pw.edu.mini.dos.master;
 
+import javafx.scene.paint.Material;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import pl.pw.edu.mini.dos.master.rmi.RMIServer;
+
+import java.net.UnknownHostException;
+import java.rmi.RemoteException;
+import java.util.Scanner;
 import pl.pw.edu.mini.dos.communication.ErrorEnum;
 import pl.pw.edu.mini.dos.master.node.Node;
 
@@ -30,6 +36,20 @@ public class Master {
     }
 
     public static void main(String[] args) {
-        logger.info("Hello world Mr. " + args[0] + "!");
+        System.setProperty("java.rmi.server.hostname", "localhost");
+        System.setProperty("java.security.policy", "/home/ghash/Dokumenty/mini-dos/src/main/resources/client.policy");
+        logger.info("Server started!");
+        try {
+            Master master = new Master();
+            RMIServer server = new RMIServer(master);
+            
+            logger.info("Server closed!");
+        } catch (UnknownHostException e) {
+            e.printStackTrace();
+            logger.error(e.getMessage().toString());
+        } catch (RemoteException e) {
+            e.printStackTrace();
+            logger.error(e.getMessage().toString());
+        }
     }
 }
