@@ -1,14 +1,17 @@
 package pl.pw.edu.mini.dos.communication.nodemaster;
 
-public class RegisterRequest {
-    /** IP address */
-    String host;
+import pl.pw.edu.mini.dos.communication.masternode.MasterNodeInterface;
 
-    public RegisterRequest(String host) {
-        this.host = host;
+import java.io.Serializable;
+
+public class RegisterRequest implements Serializable {
+    private MasterNodeInterface node;
+
+    public RegisterRequest(MasterNodeInterface node) {
+        this.node = node;
     }
 
-    public String getHost() {
-        return host;
+    public MasterNodeInterface getNode() {
+        return node;
     }
 }

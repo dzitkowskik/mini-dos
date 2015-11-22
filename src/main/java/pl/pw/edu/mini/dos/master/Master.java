@@ -2,89 +2,165 @@ package pl.pw.edu.mini.dos.master;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import pl.pw.edu.mini.dos.master.rmi.RMIServer;
-
-import java.net.UnknownHostException;
-import java.rmi.RemoteException;
-import java.util.Scanner;
 import pl.pw.edu.mini.dos.communication.ErrorEnum;
+import pl.pw.edu.mini.dos.communication.ErrorHandler;
+import pl.pw.edu.mini.dos.communication.Services;
+import pl.pw.edu.mini.dos.communication.clientmaster.ClientMasterInterface;
+import pl.pw.edu.mini.dos.communication.clientmaster.ExecuteSQLRequest;
+import pl.pw.edu.mini.dos.communication.clientmaster.ExecuteSQLResponse;
+import pl.pw.edu.mini.dos.communication.masternode.ExecuteSQLOnNodeRequest;
+import pl.pw.edu.mini.dos.communication.masternode.ExecuteSQLOnNodeResponse;
+import pl.pw.edu.mini.dos.communication.masternode.MasterNodeInterface;
+import pl.pw.edu.mini.dos.communication.nodemaster.*;
+import pl.pw.edu.mini.dos.communication.nodenode.NodeNodeInterface;
+import pl.pw.edu.mini.dos.master.rmi.RMIServer;
 import pl.pw.edu.mini.dos.master.node.Node;
 
-import java.util.HashMap;
-import java.util.Map;
+import java.io.Serializable;
+import java.rmi.RemoteException;
+import java.rmi.server.UnicastRemoteObject;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Random;
+import java.util.Scanner;
 
-public class Master {
+public class Master extends UnicastRemoteObject
+        implements NodeMasterInterface, ClientMasterInterface, Serializable {
+    /** Logger */
     private static final Logger logger = LoggerFactory.getLogger(Master.class);
 
-    private Map<String, Node> nodes;
+    private RMIServer server;
+    private final List<Node>  nodes;
 
-    public Master() {
-        nodes = new HashMap<String, Node>();
+    public Master(String host, int port) throws RemoteException {
+        nodes = new ArrayList<>();
+
+        server = new RMIServer(host, port);
+        server.startService(Services.MASTER, this);
+        logger.info("Master listening at (" + host + ":" + port + ")");
     }
 
     /**
-     * Register  a new node.
-     * @param host node's IP
-     * @return ErrorEnum
+     * @param args = {"localhost", "1099"}
      */
-    public ErrorEnum addNode(String host){
+    public static void main(String[] args) throws RemoteException {
+        Master master = new Master(args[0], Integer.valueOf(args[1]));
+
+        Scanner scanner = new Scanner (System.in);
+        System.out.println("*Enter 'q' to stop master or 'd' to show the data of nodes:");
+        while(scanner.hasNext()) {
+            String text = scanner.next();
+            if(text.equals("q")) {
+                break;
+            } else if(text.equals("d")){
+                master.showNodesData();
+            }
+        }
+
+        master.stopMaster();
+        logger.info("Master stopped!");
+    }
+
+    public List<Node> getNodes() {
+        return nodes;
+    }
+
+    public void showNodesData(){
+        for (int i = 0; i < nodes.size(); i++) {
+            try {
+                System.out.println("Data from Node " + i + ": "
+                        + nodes.get(i).getInterface().executeSQLOnNode(
+                        new ExecuteSQLOnNodeRequest("SELECT * FROM *;")
+                ).getResult());
+            } catch (RemoteException e) {
+                ErrorHandler.handleError(e, false);
+            }
+        }
+    }
+    public void stopMaster(){
+        server.stopService(Services.MASTER, this);
+    }
+
+    @Override
+    public RegisterResponse register(RegisterRequest registerRequest) throws RemoteException {
         ErrorEnum ok;
 
         // Create node
-        Node newNode = new Node(host);
+        Node newNode  = new Node(registerRequest.getNode());
 
-        // Conect to node
-        ok = newNode.connect();
-        if(!ok.equals(ErrorEnum.NO_ERROR)){
-            return ok;
-        }
+        // Check status (uncomment when it's implemented in node)
+//        ok = newNode.checkStatus();
+//        if(!ok.equals(ErrorEnum.NO_ERROR)){
+//            return new RegisterResponse(ok);
+//        }
 
-        // Check status
-        ok = newNode.checkStatus();
-        if(!ok.equals(ErrorEnum.NO_ERROR)){
-            return ok;
+        synchronized (nodes) {
+            nodes.add(newNode);
         }
+        logger.info("Node added.");
 
-        // Add to map of nodes
-        synchronized (nodes){
-            nodes.put(host, new Node(host));
-        }
-        return ErrorEnum.NO_ERROR;
+        return new RegisterResponse(ErrorEnum.NO_ERROR);
     }
 
-    public static void main(String[] args) {
-//        System.setProperty("java.rmi.server.hostname", "localhost");
-//        System.setProperty("java.security.policy", "/home/ghash/Dokumenty/mini-dos/src/main/resources/client.policy");
-
-        Master master;
-        RMIServer server = null;
-        Scanner scanner = null;
-
-        logger.info("Server started!");
-        System.out.println("*Enter 'q' to stop master.");
-
-        try {
-            master = new Master();
-            server = new RMIServer(master);
-            scanner = new Scanner (System.in);
-
-            while(scanner.hasNext()) {
-                String text = scanner.next();
-                if(text.equals("q")) {
-                    break;
-                }
-                // operate
-            }
-        } catch (UnknownHostException e) {
-            logger.error(e.getMessage().toString());
-            logger.error(e.getStackTrace().toString());
-        } catch (RemoteException e) {
-            logger.error(e.getMessage().toString());
-            logger.error(e.getStackTrace().toString());
-        } finally {
-            scanner.close();
-            server.close();
-            logger.info("Server closed!");
+    @Override
+    public InsertMetadataResponse insertMetadata(InsertMetadataRequest insertMetadataRequest)
+            throws RemoteException {
+        List<NodeNodeInterface> nodes = new ArrayList<>(this.getNodes().size());
+        // Insert in all nodes (example)
+        for(Node n : this.getNodes()){
+            nodes.add((NodeNodeInterface) n.getInterface());
         }
+
+        return new InsertMetadataResponse(nodes, ErrorEnum.NO_ERROR);
+    }
+
+    @Override
+    public SelectMetadataResponse selectMetadata(SelectMetadataRequest selectMetadataRequest)
+            throws RemoteException {
+        return null;
+    }
+
+    @Override
+    public UpdateMetadataResponse updateMetadata(UpdateMetadataRequest updateMetadataRequest)
+            throws RemoteException {
+        return null;
+    }
+
+    @Override
+    public DeleteMetadataResponse deleteMetadata(DeleteMetadataRequest deleteMetadataRequest)
+            throws RemoteException {
+        return null;
+    }
+
+    @Override
+    public TableMetadataResponse tableMetadata(TableMetadataRequest tableMetadataRequest)
+            throws RemoteException {
+        return null;
+    }
+
+    @Override
+    public ExecuteSQLResponse executeSQL(ExecuteSQLRequest executeSQLRequest) throws RemoteException {
+        String query = executeSQLRequest.getSql();
+        MasterNodeInterface node = nodes.get(selectNode()).getInterface();
+
+        ExecuteSQLOnNodeResponse result = node.executeSQLOnNode(
+                new ExecuteSQLOnNodeRequest(query));
+
+        ExecuteSQLResponse response;
+        if(result.getError().equals(ErrorEnum.NO_ERROR)){
+            response = new ExecuteSQLResponse(result.getResult());
+        } else {
+            response = new ExecuteSQLResponse(result.getError().toString());
+        }
+        return response;
+    }
+
+    /**
+     * Load balancer
+     * @return node chosen to run the query
+     */
+    private int selectNode(){
+        Random random = new Random();
+        return random.nextInt(nodes.size());
     }
 }

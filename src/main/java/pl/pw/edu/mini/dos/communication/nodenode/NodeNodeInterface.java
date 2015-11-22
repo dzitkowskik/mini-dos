@@ -11,7 +11,8 @@ public interface NodeNodeInterface extends Remote {
      * @return
      * If executing query was successful.
      */
-    InsertDataResponse insertData(InsertDataRequest insertDataRequest);
+    InsertDataResponse insertData(InsertDataRequest insertDataRequest)
+            throws RemoteException;
     /**
      * Execute select query on another Node.
      * @param selectDataRequest
@@ -19,7 +20,7 @@ public interface NodeNodeInterface extends Remote {
      * @return
      * If executing query was successful.
      */
-    SelectDataResponse selectMetdata(SelectDataRequest selectDataRequest)
+    SelectDataResponse selectMetadata(SelectDataRequest selectDataRequest)
             throws RemoteException;
     /**
      * Execute update query on another Node.
@@ -28,7 +29,7 @@ public interface NodeNodeInterface extends Remote {
      * @return
      * If executing query was successful.
      */
-    UpdateDataResponse updateMetdata(UpdateDataRequest updateDataRequest)
+    UpdateDataResponse updateMetadata(UpdateDataRequest updateDataRequest)
             throws RemoteException;
     /**
      * Execute delete query on another Node.
@@ -37,7 +38,7 @@ public interface NodeNodeInterface extends Remote {
      * @return
      * If executing query was successful.
      */
-    DeleteDataResponse deleteMetdata(DeleteDataRequest deleteDataRequest)
+    DeleteDataResponse deleteMetadata(DeleteDataRequest deleteDataRequest)
             throws RemoteException;
     /**
      * Manage tables on another Node.
@@ -46,6 +47,6 @@ public interface NodeNodeInterface extends Remote {
      * @return
      * If executing query was successful.
      */
-    TableDataResponse tableMetdata(TableDataRequest tableDataRequest)
+    TableDataResponse tableMetadata(TableDataRequest tableDataRequest)
             throws RemoteException;
 }

@@ -1,31 +1,41 @@
 package pl.pw.edu.mini.dos.client;
 
-/**
- * Created by Karol Dzitkowski on 20.11.15.
- */
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import pl.pw.edu.mini.dos.communication.ErrorHandler;
+import pl.pw.edu.mini.dos.communication.Services;
+import pl.pw.edu.mini.dos.communication.clientmaster.ClientMasterInterface;
 import pl.pw.edu.mini.dos.communication.clientmaster.ExecuteSQLRequest;
 import pl.pw.edu.mini.dos.communication.clientmaster.ExecuteSQLResponse;
+import pl.pw.edu.mini.dos.communication.nodemaster.RegisterRequest;
 
+import java.net.URISyntaxException;
 import java.rmi.RemoteException;
 import java.util.Scanner;
 
 public class Client {
+    /**
+     * Logger
+     */
     private static final Logger logger = LoggerFactory.getLogger(Client.class);
 
-    public static void main(String[] args) {
-//        System.setProperty("java.rmi.server.hostname", "localhost");
-//        System.setProperty("java.security.policy", "/home/ghash/Dokumenty/mini-dos/src/main/resources/client.policy");
+    private ClientMasterInterface master;
 
-        logger.info("Client started!");
+    public Client(String masterHost, String masterPort, String myIp) throws RemoteException {
+        System.setProperty("java.rmi.server.hostname", myIp);   // TODO: It's necessary?
 
-        ClientRmi client = new ClientRmi();
+        RMIClient client = new RMIClient(masterHost, Integer.parseInt(masterPort));
+        master = (ClientMasterInterface) client.getService(Services.MASTER);
+    }
 
-        Scanner scanner = new Scanner (System.in);
+    /**
+     * @param args = {"localhost", "1099", "localhost"}
+     */
+    public static void main(String[] args) throws URISyntaxException, RemoteException {
+        Client client = new Client(args[0], args[1], args[2]);
+
+        Scanner scanner = new Scanner(System.in);
         System.out.println("Type the query or enter 'q' to exit:");
-
         while(scanner.hasNext()) {
             String command = scanner.next();
             logger.debug("Command: " + command);
@@ -34,14 +44,27 @@ public class Client {
                 break;
             }
 
-            try {
-                ExecuteSQLResponse response = client.execute(new ExecuteSQLRequest(command));
-                logger.debug("Response: " + response.getResponse());
-            } catch (RemoteException e) {
-                logger.error("Exception while remote method was being executed");
-                logger.error(e.getStackTrace().toString());
-            }
+            String result = client.executeSQL(command);
+            System.out.println("Result: " + result);
         }
-        logger.info("Client quit");
+
+        client.stopClient();
+        logger.info("Client stopped!");
+    }
+
+    public String executeSQL(String sql){
+        ExecuteSQLResponse response;
+
+        try {
+            response = master.executeSQL(new ExecuteSQLRequest(sql));
+        } catch (RemoteException e) {
+            return "Error: " + e.getMessage();
+        }
+        return response.getResponse();
+    }
+
+    public void stopClient() {
+        master = null;
+        System.exit(0); // Unfortunately, this is only way, to close RMI...
     }
 }
