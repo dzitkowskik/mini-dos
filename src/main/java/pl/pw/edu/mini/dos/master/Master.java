@@ -159,7 +159,7 @@ public class Master extends UnicastRemoteObject
      * Load balancer
      * @return node chosen to run the query
      */
-    private int selectNode(){
+    private synchronized int selectNode(){
         Random random = new Random();
         return random.nextInt(nodes.size());
     }
