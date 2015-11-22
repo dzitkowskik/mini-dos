@@ -1,12 +1,19 @@
 package pl.pw.edu.mini.dos.communication.nodemaster;
 
 import pl.pw.edu.mini.dos.communication.ErrorEnum;
+import pl.pw.edu.mini.dos.communication.nodenode.NodeNodeInterface;
 
-public class InsertMetadataResponse {
-    public String[] nodes;
+import java.io.Serializable;
+
+public class InsertMetadataResponse implements Serializable {
+    public NodeNodeInterface[] nodes;
     public ErrorEnum error;
 
-    public InsertMetadataResponse(String[] nodes, ErrorEnum error) {
+    public InsertMetadataResponse() {
+
+    }
+
+    public InsertMetadataResponse(NodeNodeInterface[] nodes, ErrorEnum error) {
         this.nodes = nodes;
         this.error = error;
     }

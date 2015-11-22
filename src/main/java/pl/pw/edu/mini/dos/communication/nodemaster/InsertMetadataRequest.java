@@ -1,11 +1,11 @@
 package pl.pw.edu.mini.dos.communication.nodemaster;
 
-public class InsertMetadataRequest {
-    public int[] rowId;
+import java.io.Serializable;
+
+public class InsertMetadataRequest implements Serializable {
     public String table;
 
-    public InsertMetadataRequest(int[] rowId, String table) {
-        this.rowId = rowId;
+    public InsertMetadataRequest(String table) {
         this.table = table;
     }
 }

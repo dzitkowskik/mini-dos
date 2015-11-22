@@ -1,12 +1,11 @@
 package pl.pw.edu.mini.dos.master.rmi;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import pl.pw.edu.mini.dos.communication.Communication;
+import pl.pw.edu.mini.dos.communication.ErrorHandler;
 
-import java.net.InetAddress;
-import java.net.UnknownHostException;
+import java.io.File;
+import java.net.URISyntaxException;
 import java.rmi.NotBoundException;
+import java.rmi.Remote;
 import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
@@ -14,77 +13,82 @@ import java.rmi.server.UnicastRemoteObject;
 import java.security.AccessControlException;
 import java.security.AllPermission;
 
-public class RMIServer implements Communication{
-    private static final Logger logger = LoggerFactory.getLogger(RMIServer.class);
+/**
+ * Created by asd on 11/15/15.
+ */
+public class RMIServer {
     Registry registry = null;
-    String name;
-    String host;
-    int registryPort;
+    String name = "Compute";
+    int registryPort = 1099;
 
-    public RMIServer() throws UnknownHostException {
-        this.name = Communication.RMI_MASTER_ID;
-        this.host =  InetAddress.getLocalHost().getHostAddress();
-        this.registryPort = Communication.RMI_PORT;
+    public RMIServer(String host) {
+        System.setProperty("java.rmi.server.hostname", host);
 
-        setUp(registryPort);
-    }
+        setPolicyPath();
 
-    private void setUp(int port) {
         if (System.getSecurityManager() == null) {
             System.setSecurityManager(new SecurityManager());
         }
+        checkPermission();
+
+        GetOrCreateRegistry(host, registryPort);
+    }
+
+    private void checkPermission() {
         try {
             System.getSecurityManager().checkPermission(new AllPermission());
         } catch (AccessControlException e) {
-            logger.error("client.policy file probably doesn't exist or path is not valid.");
-            logger.error(e.getStackTrace().toString());
-            return;
-        }
-
-        getOrCreateRegistry(host, port);
-
-        try {
-            ClientMaster clientMaster = new ClientMaster();
-            NodeMaster nodeMaster = new NodeMaster();
-
-            ClientMaster clientMasterStub = (ClientMaster)
-                    UnicastRemoteObject.exportObject(clientMaster, port);
-            NodeMaster nodeMasterStub = (NodeMaster)
-                    UnicastRemoteObject.exportObject(nodeMaster, port);
-
-            registry.rebind(name, clientMasterStub);
-            registry.rebind(name, nodeMasterStub);
-
-            logger.debug("RMIServer running...");
-        } catch (Exception e) {
-            logger.error("RMIServer exception:");
-            logger.error(e.getStackTrace().toString());
+            ErrorHandler.handleError(e, true);
         }
     }
 
-    private void getOrCreateRegistry(String host, int registryPort) {
+    public <T extends Remote> void StartService(String serviceName, int port, T service) {
         try {
-            logger.trace("Try get registry...");
-            registry = LocateRegistry.getRegistry(host, registryPort);
-            logger.debug(registry.list().toString());
-            logger.trace("Registry got.");
+            registry.rebind(serviceName, service);
+            System.out.println(serviceName + " bound and listening for task...");
         } catch (RemoteException e) {
+            ErrorHandler.handleError(e, false);
+        }
+    }
+
+    private void GetOrCreateRegistry(String host, int registryPort) {
+        try {
+            System.out.println("Try get registry...");
+            registry = LocateRegistry.getRegistry(host, registryPort);
+            System.out.println(registry.list().toString());
+            System.out.println("Registry got.");
+        } catch (Exception e) {
             try {
-                logger.trace("Try create registry...");
+                System.out.println("Try create registry...");
                 registry = LocateRegistry.createRegistry(registryPort);
-                logger.trace("Registry created.");
+                System.out.println("Registry created.");
             } catch (RemoteException e1) {
-                logger.error(e1.getStackTrace().toString());
+                ErrorHandler.handleError(e1, true);
             }
         }
     }
 
-    public void close() {
+    private void setPolicyPath() {
+        String pathToPolicy = null;
         try {
-            registry.unbind(name);
+            pathToPolicy = new File(RMIServer.class.getProtectionDomain().getCodeSource().getLocation().toURI())
+                    .getParent() + "/client.policy";
+        } catch (URISyntaxException e) {
+            e.printStackTrace();
+        }
+        System.out.println("Set client.policy to " + pathToPolicy);
+        System.setProperty("java.security.policy", pathToPolicy);
+    }
+
+    public <T extends Remote> void StopService(String serviceName, T service) {
+        try {
+            registry.unbind(serviceName);
+            UnicastRemoteObject.unexportObject(service, false);
+            System.out.println("Service " + serviceName + " stopped.");
         } catch (RemoteException | NotBoundException e) {
-            logger.error(e.getStackTrace().toString());
+            ErrorHandler.handleError(e, false);
         }
     }
 
 }
+

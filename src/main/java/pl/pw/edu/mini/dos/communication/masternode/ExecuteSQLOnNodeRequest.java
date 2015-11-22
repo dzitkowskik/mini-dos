@@ -1,6 +1,8 @@
 package pl.pw.edu.mini.dos.communication.masternode;
 
-public class ExecuteSQLOnNodeRequest {
+import java.io.Serializable;
+
+public class ExecuteSQLOnNodeRequest implements Serializable {
     public String sql;
 
     public ExecuteSQLOnNodeRequest(String sql) {

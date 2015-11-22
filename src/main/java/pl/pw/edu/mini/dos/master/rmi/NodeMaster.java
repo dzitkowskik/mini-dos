@@ -22,27 +22,27 @@ public class NodeMaster extends UnicastRemoteObject
     }
 
     @Override
-    public InsertMetadataResponse insertMetdata(InsertMetadataRequest insertMetadataRequest) throws RemoteException {
+    public InsertMetadataResponse insertMetadata(InsertMetadataRequest insertMetadataRequest) throws RemoteException {
         return null;
     }
 
     @Override
-    public SelectMetadataResponse selectMetdata(SelectMetadataRequest selectMetadataRequest) throws RemoteException {
+    public SelectMetadataResponse selectMetadata(SelectMetadataRequest selectMetadataRequest) throws RemoteException {
         return null;
     }
 
     @Override
-    public UpdateMetadataResponse updateMetdata(UpdateMetadataRequest updateMetadataRequest) throws RemoteException {
+    public UpdateMetadataResponse updateMetadata(UpdateMetadataRequest updateMetadataRequest) throws RemoteException {
         return null;
     }
 
     @Override
-    public DeleteMetadataResponse deleteMetdata(DeleteMetadataRequest deleteMetadataRequest) throws RemoteException {
+    public DeleteMetadataResponse deleteMetadata(DeleteMetadataRequest deleteMetadataRequest) throws RemoteException {
         return null;
     }
 
     @Override
-    public TableMetadataResponse tableMetdata(TableMetadataRequest tableMetadataRequest) throws RemoteException {
+    public TableMetadataResponse tableMetadata(TableMetadataRequest tableMetadataRequest) throws RemoteException {
         return null;
     }
 }

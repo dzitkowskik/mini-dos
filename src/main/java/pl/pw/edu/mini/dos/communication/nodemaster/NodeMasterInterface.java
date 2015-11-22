@@ -21,7 +21,7 @@ public interface NodeMasterInterface extends Remote {
      * @return
      * Received metadata.
      */
-    InsertMetadataResponse insertMetdata(InsertMetadataRequest insertMetadataRequest)
+    InsertMetadataResponse insertMetadata(InsertMetadataRequest insertMetadataRequest)
             throws RemoteException;
     /**
      * Request for metadata to execute select query.
@@ -30,7 +30,7 @@ public interface NodeMasterInterface extends Remote {
      * @return
      * Received metadata.
      */
-    SelectMetadataResponse selectMetdata(SelectMetadataRequest selectMetadataRequest)
+    SelectMetadataResponse selectMetadata(SelectMetadataRequest selectMetadataRequest)
             throws RemoteException;
 
     /**
@@ -40,7 +40,7 @@ public interface NodeMasterInterface extends Remote {
      * @return
      * Received metadata.
      */
-    UpdateMetadataResponse updateMetdata(UpdateMetadataRequest updateMetadataRequest)
+    UpdateMetadataResponse updateMetadata(UpdateMetadataRequest updateMetadataRequest)
             throws RemoteException;
     /**
      * Request for metadata to execute delete query.
@@ -49,7 +49,7 @@ public interface NodeMasterInterface extends Remote {
      * @return
      * Received metadata.
      */
-    DeleteMetadataResponse deleteMetdata(DeleteMetadataRequest deleteMetadataRequest)
+    DeleteMetadataResponse deleteMetadata(DeleteMetadataRequest deleteMetadataRequest)
             throws RemoteException;
     /**
      * Request for metadata to manage tables.
@@ -58,6 +58,6 @@ public interface NodeMasterInterface extends Remote {
      * @return
      * Received metadata.
      */
-    TableMetadataResponse tableMetdata(TableMetadataRequest tableMetadataRequest)
+    TableMetadataResponse tableMetadata(TableMetadataRequest tableMetadataRequest)
             throws RemoteException;
 }
