@@ -32,9 +32,12 @@ public class Master extends UnicastRemoteObject
     private RMIServer server;
     private final List<Node>  nodes;
 
+    public Master() throws RemoteException {
+        this("localhost", 1099);
+    }
+
     public Master(String host, int port) throws RemoteException {
         nodes = new ArrayList<>();
-
         server = new RMIServer(host, port);
         server.startService(Services.MASTER, this);
         logger.info("Master listening at (" + host + ":" + port + ")");
@@ -44,8 +47,11 @@ public class Master extends UnicastRemoteObject
      * @param args = {"localhost", "1099"}
      */
     public static void main(String[] args) throws RemoteException {
-        Master master = new Master(args[0], Integer.valueOf(args[1]));
-
+        Master master;
+        if(args.length == 2)
+            master = new Master(args[0], Integer.valueOf(args[1]));
+        else master = new Master();
+        
         Scanner scanner = new Scanner (System.in);
         System.out.println("*Enter 'q' to stop master or 'd' to show the data of nodes:");
         while(scanner.hasNext()) {

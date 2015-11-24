@@ -37,12 +37,7 @@ public class RMIServer {
 
     private void setPolicyPath() {
         String pathToPolicy = null;
-        try {
-            pathToPolicy = new File(RMIServer.class.getProtectionDomain().getCodeSource().getLocation().toURI())
-                    .getParent() + "/client.policy";
-        } catch (URISyntaxException e) {
-            e.printStackTrace();
-        }
+        pathToPolicy = this.getClass().getClassLoader().getResource("client.policy").getFile();
         if (pathToPolicy != null) {
             System.setProperty("java.security.policy", pathToPolicy);
         }
