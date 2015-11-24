@@ -35,6 +35,7 @@ public class RMIServer {
         getOrCreateRegistry(host, registryPort);
     }
 
+    // TODO: This should be common to all modules, so move it to communication?
     private void setPolicyPath() {
         String pathToPolicy = null;
         pathToPolicy = this.getClass().getClassLoader().getResource("client.policy").getFile();
@@ -55,11 +56,11 @@ public class RMIServer {
     private void getOrCreateRegistry(String host, int registryPort) {
         try {
             registry = LocateRegistry.getRegistry(host, registryPort);
-            logger.info("Registry obtained");
             logger.debug(Arrays.toString(registry.list()));
+            logger.info("Registry obtained");
         } catch (Exception e) {
             try {
-                logger.error(e.getMessage());
+                logger.info("Registry not found, creating registry");
                 registry = LocateRegistry.createRegistry(registryPort);
                 logger.info("Registry created");
             } catch (RemoteException e1) {

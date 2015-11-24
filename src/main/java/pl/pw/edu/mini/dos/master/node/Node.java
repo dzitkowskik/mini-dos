@@ -10,18 +10,11 @@ import pl.pw.edu.mini.dos.communication.masternode.MasterNodeInterface;
 import java.rmi.RemoteException;
 
 public class Node {
-    /**
-     * Logger
-     */
+
     private static final Logger logger = LoggerFactory.getLogger(Node.class);
 
-    /**
-     * Interface for communication with node
-     */
     private MasterNodeInterface node;
-    /**
-     * Status
-     */
+
     private StatusNode statusNode;
 
     public Node(MasterNodeInterface node) {

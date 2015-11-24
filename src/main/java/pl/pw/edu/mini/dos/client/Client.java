@@ -21,6 +21,10 @@ public class Client {
 
     private ClientMasterInterface master;
 
+    public Client() throws RemoteException {
+        this("0.0.0.0", "1099", "0.0.0.0");
+    }
+
     public Client(String masterHost, String masterPort, String myIp) throws RemoteException {
         System.setProperty("java.rmi.server.hostname", myIp);   // TODO: It's necessary?
 
@@ -32,7 +36,10 @@ public class Client {
      * @param args = {"localhost", "1099", "localhost"}
      */
     public static void main(String[] args) throws URISyntaxException, RemoteException {
-        Client client = new Client(args[0], args[1], args[2]);
+        Client client;
+        if(args.length == 3)
+            client = new Client(args[0], args[1], args[2]);
+        else client = new Client();
 
         Scanner scanner = new Scanner(System.in);
         System.out.println("Type the query or enter 'q' to exit:");

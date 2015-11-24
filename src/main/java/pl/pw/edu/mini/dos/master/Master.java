@@ -24,16 +24,16 @@ import java.util.List;
 import java.util.Random;
 import java.util.Scanner;
 
-public class Master extends UnicastRemoteObject
+public class Master
+        extends UnicastRemoteObject
         implements NodeMasterInterface, ClientMasterInterface, Serializable {
-    /** Logger */
-    private static final Logger logger = LoggerFactory.getLogger(Master.class);
 
+    private static final Logger logger = LoggerFactory.getLogger(Master.class);
     private RMIServer server;
     private final List<Node>  nodes;
 
     public Master() throws RemoteException {
-        this("localhost", 1099);
+        this("0.0.0.0", 1099);
     }
 
     public Master(String host, int port) throws RemoteException {
