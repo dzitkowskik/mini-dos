@@ -6,7 +6,7 @@
 
 2015.11.24 - we will have nodes registering in master and working insert of single row from many clients (no failure detection, no replication etc.)
 
-2015.12.01 - we will be able to insert data with replication with some replication factor + failure of node detection with replicating data it had
+**2015.12.04** - we will be able to insert data with replication with some replication factor + failure of node detection with replicating data it had
 
 2015.12.12 - we will be able to do update, delete and select queries on our data (possible not full failure detection and bugs)
 
