@@ -22,7 +22,7 @@ public class Client {
     private ClientMasterInterface master;
 
     public Client() throws RemoteException {
-        this("0.0.0.0", "1099", "0.0.0.0");
+        this("127.0.0.1", "1099", "127.0.0.1");
     }
 
     public Client(String masterHost, String masterPort, String myIp) throws RemoteException {
@@ -44,7 +44,7 @@ public class Client {
         Scanner scanner = new Scanner(System.in);
         System.out.println("Type the query or enter 'q' to exit:");
         while(scanner.hasNext()) {
-            String command = scanner.next();
+            String command = scanner.nextLine();
             logger.debug("Command: " + command);
 
             if(command.equals("q")) {

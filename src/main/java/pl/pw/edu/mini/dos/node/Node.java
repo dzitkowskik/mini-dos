@@ -1,5 +1,10 @@
 package pl.pw.edu.mini.dos.node;
 
+import net.sf.jsqlparser.JSQLParserException;
+import net.sf.jsqlparser.parser.CCJSqlParserUtil;
+import net.sf.jsqlparser.statement.Statement;
+import net.sf.jsqlparser.statement.StatementVisitor;
+import net.sf.jsqlparser.statement.Statements;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import pl.pw.edu.mini.dos.Helper;
@@ -15,6 +20,7 @@ import java.io.Serializable;
 import java.net.URISyntaxException;
 import java.rmi.RemoteException;
 import java.rmi.server.UnicastRemoteObject;
+import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -27,6 +33,10 @@ public class Node extends UnicastRemoteObject
 
     private String data = "new";
     private NodeMasterInterface master;
+
+    public Node() throws RemoteException {
+        this("127.0.0.1", "1099", "127.0.0.1");
+    }
 
     public Node(String masterHost, String masterPort, String myIp) throws RemoteException {
         System.setProperty("java.rmi.server.hostname", myIp);   // TODO: It's necessary?
@@ -44,8 +54,12 @@ public class Node extends UnicastRemoteObject
      * @param args = {"localhost", "1099", "localhost"}
      */
     public static void main(String[] args) throws URISyntaxException, RemoteException {
-        Node node = new Node(args[0], args[1], args[2]);
-
+        Node node;
+        if(args.length == 3) {
+            node = new Node(args[0], args[1], args[2]);
+        } else {
+            node = new Node();
+        }
         Scanner scanner = new Scanner (System.in);
         System.out.println("*Enter 'q' to stop node or 'n' to generate new data.");
         while(scanner.hasNext()) {
@@ -76,34 +90,17 @@ public class Node extends UnicastRemoteObject
     }
 
     @Override
-    public ExecuteSQLOnNodeResponse executeSQLOnNode
-            (ExecuteSQLOnNodeRequest executeSQLOnNodeRequest)
+    public ExecuteSQLOnNodeResponse executeSQLOnNode(ExecuteSQLOnNodeRequest executeSQLOnNodeRequest)
             throws RemoteException {
-
-        // TODO parsing query and get needed tables
-        List<String> tables = new ArrayList<>(1);
-        tables.add("#4"); // Table #4 is needed
-
-        InsertMetadataResponse insertMetadataResponse
-                = master.insertMetadata(new InsertMetadataRequest(tables));
-
-        String result = this.data;
-
-        HashMap map = new HashMap<String, String>();
-        map.put("data", executeSQLOnNodeRequest.getSql());
-
-        for (int i = 0; i < insertMetadataResponse.getNodes().size(); i++) {
-            map.put("id", i);
-
-            InsertDataRequest insertDataRequest
-                    = new InsertDataRequest(new Record[] {new Record(map)}, tables);
-
-            InsertDataResponse insertDataResponse
-                    = insertMetadataResponse.getNodes().get(i).insertData(insertDataRequest);
+        try (SqLiteDb db = new SqLiteDb()) {
+            Statement stmt = CCJSqlParserUtil.parse(executeSQLOnNodeRequest.getSql());
+            SqlLiteStatementVisitor visitor = new SqlLiteStatementVisitor(db, master);
+            stmt.accept(visitor);
+            return visitor.getResult();
+        } catch (JSQLParserException e) {
+            logger.error("Sql parsing error: {} - {}", e.getMessage(), e.getStackTrace());
+            return new ExecuteSQLOnNodeResponse("", ErrorEnum.SQL_PARSING_ERROR);
         }
-
-        logger.debug("I'm sending executeSQLOnNodeResponse..");
-        return new ExecuteSQLOnNodeResponse(result, ErrorEnum.NO_ERROR);
     }
 
     @Override
@@ -115,10 +112,19 @@ public class Node extends UnicastRemoteObject
     @Override
     public InsertDataResponse insertData(InsertDataRequest insertDataRequest)
             throws RemoteException {
-        logger.debug("I'm insert {"
-                + Helper.ArrayToString(insertDataRequest.getData())
-                + "} to table " + insertDataRequest.getTable());
-        return new InsertDataResponse(ErrorEnum.NO_ERROR);
+        logger.info("Performing insert: {}", insertDataRequest.getInsertSql());
+
+        try (SqLiteDb db = new SqLiteDb()) {
+            Integer rowsAffected = db.ExecuteQuery(insertDataRequest.getInsertSql());
+            String response = rowsAffected.toString() + " rows affected";
+            return new InsertDataResponse(ErrorEnum.NO_ERROR, response);
+        } catch (SQLException e) {
+            logger.error("Error executing sql query: {} error: {} stack: {}",
+                    insertDataRequest.getInsertSql(),
+                    e.getMessage(),
+                    e.getStackTrace());
+            return new InsertDataResponse(ErrorEnum.ANOTHER_ERROR, e.getMessage());
+        }
     }
 
     @Override

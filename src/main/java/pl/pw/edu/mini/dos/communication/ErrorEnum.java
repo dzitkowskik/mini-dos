@@ -8,7 +8,8 @@ public enum ErrorEnum {
     DENIAL_OF_PERMITS("No permissions to call remote method"),
     REMOTE_EXCEPTION("Exception while remote method was being executed"),
     INCORRECT_NAME("The name has no associated binding"),
-    ANOTHER_ERROR("Error");
+    ANOTHER_ERROR("Error"),
+    SQL_PARSING_ERROR("Sql cannot be parsed");
 
     private final String description;
 

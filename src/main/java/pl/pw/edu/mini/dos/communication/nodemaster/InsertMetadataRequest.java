@@ -1,16 +1,15 @@
 package pl.pw.edu.mini.dos.communication.nodemaster;
 
 import java.io.Serializable;
-import java.util.List;
 
 public class InsertMetadataRequest implements Serializable {
-    private List<String> tables;
+    private String table;
 
-    public InsertMetadataRequest(List<String> tables) {
-        this.tables = tables;
+    public InsertMetadataRequest(String table) {
+        this.table = table;
     }
 
-    public List<String> getTables() {
-        return tables;
+    public String getTables() {
+        return table;
     }
 }

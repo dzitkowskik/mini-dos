@@ -33,7 +33,7 @@ public class Master
     private final List<Node>  nodes;
 
     public Master() throws RemoteException {
-        this("0.0.0.0", 1099);
+        this("127.0.0.1", 1099);
     }
 
     public Master(String host, int port) throws RemoteException {
@@ -148,17 +148,9 @@ public class Master
     public ExecuteSQLResponse executeSQL(ExecuteSQLRequest executeSQLRequest) throws RemoteException {
         String query = executeSQLRequest.getSql();
         MasterNodeInterface node = nodes.get(selectNode()).getInterface();
-
         ExecuteSQLOnNodeResponse result = node.executeSQLOnNode(
                 new ExecuteSQLOnNodeRequest(query));
-
-        ExecuteSQLResponse response;
-        if(result.getError().equals(ErrorEnum.NO_ERROR)){
-            response = new ExecuteSQLResponse(result.getResult());
-        } else {
-            response = new ExecuteSQLResponse(result.getError().toString());
-        }
-        return response;
+        return new ExecuteSQLResponse(result);
     }
 
     /**
