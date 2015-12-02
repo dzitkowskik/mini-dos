@@ -5,7 +5,7 @@ import java.rmi.RemoteException;
 
 public interface NodeNodeInterface extends Remote {
     /**
-     * Execute insert query on another Node.
+     * Execute insert query on another RegisteredNode.
      * @param insertDataRequest
      * Data for executing request.
      * @return
@@ -14,7 +14,7 @@ public interface NodeNodeInterface extends Remote {
     InsertDataResponse insertData(InsertDataRequest insertDataRequest)
             throws RemoteException;
     /**
-     * Execute select query on another Node.
+     * Execute select query on another RegisteredNode.
      * @param selectDataRequest
      * Data for executing request.
      * @return
@@ -23,7 +23,7 @@ public interface NodeNodeInterface extends Remote {
     SelectDataResponse selectMetadata(SelectDataRequest selectDataRequest)
             throws RemoteException;
     /**
-     * Execute update query on another Node.
+     * Execute update query on another RegisteredNode.
      * @param updateDataRequest
      * Data for executing request.
      * @return
@@ -32,7 +32,7 @@ public interface NodeNodeInterface extends Remote {
     UpdateDataResponse updateMetadata(UpdateDataRequest updateDataRequest)
             throws RemoteException;
     /**
-     * Execute delete query on another Node.
+     * Execute delete query on another RegisteredNode.
      * @param deleteDataRequest
      * Data for executing request.
      * @return
@@ -41,7 +41,7 @@ public interface NodeNodeInterface extends Remote {
     DeleteDataResponse deleteMetadata(DeleteDataRequest deleteDataRequest)
             throws RemoteException;
     /**
-     * Manage tables on another Node.
+     * Manage tables on another RegisteredNode.
      * @param tableDataRequest
      * Data for executing request.
      * @return

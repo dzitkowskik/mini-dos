@@ -14,7 +14,7 @@ import pl.pw.edu.mini.dos.communication.masternode.MasterNodeInterface;
 import pl.pw.edu.mini.dos.communication.nodemaster.*;
 import pl.pw.edu.mini.dos.communication.nodenode.NodeNodeInterface;
 import pl.pw.edu.mini.dos.master.rmi.RMIServer;
-import pl.pw.edu.mini.dos.master.node.Node;
+import pl.pw.edu.mini.dos.master.node.RegisteredNode;
 
 import java.io.Serializable;
 import java.rmi.RemoteException;
@@ -30,30 +30,32 @@ public class Master
 
     private static final Logger logger = LoggerFactory.getLogger(Master.class);
     private RMIServer server;
-    private final List<Node>  nodes;
+    private final List<RegisteredNode> registeredNodes;
 
     public Master() throws RemoteException {
         this("127.0.0.1", 1099);
     }
 
     public Master(String host, int port) throws RemoteException {
-        nodes = new ArrayList<>();
+        registeredNodes = new ArrayList<>();
         server = new RMIServer(host, port);
         server.startService(Services.MASTER, this);
         logger.info("Master listening at (" + host + ":" + port + ")");
     }
 
     /**
-     * @param args = {"localhost", "1099"}
+     * @param args = [ipAddress, port]
      */
     public static void main(String[] args) throws RemoteException {
         Master master;
-        if(args.length == 2)
+        if(args.length == 2){
             master = new Master(args[0], Integer.valueOf(args[1]));
-        else master = new Master();
-        
+        } else {
+            master = new Master();
+        }
+
         Scanner scanner = new Scanner (System.in);
-        System.out.println("*Enter 'q' to stop master or 'd' to show the data of nodes:");
+        System.out.println("*Enter 'q' to stop master or 'd' to show the data of registeredNodes:");
         while(scanner.hasNext()) {
             String text = scanner.next();
             if(text.equals("q")) {
@@ -67,15 +69,15 @@ public class Master
         logger.info("Master stopped!");
     }
 
-    public List<Node> getNodes() {
-        return nodes;
+    public List<RegisteredNode> getRegisteredNodes() {
+        return registeredNodes;
     }
 
     public void showNodesData(){
-        for (int i = 0; i < nodes.size(); i++) {
+        for (int i = 0; i < registeredNodes.size(); i++) {
             try {
-                System.out.println("Data from Node " + i + ": "
-                        + nodes.get(i).getInterface().executeSQLOnNode(
+                System.out.println("Data from RegisteredNode " + i + ": "
+                        + registeredNodes.get(i).getInterface().executeSQLOnNode(
                         new ExecuteSQLOnNodeRequest("SELECT * FROM *;")
                 ).getResult());
             } catch (RemoteException e) {
@@ -89,21 +91,21 @@ public class Master
 
     @Override
     public RegisterResponse register(RegisterRequest registerRequest) throws RemoteException {
-        ErrorEnum ok;
+//        ErrorEnum ok;
 
         // Create node
-        Node newNode  = new Node(registerRequest.getNode());
+        RegisteredNode newRegisteredNode = new RegisteredNode(registerRequest.getNode());
 
         // Check status (uncomment when it's implemented in node)
-//        ok = newNode.checkStatus();
+//        ok = newRegisteredNode.checkStatus();
 //        if(!ok.equals(ErrorEnum.NO_ERROR)){
 //            return new RegisterResponse(ok);
 //        }
 
-        synchronized (nodes) {
-            nodes.add(newNode);
+        synchronized (registeredNodes) {
+            registeredNodes.add(newRegisteredNode);
         }
-        logger.info("Node added.");
+        logger.info("RegisteredNode added.");
 
         return new RegisterResponse(ErrorEnum.NO_ERROR);
     }
@@ -111,9 +113,9 @@ public class Master
     @Override
     public InsertMetadataResponse insertMetadata(InsertMetadataRequest insertMetadataRequest)
             throws RemoteException {
-        List<NodeNodeInterface> nodes = new ArrayList<>(this.getNodes().size());
-        // Insert in all nodes (example)
-        for(Node n : this.getNodes()){
+        List<NodeNodeInterface> nodes = new ArrayList<>(this.getRegisteredNodes().size());
+        // Insert in all registeredNodes (example)
+        for(RegisteredNode n : this.getRegisteredNodes()){
             nodes.add((NodeNodeInterface) n.getInterface());
         }
 
@@ -147,7 +149,7 @@ public class Master
     @Override
     public ExecuteSQLResponse executeSQL(ExecuteSQLRequest executeSQLRequest) throws RemoteException {
         String query = executeSQLRequest.getSql();
-        MasterNodeInterface node = nodes.get(selectNode()).getInterface();
+        MasterNodeInterface node = registeredNodes.get(selectNode()).getInterface();
         ExecuteSQLOnNodeResponse result = node.executeSQLOnNode(
                 new ExecuteSQLOnNodeRequest(query));
         return new ExecuteSQLResponse(result);
@@ -159,6 +161,6 @@ public class Master
      */
     private synchronized int selectNode(){
         Random random = new Random();
-        return random.nextInt(nodes.size());
+        return random.nextInt(registeredNodes.size());
     }
 }

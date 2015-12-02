@@ -5,7 +5,7 @@ import java.rmi.RemoteException;
 
 public interface MasterNodeInterface extends Remote {
     /**
-     * Execute SQL query on Node as a Master.
+     * Execute SQL query on RegisteredNode as a Master.
      *
      * @param executeSQLOnNodeRequest Data for executing query.
      * @return Result of query.
@@ -14,10 +14,10 @@ public interface MasterNodeInterface extends Remote {
             throws RemoteException;
 
     /**
-     * Send request for status on Node. Mainly check is alive.
+     * Send request for status on RegisteredNode. Mainly check is alive.
      *
      * @param checkStatusRequest Now this is empty class.
-     * @return Status of Node.
+     * @return Status of RegisteredNode.
      */
     CheckStatusResponse checkStatus(CheckStatusRequest checkStatusRequest)
             throws RemoteException;

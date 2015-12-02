@@ -63,7 +63,7 @@ public class Node extends UnicastRemoteObject
         }
 
         node.stopNode();
-        logger.info("Node stopped!");
+        logger.info("RegisteredNode stopped!");
     }
 
     public void stopNode() {

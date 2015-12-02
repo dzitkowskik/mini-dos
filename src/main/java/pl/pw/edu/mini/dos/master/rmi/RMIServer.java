@@ -4,8 +4,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import pl.pw.edu.mini.dos.communication.ErrorHandler;
 
-import java.io.File;
-import java.net.URISyntaxException;
 import java.rmi.NotBoundException;
 import java.rmi.Remote;
 import java.rmi.RemoteException;
@@ -37,8 +35,7 @@ public class RMIServer {
 
     // TODO: This should be common to all modules, so move it to communication?
     private void setPolicyPath() {
-        String pathToPolicy = null;
-        pathToPolicy = this.getClass().getClassLoader().getResource("client.policy").getFile();
+        String pathToPolicy = this.getClass().getClassLoader().getResource("client.policy").getFile();
         if (pathToPolicy != null) {
             System.setProperty("java.security.policy", pathToPolicy);
         }
