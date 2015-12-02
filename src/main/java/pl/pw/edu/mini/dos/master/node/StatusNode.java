@@ -5,14 +5,14 @@ package pl.pw.edu.mini.dos.master.node;
  */
 public class StatusNode {
     private boolean running;
-    private float loadAverage;
-    private float cpu;
-    private float memory;
+    private double loadAverage;
+    private long dbSize;
+    private long memory;
 
-    public StatusNode(float loadAverage, float cpu, float memory) {
+    public StatusNode(double loadAverage, long dbSize, long memory) {
         this.running = true;
         this.loadAverage = loadAverage;
-        this.cpu = cpu;
+        this.dbSize = dbSize;
         this.memory = memory;
     }
 
@@ -20,10 +20,10 @@ public class StatusNode {
         this.running = false;
     }
 
-    public void setStatus(float loadAverage, float cpu, float memory) {
+    public void setStatus(double loadAverage, long dbSize, long memory) {
         this.running = true;
         this.loadAverage = loadAverage;
-        this.cpu = cpu;
+        this.dbSize = dbSize;
         this.memory = memory;
     }
 
@@ -31,15 +31,15 @@ public class StatusNode {
         return this.running;
     }
 
-    public float getLoadAverage() {
+    public double getLoadAverage() {
         return loadAverage;
     }
 
-    public float getCpu() {
-        return cpu;
+    public long getDbSize() {
+        return dbSize;
     }
 
-    public float getMemory() {
+    public long getMemory() {
         return memory;
     }
 }
