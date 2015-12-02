@@ -3,9 +3,10 @@ package pl.pw.edu.mini.dos;
 import java.util.Iterator;
 import java.util.Map;
 
-/**
- * Created by asd on 11/21/15.
+/*
+ * Created by Karol Dzitkowski on 11/21/15.
  */
+
 public class Helper {
     public static <T> String ArrayToString(T[] array, String splitter) {
         if (array.length == 0) return "";

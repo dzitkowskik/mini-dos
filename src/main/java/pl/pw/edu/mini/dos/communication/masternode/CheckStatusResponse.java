@@ -3,25 +3,26 @@ package pl.pw.edu.mini.dos.communication.masternode;
 import java.io.Serializable;
 
 public class CheckStatusResponse implements Serializable{
-    float loadAverage;
-    float cpu;
-    float memory;
+    double loadAverage;
+    long dbSize;
+    long memory;
 
-    public CheckStatusResponse(float loadAverage, float cpu, float memory) {
+    public CheckStatusResponse(
+            double loadAverage, long dbSize, long memory) {
         this.loadAverage = loadAverage;
-        this.cpu = cpu;
+        this.dbSize = dbSize;
         this.memory = memory;
     }
 
-    public float getLoadAverage() {
+    public double getLoadAverage() {
         return loadAverage;
     }
 
-    public float getCpu() {
-        return cpu;
+    public long getDbSize() {
+        return dbSize;
     }
 
-    public float getMemory() {
+    public long getMemory() {
         return memory;
     }
 }

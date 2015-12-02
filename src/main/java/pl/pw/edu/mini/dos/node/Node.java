@@ -3,17 +3,14 @@ package pl.pw.edu.mini.dos.node;
 import net.sf.jsqlparser.JSQLParserException;
 import net.sf.jsqlparser.parser.CCJSqlParserUtil;
 import net.sf.jsqlparser.statement.Statement;
-import net.sf.jsqlparser.statement.StatementVisitor;
-import net.sf.jsqlparser.statement.Statements;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import pl.pw.edu.mini.dos.Helper;
 import pl.pw.edu.mini.dos.communication.ErrorEnum;
 import pl.pw.edu.mini.dos.communication.ErrorHandler;
-import pl.pw.edu.mini.dos.communication.Record;
 import pl.pw.edu.mini.dos.communication.Services;
 import pl.pw.edu.mini.dos.communication.masternode.*;
-import pl.pw.edu.mini.dos.communication.nodemaster.*;
+import pl.pw.edu.mini.dos.communication.nodemaster.NodeMasterInterface;
+import pl.pw.edu.mini.dos.communication.nodemaster.RegisterRequest;
 import pl.pw.edu.mini.dos.communication.nodenode.*;
 
 import java.io.Serializable;
@@ -21,9 +18,6 @@ import java.net.URISyntaxException;
 import java.rmi.RemoteException;
 import java.rmi.server.UnicastRemoteObject;
 import java.sql.SQLException;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
 import java.util.Scanner;
 
 public class Node extends UnicastRemoteObject
@@ -31,7 +25,6 @@ public class Node extends UnicastRemoteObject
     /** Logger */
     private static final Logger logger = LoggerFactory.getLogger(Node.class);
 
-    private String data = "new";
     private NodeMasterInterface master;
 
     public Node() throws RemoteException {
@@ -66,9 +59,6 @@ public class Node extends UnicastRemoteObject
             String text = scanner.next();
             if(text.equals("q")) {
                 break;
-            } else if(text.equals("n")) {
-                node.setData(Double.toString(Math.random()));
-                logger.info("New data generated: " + node.getData());
             }
         }
 
@@ -76,16 +66,9 @@ public class Node extends UnicastRemoteObject
         logger.info("Node stopped!");
     }
 
-    public void setData(String data) {
-        this.data = data;
-    }
-
-    public String getData() {
-        return data;
-    }
-
     public void stopNode() {
         master = null;
+        // TODO: REALLY??!!
         System.exit(0); // Unfortunately, this is only way, to close RMI...
     }
 
@@ -105,7 +88,11 @@ public class Node extends UnicastRemoteObject
 
     @Override
     public CheckStatusResponse checkStatus(CheckStatusRequest checkStatusRequest) throws RemoteException {
-        return null;
+        Stats stats = new Stats();
+        return new CheckStatusResponse(
+                stats.getSystemLoad(),
+                stats.getDbSize(),
+                stats.getFreeMemory());
     }
 
 

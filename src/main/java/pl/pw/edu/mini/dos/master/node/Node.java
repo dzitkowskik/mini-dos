@@ -40,10 +40,13 @@ public class Node {
     public ErrorEnum checkStatus() {
         try {
             CheckStatusResponse status = node.checkStatus(new CheckStatusRequest());
-            this.statusNode.setStatus(status.getLoadAverage(), status.getCpu(),
+            this.statusNode.setStatus(
+                    status.getLoadAverage(),
+                    status.getDbSize(),
                     status.getMemory());
+
         } catch (RemoteException e) {
-            logger.warn("Node down");
+            logger.warn("Node is down");
             this.statusNode.setDown();
             return ErrorEnum.HOST_IS_UNAVAILABLE;
         }
