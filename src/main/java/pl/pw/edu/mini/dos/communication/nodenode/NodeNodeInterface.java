@@ -5,48 +5,26 @@ import java.rmi.RemoteException;
 
 public interface NodeNodeInterface extends Remote {
     /**
-     * Execute insert query on another Node.
-     * @param insertDataRequest
-     * Data for executing request.
+     * Execute sql query on another Node using 2 phase commit.
+     * Asks another note to execute sql on his sqlite db
+     * @param request
+     * Data for executing request (sql and taskId).
      * @return
      * If executing query was successful.
      */
-    InsertDataResponse insertData(InsertDataRequest insertDataRequest)
-            throws RemoteException;
+    ExecuteSqlResponse executeSql(ExecuteSqlRequest request)
+        throws RemoteException;
+
     /**
-     * Execute select query on another Node.
-     * @param selectDataRequest
-     * Data for executing request.
+     * Asks node who commissioned a task (executeSql) if it should commit
+     * sending him result of his query. IF all nodes involved in this
+     * "transaction" succeeded then he will get "COMMIT" in return, else "ABORT"
+     * It is needed for implementing two phase commit
+     * @param request
+     * Contains info about taskId and is query succeeded
      * @return
-     * If executing query was successful.
+     * If node should commit or rollback his changes
      */
-    SelectDataResponse selectMetadata(SelectDataRequest selectDataRequest)
-            throws RemoteException;
-    /**
-     * Execute update query on another Node.
-     * @param updateDataRequest
-     * Data for executing request.
-     * @return
-     * If executing query was successful.
-     */
-    UpdateDataResponse updateMetadata(UpdateDataRequest updateDataRequest)
-            throws RemoteException;
-    /**
-     * Execute delete query on another Node.
-     * @param deleteDataRequest
-     * Data for executing request.
-     * @return
-     * If executing query was successful.
-     */
-    DeleteDataResponse deleteMetadata(DeleteDataRequest deleteDataRequest)
-            throws RemoteException;
-    /**
-     * Manage tables on another Node.
-     * @param tableDataRequest
-     * Data for executing request.
-     * @return
-     * If executing query was successful.
-     */
-    TableDataResponse tableMetadata(TableDataRequest tableDataRequest)
+    AskToCommitResponse askToCommit(AskToCommitRequest request)
             throws RemoteException;
 }

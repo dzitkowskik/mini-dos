@@ -4,6 +4,8 @@ import java.io.Serializable;
 
 public class ExecuteSQLOnNodeRequest implements Serializable {
     private String sql;
+    // TODO: Implement task id
+    private Integer taskId = 5;
 
     public ExecuteSQLOnNodeRequest(String sql) {
         this.sql = sql;
@@ -12,4 +14,5 @@ public class ExecuteSQLOnNodeRequest implements Serializable {
     public String getSql() {
         return sql;
     }
+    public Integer getTaskId() { return taskId; }
 }
