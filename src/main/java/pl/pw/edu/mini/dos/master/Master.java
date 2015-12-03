@@ -28,7 +28,7 @@ public class Master
         implements NodeMasterInterface, ClientMasterInterface, Serializable {
 
     private static final Logger logger = LoggerFactory.getLogger(Master.class);
-    private static final Properties config = Config.getConfig();
+    private static final Config config = Config.getConfig();
     private RMIServer server;
     private final List<RegisteredNode> registeredNodes;
 

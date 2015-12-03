@@ -5,7 +5,6 @@ import org.slf4j.LoggerFactory;
 import pl.pw.edu.mini.dos.Config;
 
 import java.sql.*;
-import java.util.Properties;
 
 /**
  * Created by Karol Dzitkowski on 02.12.2015.
@@ -13,7 +12,7 @@ import java.util.Properties;
 public class SqLiteDb implements AutoCloseable {
 
     private static final Logger logger = LoggerFactory.getLogger(SqLiteDb.class);
-    private static final Properties config = Config.getConfig();
+    private static final Config config = Config.getConfig();
     private Connection connection;
 
     public SqLiteDb() {
@@ -39,13 +38,13 @@ public class SqLiteDb implements AutoCloseable {
         // connect to db
         try {
             this.connection = DriverManager.getConnection("jdbc:sqlite:" + pathToDBFile);
-            this.connection.setAutoCommit(true);
+            this.connection.setAutoCommit(false);
         } catch (SQLException e) {
             logger.error("Cannot connect to sqlite database - {}", e.getMessage());
         }
     }
 
-    public int executeQuery(String query) throws SQLException {
+    public int ExecuteQuery(String query) throws SQLException {
         Statement stmt = null;
         try {
             stmt = this.connection.createStatement();
@@ -54,6 +53,18 @@ public class SqLiteDb implements AutoCloseable {
             if (stmt != null) {
                 stmt.close();
             }
+        }
+    }
+
+    public void commit() throws SQLException {
+        this.connection.commit();
+    }
+
+    public void rollback() {
+        try {
+            this.connection.rollback();
+        } catch (SQLException e) {
+            logger.error("Error while trying to rollback: {}", e.getMessage());
         }
     }
 

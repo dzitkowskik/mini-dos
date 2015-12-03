@@ -1,10 +1,12 @@
 package pl.pw.edu.mini.dos.node;
 
+import javafx.util.Pair;
 import net.sf.jsqlparser.JSQLParserException;
 import net.sf.jsqlparser.parser.CCJSqlParserUtil;
 import net.sf.jsqlparser.statement.Statement;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import pl.pw.edu.mini.dos.Config;
 import pl.pw.edu.mini.dos.communication.ErrorEnum;
 import pl.pw.edu.mini.dos.communication.ErrorHandler;
 import pl.pw.edu.mini.dos.communication.Services;
@@ -17,13 +19,15 @@ import java.io.Serializable;
 import java.net.URISyntaxException;
 import java.rmi.RemoteException;
 import java.rmi.server.UnicastRemoteObject;
-import java.sql.SQLException;
 import java.util.Scanner;
 
 public class Node extends UnicastRemoteObject
         implements MasterNodeInterface, NodeNodeInterface, Serializable {
 
     private static final Logger logger = LoggerFactory.getLogger(Node.class);
+    private static final Config config = Config.getConfig();
+
+    private WorkQueue workQueue;
     private NodeMasterInterface master;
 
     public Node() throws RemoteException {
@@ -33,6 +37,11 @@ public class Node extends UnicastRemoteObject
     public Node(String masterHost, String masterPort, String myIp) throws RemoteException {
         System.setProperty("java.rmi.server.hostname", myIp);   // TODO: It's necessary?
 
+        // CREATE THREAD POOL
+        int workerThreads = Integer.parseInt(config.getProperty("nodeWorkerThreads"));
+        workQueue = new WorkQueue(workerThreads);
+
+        // RUN SERVICES
         RMIClient client = new RMIClient(masterHost, Integer.parseInt(masterPort));
         try {
             master = (NodeMasterInterface) client.getService(Services.MASTER);
@@ -43,7 +52,7 @@ public class Node extends UnicastRemoteObject
     }
 
     /**
-     * @param args = [masterIpAddress, port, IpAddress]
+     * @param args = {"localhost", "1099", "localhost"}
      */
     public static void main(String[] args) throws URISyntaxException, RemoteException {
         Node node;
@@ -53,33 +62,31 @@ public class Node extends UnicastRemoteObject
             node = new Node();
         }
         Scanner scanner = new Scanner (System.in);
-        System.out.println("*Enter 'q' to stop node:");
+        System.out.println("*Enter 'q' to stop node or 'n' to generate new data.");
         while(scanner.hasNext()) {
             String text = scanner.next();
             if(text.equals("q")) {
-                scanner.close();
                 break;
             }
         }
 
         node.stopNode();
-        logger.info("RegisteredNode stopped!");
+        logger.info("Node stopped!");
     }
 
     public void stopNode() {
         master = null;
-        // TODO: REALLY??!!
+        // TODO: REALLY??!! THIS RMI SUCKS!!
         System.exit(0); // Unfortunately, this is only way, to close RMI...
     }
 
     @Override
     public ExecuteSQLOnNodeResponse executeSQLOnNode(ExecuteSQLOnNodeRequest executeSQLOnNodeRequest)
             throws RemoteException {
+        Integer taskId = executeSQLOnNodeRequest.getTaskId();
         try (SqLiteDb db = new SqLiteDb()) {
-            // Parse query
             Statement stmt = CCJSqlParserUtil.parse(executeSQLOnNodeRequest.getSql());
-            // Execute query
-            SqlLiteStatementVisitor visitor = new SqlLiteStatementVisitor(db, master);
+            SqlLiteStatementVisitor visitor = new SqlLiteStatementVisitor(db, master, this, taskId);
             stmt.accept(visitor);
             return visitor.getResult();
         } catch (JSQLParserException e) {
@@ -90,52 +97,42 @@ public class Node extends UnicastRemoteObject
 
     @Override
     public CheckStatusResponse checkStatus(CheckStatusRequest checkStatusRequest) throws RemoteException {
+        Stats stats = new Stats();
         return new CheckStatusResponse(
-                Stats.getSystemLoad(),
-                Stats.getDbSize(),
-                Stats.getFreeMemory());
+                stats.getSystemLoad(),
+                stats.getDbSize(),
+                stats.getFreeMemory());
     }
 
+    @Override
+    public ExecuteSqlResponse executeSql(ExecuteSqlRequest request) throws RemoteException {
+        logger.info("Got sql to execute: {}", request.sql);
+
+        // Create and shedule sqlite job to execute
+        SQLiteJob job = new SQLiteJob(request);
+        workQueue.execute(job);
+
+        return new ExecuteSqlResponse(ErrorEnum.NO_ERROR, "");
+    }
 
     @Override
-    public InsertDataResponse insertData(InsertDataRequest insertDataRequest)
-            throws RemoteException {
-        logger.info("Performing insert: {}", insertDataRequest.getInsertSql());
+    public AskToCommitResponse askToCommit(AskToCommitRequest request) throws RemoteException {
+        logger.info("askToCommit start");
 
-        try (SqLiteDb db = new SqLiteDb()) {
-            Integer rowsAffected = db.executeQuery(insertDataRequest.getInsertSql());
-            String response = rowsAffected.toString() + " rows affected";
-            return new InsertDataResponse(response, ErrorEnum.NO_ERROR);
-        } catch (SQLException e) {
-            logger.error("Error executing sql query: {} error: {} stack: {}",
-                    insertDataRequest.getInsertSql(),
-                    e.getMessage(),
-                    e.getStackTrace());
-            return new InsertDataResponse(e.getMessage(), ErrorEnum.ANOTHER_ERROR);
+        TaskCompletion.getInstance().update(
+                request.taskId,
+                request.errorType,
+                request.errorMessage,
+                request.queryResult);
+
+        Pair<ErrorEnum, String> result =
+            TaskCompletion.getInstance().waitForCompletion(request.taskId);
+
+        logger.info("askToCommit end");
+        if(result.getKey() == ErrorEnum.NO_ERROR) {
+            return new AskToCommitResponse(true);
+        } else {
+            return new AskToCommitResponse(false);
         }
-    }
-
-    @Override
-    public SelectDataResponse selectMetadata(SelectDataRequest selectDataRequest)
-            throws RemoteException {
-        return null;
-    }
-
-    @Override
-    public UpdateDataResponse updateMetadata(UpdateDataRequest updateDataRequest)
-            throws RemoteException {
-        return null;
-    }
-
-    @Override
-    public DeleteDataResponse deleteMetadata(DeleteDataRequest deleteDataRequest)
-            throws RemoteException {
-        return null;
-    }
-
-    @Override
-    public TableDataResponse tableMetadata(TableDataRequest tableDataRequest)
-            throws RemoteException {
-        return null;
     }
 }

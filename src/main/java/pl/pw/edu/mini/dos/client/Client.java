@@ -68,7 +68,7 @@ public class Client {
         }
 
         if(response.getError() != ErrorEnum.NO_ERROR){
-            return "ERROR: " + response.getError();
+            return "ERROR: " + response.getError() + " - " + response.getResponse();
         }
         return response.getResponse();
     }
