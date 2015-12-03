@@ -9,16 +9,17 @@ import pl.pw.edu.mini.dos.communication.masternode.MasterNodeInterface;
 
 import java.rmi.RemoteException;
 
-public class Node {
+public class RegisteredNode {
 
-    private static final Logger logger = LoggerFactory.getLogger(Node.class);
+    private static final Logger logger = LoggerFactory.getLogger(RegisteredNode.class);
 
     private MasterNodeInterface node;
 
     private StatusNode statusNode;
 
-    public Node(MasterNodeInterface node) {
+    public RegisteredNode(MasterNodeInterface node) {
         this.node = node;
+        this.statusNode = new StatusNode();
     }
 
     public MasterNodeInterface getInterface() {
@@ -46,7 +47,8 @@ public class Node {
                     status.getMemory());
 
         } catch (RemoteException e) {
-            logger.warn("Node is down");
+            logger.warn("RegisteredNode is down");
+            logger.warn("E: " + e.getMessage());
             this.statusNode.setDown();
             return ErrorEnum.HOST_IS_UNAVAILABLE;
         }

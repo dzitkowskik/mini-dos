@@ -5,7 +5,7 @@ import java.rmi.RemoteException;
 
 public interface NodeMasterInterface extends Remote {
     /**
-     * Register Node on Master.
+     * Register RegisteredNode on Master.
      * @param registerRequest
      * Now is empty.
      * @return

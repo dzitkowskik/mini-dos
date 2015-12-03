@@ -9,14 +9,9 @@ public class ExecuteSQLResponse implements Serializable {
     private String response;
     private ErrorEnum errorEnum;
 
-    public ExecuteSQLResponse(ErrorEnum error, String response) {
-        this.errorEnum = error;
-        this.response = response;
-    }
-
     public ExecuteSQLResponse(ExecuteSQLOnNodeResponse response) {
-        this.errorEnum = response.getError();
         this.response = response.getResult();
+        this.errorEnum = response.getError();
     }
 
     public String getResponse() {

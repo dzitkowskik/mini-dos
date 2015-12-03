@@ -1,5 +1,7 @@
 package pl.pw.edu.mini.dos.communication;
 
+import java.util.Objects;
+
 public enum ErrorEnum {
     NO_ERROR("No errors"),
     HOST_IS_UNAVAILABLE("The host is unavailable"),
@@ -8,7 +10,8 @@ public enum ErrorEnum {
     INCORRECT_NAME("The name has no associated binding"),
     ANOTHER_ERROR("Error"),
     SQL_EXECUTION_ERROR("Error while executing sql query"),
-    SQL_PARSING_ERROR("Sql cannot be parsed");
+    SQL_PARSING_ERROR("Sql cannot be parsed"),
+    TABLE_ALREADY_EXISTS("The table cannot be created because it already exists");
 
     private final String description;
 

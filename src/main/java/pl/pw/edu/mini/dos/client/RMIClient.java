@@ -4,9 +4,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import pl.pw.edu.mini.dos.communication.ErrorHandler;
 
-import java.io.File;
 import java.io.Serializable;
-import java.net.URISyntaxException;
 import java.rmi.Remote;
 import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
@@ -15,7 +13,9 @@ import java.security.AccessControlException;
 import java.security.AllPermission;
 
 public class RMIClient implements Serializable {
-    /** Logger */
+    /**
+     * Logger
+     */
     private static final Logger logger = LoggerFactory.getLogger(RMIClient.class);
 
     private Registry registry;
@@ -36,8 +36,7 @@ public class RMIClient implements Serializable {
     }
 
     private void setPolicyPath() {
-        String pathToPolicy = null;
-        pathToPolicy = this.getClass().getClassLoader().getResource("client.policy").getFile();
+        String pathToPolicy = this.getClass().getClassLoader().getResource("client.policy").getFile();
         if (pathToPolicy != null) {
             System.setProperty("java.security.policy", pathToPolicy);
         }
