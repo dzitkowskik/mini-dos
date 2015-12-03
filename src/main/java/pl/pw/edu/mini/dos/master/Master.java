@@ -2,6 +2,7 @@ package pl.pw.edu.mini.dos.master;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import pl.pw.edu.mini.dos.Config;
 import pl.pw.edu.mini.dos.communication.ErrorEnum;
 import pl.pw.edu.mini.dos.communication.ErrorHandler;
 import pl.pw.edu.mini.dos.communication.Services;
@@ -13,22 +14,21 @@ import pl.pw.edu.mini.dos.communication.masternode.ExecuteSQLOnNodeResponse;
 import pl.pw.edu.mini.dos.communication.masternode.MasterNodeInterface;
 import pl.pw.edu.mini.dos.communication.nodemaster.*;
 import pl.pw.edu.mini.dos.communication.nodenode.NodeNodeInterface;
+import pl.pw.edu.mini.dos.master.node.PingNodes;
 import pl.pw.edu.mini.dos.master.rmi.RMIServer;
 import pl.pw.edu.mini.dos.master.node.RegisteredNode;
 
 import java.io.Serializable;
 import java.rmi.RemoteException;
 import java.rmi.server.UnicastRemoteObject;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Random;
-import java.util.Scanner;
+import java.util.*;
 
 public class Master
         extends UnicastRemoteObject
         implements NodeMasterInterface, ClientMasterInterface, Serializable {
 
     private static final Logger logger = LoggerFactory.getLogger(Master.class);
+    private static final Properties config = Config.getConfig();
     private RMIServer server;
     private final List<RegisteredNode> registeredNodes;
 
@@ -41,6 +41,10 @@ public class Master
         server = new RMIServer(host, port);
         server.startService(Services.MASTER, this);
         logger.info("Master listening at (" + host + ":" + port + ")");
+        // Ping nodes periodically
+        long spanTime = Long.parseLong(config.getProperty("spanPingingTime"));
+        Thread thread = new Thread(new PingNodes(registeredNodes, spanTime));
+        thread.start();
     }
 
     /**

@@ -5,6 +5,7 @@ import java.util.Objects;
 public enum ErrorEnum {
     NO_ERROR("No errors"),
     HOST_IS_UNAVAILABLE("The host is unavailable"),
+    TIMEOUT_EXPIRED("The host didn't answer in time"),
     DENIAL_OF_PERMITS("No permissions to call remote method"),
     REMOTE_EXCEPTION("Exception while remote method was being executed"),
     INCORRECT_NAME("The name has no associated binding"),
