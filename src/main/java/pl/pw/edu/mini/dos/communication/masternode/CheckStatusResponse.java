@@ -2,10 +2,10 @@ package pl.pw.edu.mini.dos.communication.masternode;
 
 import java.io.Serializable;
 
-public class CheckStatusResponse implements Serializable{
-    double loadAverage;
-    long dbSize;
-    long memory;
+public class CheckStatusResponse implements Serializable {
+    private double loadAverage;
+    private long dbSize;
+    private long memory;
 
     public CheckStatusResponse(
             double loadAverage, long dbSize, long memory) {

@@ -2,23 +2,19 @@ package pl.pw.edu.mini.dos.client;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import pl.pw.edu.mini.dos.communication.ErrorHandler;
+import pl.pw.edu.mini.dos.communication.ErrorEnum;
 import pl.pw.edu.mini.dos.communication.Services;
 import pl.pw.edu.mini.dos.communication.clientmaster.ClientMasterInterface;
 import pl.pw.edu.mini.dos.communication.clientmaster.ExecuteSQLRequest;
 import pl.pw.edu.mini.dos.communication.clientmaster.ExecuteSQLResponse;
-import pl.pw.edu.mini.dos.communication.nodemaster.RegisterRequest;
 
 import java.net.URISyntaxException;
 import java.rmi.RemoteException;
 import java.util.Scanner;
 
 public class Client {
-    /**
-     * Logger
-     */
-    private static final Logger logger = LoggerFactory.getLogger(Client.class);
 
+    private static final Logger logger = LoggerFactory.getLogger(Client.class);
     private ClientMasterInterface master;
 
     public Client() throws RemoteException {
@@ -33,21 +29,24 @@ public class Client {
     }
 
     /**
-     * @param args = {"localhost", "1099", "localhost"}
+     * @param args = [masterIpAddress, port, IpAddress]
      */
     public static void main(String[] args) throws URISyntaxException, RemoteException {
         Client client;
-        if(args.length == 3)
+        if (args.length == 3) {
             client = new Client(args[0], args[1], args[2]);
-        else client = new Client();
+        } else {
+            client = new Client();
+        }
 
         Scanner scanner = new Scanner(System.in);
         System.out.println("Type the query or enter 'q' to exit:");
-        while(scanner.hasNext()) {
+        while (scanner.hasNext()) {
             String command = scanner.nextLine();
             logger.debug("Command: " + command);
 
-            if(command.equals("q")) {
+            if (command.equals("q")) {
+                scanner.close();
                 break;
             }
 
@@ -59,13 +58,17 @@ public class Client {
         logger.info("Client stopped!");
     }
 
-    public String executeSQL(String sql){
+    public String executeSQL(String sql) {
         ExecuteSQLResponse response;
 
         try {
             response = master.executeSQL(new ExecuteSQLRequest(sql));
         } catch (RemoteException e) {
             return "Error: " + e.getMessage();
+        }
+
+        if(response.getError() != ErrorEnum.NO_ERROR){
+            return "ERROR: " + response.getError() + " - " + response.getResponse();
         }
         return response.getResponse();
     }

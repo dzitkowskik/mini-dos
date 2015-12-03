@@ -7,17 +7,26 @@ import pl.pw.edu.mini.dos.Config;
 import java.sql.*;
 
 /**
- * Created by ghash on 02.12.2015.
+ * Created by Karol Dzitkowski on 02.12.2015.
  */
 public class SqLiteDb implements AutoCloseable {
 
     private static final Logger logger = LoggerFactory.getLogger(SqLiteDb.class);
     private static final Config config = Config.getConfig();
+    private Connection connection;
 
-    Connection connection;
+    public SqLiteDb() {
+        this(false);
+    }
 
-    public SqLiteDb()  {
-        String pathToDBFile = this.config.getProperty("nodeDatabasePath");
+    public SqLiteDb(boolean inMemory)  {
+        // choose type of db to open
+        String pathToDBFile;
+        if(inMemory) {
+            pathToDBFile = "memory:";
+        } else {
+            pathToDBFile = config.getProperty("nodeDatabasePath");
+        }
 
         // load the sqlite-JDBC driver using the current class loader
         try {
@@ -29,7 +38,7 @@ public class SqLiteDb implements AutoCloseable {
         // connect to db
         try {
             this.connection = DriverManager.getConnection("jdbc:sqlite:" + pathToDBFile);
-            this.connection.setAutoCommit(true);
+            this.connection.setAutoCommit(false);
         } catch (SQLException e) {
             logger.error("Cannot connect to sqlite database - {}", e.getMessage());
         }
@@ -44,6 +53,18 @@ public class SqLiteDb implements AutoCloseable {
             if (stmt != null) {
                 stmt.close();
             }
+        }
+    }
+
+    public void commit() throws SQLException {
+        this.connection.commit();
+    }
+
+    public void rollback() {
+        try {
+            this.connection.rollback();
+        } catch (SQLException e) {
+            logger.error("Error while trying to rollback: {}", e.getMessage());
         }
     }
 
