@@ -55,10 +55,11 @@ public class Master
         }
 
         Scanner scanner = new Scanner (System.in);
-        System.out.println("*Enter 'q' to stop master or 'd' to show the data of registeredNodes:");
+        System.out.println("*Enter 'q' to stop master or 'd' to show the data of nodes:");
         while(scanner.hasNext()) {
             String text = scanner.next();
             if(text.equals("q")) {
+                scanner.close();
                 break;
             } else if(text.equals("d")){
                 master.showNodesData();
@@ -91,21 +92,21 @@ public class Master
 
     @Override
     public RegisterResponse register(RegisterRequest registerRequest) throws RemoteException {
-//        ErrorEnum ok;
+        ErrorEnum ok;
 
         // Create node
         RegisteredNode newRegisteredNode = new RegisteredNode(registerRequest.getNode());
 
         // Check status (uncomment when it's implemented in node)
-//        ok = newRegisteredNode.checkStatus();
-//        if(!ok.equals(ErrorEnum.NO_ERROR)){
-//            return new RegisterResponse(ok);
-//        }
+        ok = newRegisteredNode.checkStatus();
+        if(!ok.equals(ErrorEnum.NO_ERROR)){
+            return new RegisterResponse(ok);
+        }
 
         synchronized (registeredNodes) {
             registeredNodes.add(newRegisteredNode);
         }
-        logger.info("RegisteredNode added.");
+        logger.info("Node registered.");
 
         return new RegisterResponse(ErrorEnum.NO_ERROR);
     }
@@ -119,7 +120,7 @@ public class Master
             nodes.add((NodeNodeInterface) n.getInterface());
         }
 
-        return new InsertMetadataResponse(nodes, ErrorEnum.NO_ERROR);
+        return new InsertMetadataResponse(nodes);
     }
 
     @Override
@@ -148,10 +149,9 @@ public class Master
 
     @Override
     public ExecuteSQLResponse executeSQL(ExecuteSQLRequest executeSQLRequest) throws RemoteException {
-        String query = executeSQLRequest.getSql();
         MasterNodeInterface node = registeredNodes.get(selectNode()).getInterface();
         ExecuteSQLOnNodeResponse result = node.executeSQLOnNode(
-                new ExecuteSQLOnNodeRequest(query));
+                new ExecuteSQLOnNodeRequest(executeSQLRequest.getSql()));
         return new ExecuteSQLResponse(result);
     }
 

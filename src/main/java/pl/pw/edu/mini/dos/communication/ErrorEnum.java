@@ -9,7 +9,8 @@ public enum ErrorEnum {
     REMOTE_EXCEPTION("Exception while remote method was being executed"),
     INCORRECT_NAME("The name has no associated binding"),
     ANOTHER_ERROR("Error"),
-    SQL_PARSING_ERROR("Sql cannot be parsed");
+    SQL_PARSING_ERROR("Sql cannot be parsed"),
+    TABLE_ALREADY_EXISTS("The table cannot be created because it already exists");
 
     private final String description;
 

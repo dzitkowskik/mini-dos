@@ -19,6 +19,7 @@ public class RegisteredNode {
 
     public RegisteredNode(MasterNodeInterface node) {
         this.node = node;
+        this.statusNode = new StatusNode();
     }
 
     public MasterNodeInterface getInterface() {
@@ -47,6 +48,7 @@ public class RegisteredNode {
 
         } catch (RemoteException e) {
             logger.warn("RegisteredNode is down");
+            logger.warn("E: " + e.getMessage());
             this.statusNode.setDown();
             return ErrorEnum.HOST_IS_UNAVAILABLE;
         }

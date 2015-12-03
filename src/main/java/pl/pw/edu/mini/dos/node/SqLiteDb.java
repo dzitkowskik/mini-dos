@@ -5,6 +5,7 @@ import org.slf4j.LoggerFactory;
 import pl.pw.edu.mini.dos.Config;
 
 import java.sql.*;
+import java.util.Properties;
 
 /**
  * Created by Karol Dzitkowski on 02.12.2015.
@@ -12,7 +13,7 @@ import java.sql.*;
 public class SqLiteDb implements AutoCloseable {
 
     private static final Logger logger = LoggerFactory.getLogger(SqLiteDb.class);
-    private static final Config config = Config.getConfig();
+    private static final Properties config = Config.getConfig();
     private Connection connection;
 
     public SqLiteDb() {
@@ -44,7 +45,7 @@ public class SqLiteDb implements AutoCloseable {
         }
     }
 
-    public int ExecuteQuery(String query) throws SQLException {
+    public int executeQuery(String query) throws SQLException {
         Statement stmt = null;
         try {
             stmt = this.connection.createStatement();

@@ -4,16 +4,19 @@ import pl.pw.edu.mini.dos.communication.ErrorEnum;
 import java.io.Serializable;
 
 public class InsertDataResponse implements Serializable {
-    private ErrorEnum error;
     private String response;
+    private ErrorEnum error;
 
-    public InsertDataResponse(ErrorEnum error, String response) {
-        this.error = error;
+    public InsertDataResponse(String response, ErrorEnum error) {
         this.response = response;
+        this.error = error;
+    }
+
+    public String getResponse() {
+        return response;
     }
 
     public ErrorEnum getError() {
         return error;
     }
-    public String getResponse() { return response; }
 }

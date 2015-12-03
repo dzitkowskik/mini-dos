@@ -9,11 +9,11 @@ public class StatusNode {
     private long dbSize;
     private long memory;
 
-    public StatusNode(double loadAverage, long dbSize, long memory) {
-        this.running = true;
-        this.loadAverage = loadAverage;
-        this.dbSize = dbSize;
-        this.memory = memory;
+    public StatusNode(){
+        this.running = false;
+        this.loadAverage = 0;
+        this.dbSize = 0;
+        this.memory = 0;
     }
 
     public void setDown(){

@@ -1,4 +1,6 @@
 package pl.pw.edu.mini.dos.communication.masternode;
 
-public class CheckStatusRequest {
+import java.io.Serializable;
+
+public class CheckStatusRequest implements Serializable {
 }

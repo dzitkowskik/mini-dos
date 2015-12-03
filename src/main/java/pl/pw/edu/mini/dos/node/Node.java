@@ -22,9 +22,8 @@ import java.util.Scanner;
 
 public class Node extends UnicastRemoteObject
         implements MasterNodeInterface, NodeNodeInterface, Serializable {
-    /** Logger */
-    private static final Logger logger = LoggerFactory.getLogger(Node.class);
 
+    private static final Logger logger = LoggerFactory.getLogger(Node.class);
     private NodeMasterInterface master;
 
     public Node() throws RemoteException {
@@ -44,7 +43,7 @@ public class Node extends UnicastRemoteObject
     }
 
     /**
-     * @param args = {"localhost", "1099", "localhost"}
+     * @param args = [masterIpAddress, port, IpAddress]
      */
     public static void main(String[] args) throws URISyntaxException, RemoteException {
         Node node;
@@ -54,10 +53,11 @@ public class Node extends UnicastRemoteObject
             node = new Node();
         }
         Scanner scanner = new Scanner (System.in);
-        System.out.println("*Enter 'q' to stop node or 'n' to generate new data.");
+        System.out.println("*Enter 'q' to stop node:");
         while(scanner.hasNext()) {
             String text = scanner.next();
             if(text.equals("q")) {
+                scanner.close();
                 break;
             }
         }
@@ -76,7 +76,9 @@ public class Node extends UnicastRemoteObject
     public ExecuteSQLOnNodeResponse executeSQLOnNode(ExecuteSQLOnNodeRequest executeSQLOnNodeRequest)
             throws RemoteException {
         try (SqLiteDb db = new SqLiteDb()) {
+            // Parse query
             Statement stmt = CCJSqlParserUtil.parse(executeSQLOnNodeRequest.getSql());
+            // Execute query
             SqlLiteStatementVisitor visitor = new SqlLiteStatementVisitor(db, master);
             stmt.accept(visitor);
             return visitor.getResult();
@@ -88,11 +90,10 @@ public class Node extends UnicastRemoteObject
 
     @Override
     public CheckStatusResponse checkStatus(CheckStatusRequest checkStatusRequest) throws RemoteException {
-        Stats stats = new Stats();
         return new CheckStatusResponse(
-                stats.getSystemLoad(),
-                stats.getDbSize(),
-                stats.getFreeMemory());
+                Stats.getSystemLoad(),
+                Stats.getDbSize(),
+                Stats.getFreeMemory());
     }
 
 
@@ -102,15 +103,15 @@ public class Node extends UnicastRemoteObject
         logger.info("Performing insert: {}", insertDataRequest.getInsertSql());
 
         try (SqLiteDb db = new SqLiteDb()) {
-            Integer rowsAffected = db.ExecuteQuery(insertDataRequest.getInsertSql());
+            Integer rowsAffected = db.executeQuery(insertDataRequest.getInsertSql());
             String response = rowsAffected.toString() + " rows affected";
-            return new InsertDataResponse(ErrorEnum.NO_ERROR, response);
+            return new InsertDataResponse(response, ErrorEnum.NO_ERROR);
         } catch (SQLException e) {
             logger.error("Error executing sql query: {} error: {} stack: {}",
                     insertDataRequest.getInsertSql(),
                     e.getMessage(),
                     e.getStackTrace());
-            return new InsertDataResponse(ErrorEnum.ANOTHER_ERROR, e.getMessage());
+            return new InsertDataResponse(e.getMessage(), ErrorEnum.ANOTHER_ERROR);
         }
     }
 
