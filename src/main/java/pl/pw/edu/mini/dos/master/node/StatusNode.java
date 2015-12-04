@@ -9,14 +9,14 @@ public class StatusNode {
     private long dbSize;
     private long memory;
 
-    public StatusNode(){
+    public StatusNode() {
         this.running = false;
         this.loadAverage = 0;
         this.dbSize = 0;
         this.memory = 0;
     }
 
-    public void setDown(){
+    public void setDown() {
         this.running = false;
     }
 
@@ -27,7 +27,7 @@ public class StatusNode {
         this.memory = memory;
     }
 
-    public boolean getStatus(){
+    public boolean getStatus() {
         return this.running;
     }
 

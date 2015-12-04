@@ -40,13 +40,13 @@ public class SqlLiteStatementVisitor implements StatementVisitor {
     private NodeMasterInterface master;
     private NodeNodeInterface thisNode;
     private ExecuteSQLOnNodeResponse result;
-    private Integer taskId;
+    private Long taskId;
 
     public SqlLiteStatementVisitor(
             SqLiteDb db,
             NodeMasterInterface master,
             NodeNodeInterface node,
-            Integer taskId) {
+            Long taskId) {
         this.db = db;
         this.master = master;
         this.taskId = taskId;
@@ -86,7 +86,7 @@ public class SqlLiteStatementVisitor implements StatementVisitor {
             logger.error("Cannot get insert metadata from master: {}", e.getMessage());
         }
 
-        Integer tasksNumber = insertMetadataResponse.getNodes().size();
+        int tasksNumber = insertMetadataResponse.getNodes().size();
         TaskCompletion.getInstance().add(taskId, tasksNumber);
 
         // Insert data to nodes pointed by master

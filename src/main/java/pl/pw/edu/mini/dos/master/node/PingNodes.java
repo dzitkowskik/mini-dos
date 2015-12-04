@@ -4,15 +4,13 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import pl.pw.edu.mini.dos.communication.ErrorEnum;
 
-import java.util.List;
-
 public class PingNodes implements Runnable {
     private static final Logger logger = LoggerFactory.getLogger(PingNodes.class);
-    private List<RegisteredNode> nodes;
+    private NodeManager nodeManager;
     private long spanTime;
 
-    public PingNodes(List<RegisteredNode> nodes, long spanTime) {
-        this.nodes = nodes;
+    public PingNodes(NodeManager nodeManager, long spanTime) {
+        this.nodeManager = nodeManager;
         this.spanTime = spanTime;
     }
 
@@ -20,11 +18,11 @@ public class PingNodes implements Runnable {
     public void run() {
         while (!Thread.currentThread().isInterrupted()) {
             try {
-                logger.debug("Pinging " + nodes.size() + " nodes...");
+                logger.debug("Pinging " + nodeManager.numNodes() + " nodes...");
                 ErrorEnum ok;
-                for(RegisteredNode node : nodes){
+                for (RegisteredNode node : nodeManager.getNodes()) {
                     ok = node.checkStatus();
-                    if(!ok.equals(ErrorEnum.NO_ERROR)){
+                    if (!ok.equals(ErrorEnum.NO_ERROR)) {
                         logger.warn(ok.toString());
                     }
                 }

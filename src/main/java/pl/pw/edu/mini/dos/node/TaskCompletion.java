@@ -11,6 +11,9 @@ import java.util.HashMap;
  * Created by Karol Dzitkowski on 03.12.2015.
  */
 public class TaskCompletion {
+    private static final Logger logger = LoggerFactory.getLogger(TaskCompletion.class);
+    private static TaskCompletion ourInstance = new TaskCompletion();
+    private HashMap<Long, Completion> completions;
 
     private class Completion {
         public Integer allTasks;
@@ -20,30 +23,26 @@ public class TaskCompletion {
         public String errorMessage = "";
         public String result = "";
 
-        public Completion(Integer allTasks) { this.allTasks = allTasks; }
+        public Completion(Integer allTasks) {
+            this.allTasks = allTasks; }
     }
-
-    private static final Logger logger = LoggerFactory.getLogger(TaskCompletion.class);
-    private static TaskCompletion ourInstance = new TaskCompletion();
 
     public static TaskCompletion getInstance() {
         return ourInstance;
     }
 
-    private HashMap<Integer, Completion> completions;
-
     private TaskCompletion() {
         completions = new HashMap<>();
     }
 
-    public void add(Integer taskId, Integer tasksNumber) {
+    public void add(Long taskId, Integer tasksNumber) {
         synchronized (completions) {
             completions.put(taskId, new Completion(tasksNumber));
         }
     }
 
     public void update(
-            Integer taskId,
+            Long taskId,
             ErrorEnum error,
             String errorMessage,
             String resultMessage) {
@@ -63,7 +62,7 @@ public class TaskCompletion {
         }
     }
 
-    public void additionalError(Integer taskId, String message) {
+    public void additionalError(Long taskId, String message) {
         Completion comp;
         synchronized (completions) {
             comp = completions.get(taskId);
@@ -76,7 +75,7 @@ public class TaskCompletion {
         }
     }
 
-    public Pair<ErrorEnum, String> waitForCompletion(Integer taskId) {
+    public Pair<ErrorEnum, String> waitForCompletion(Long taskId) {
         Completion comp;
         synchronized (completions) {
              comp = completions.get(taskId);
@@ -98,7 +97,7 @@ public class TaskCompletion {
         }
     }
 
-    public void remove(Integer taskId) {
+    public void remove(Long taskId) {
         synchronized (completions) {
             completions.remove(taskId);
         }

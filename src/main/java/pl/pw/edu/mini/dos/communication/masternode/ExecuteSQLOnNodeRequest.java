@@ -4,15 +4,18 @@ import java.io.Serializable;
 
 public class ExecuteSQLOnNodeRequest implements Serializable {
     private String sql;
-    // TODO: Implement task id
-    private Integer taskId = 5;
+    private Long taskId;
 
-    public ExecuteSQLOnNodeRequest(String sql) {
+    public ExecuteSQLOnNodeRequest(Long taskId, String sql) {
+        this.taskId = taskId;
         this.sql = sql;
     }
 
     public String getSql() {
         return sql;
     }
-    public Integer getTaskId() { return taskId; }
+
+    public Long getTaskId() {
+        return taskId;
+    }
 }

@@ -11,8 +11,7 @@ public enum ErrorEnum {
     INCORRECT_NAME("The name has no associated binding"),
     ANOTHER_ERROR("Error"),
     SQL_EXECUTION_ERROR("Error while executing sql query"),
-    SQL_PARSING_ERROR("Sql cannot be parsed"),
-    TABLE_ALREADY_EXISTS("The table cannot be created because it already exists");
+    SQL_PARSING_ERROR("Sql cannot be parsed");
 
     private final String description;
 

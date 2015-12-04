@@ -4,18 +4,15 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import pl.pw.edu.mini.dos.Config;
 import pl.pw.edu.mini.dos.communication.ErrorEnum;
-import pl.pw.edu.mini.dos.communication.masternode.CheckStatusRequest;
 import pl.pw.edu.mini.dos.communication.masternode.CheckStatusResponse;
 import pl.pw.edu.mini.dos.communication.masternode.MasterNodeInterface;
 
-import java.rmi.RemoteException;
-import java.util.Properties;
 import java.util.concurrent.*;
 
-public class RegisteredNode {
 
+public class RegisteredNode {
     private static final Logger logger = LoggerFactory.getLogger(RegisteredNode.class);
-    private static final Properties config = Config.getConfig();
+    private static final Config config = Config.getConfig();
 
     private MasterNodeInterface node;
 
@@ -40,6 +37,7 @@ public class RegisteredNode {
 
     /**
      * Checks if the node is up or down. If the node is up, it updates the status figures.
+     *
      * @return true if the node is up, otherwise false
      */
     public ErrorEnum checkStatus() {
@@ -63,7 +61,7 @@ public class RegisteredNode {
             return ErrorEnum.TIMEOUT_EXPIRED;
         } catch (InterruptedException e) {
             return ErrorEnum.ANOTHER_ERROR;
-        }finally {
+        } finally {
             executor.shutdownNow();
         }
         return ErrorEnum.NO_ERROR;
