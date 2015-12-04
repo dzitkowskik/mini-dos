@@ -58,24 +58,24 @@
 
     <build>
         <plugins>
-            <plugin>
-                <!-- Execute master when install -->
-                <groupId>org.codehaus.mojo</groupId>
-                <artifactId>exec-maven-plugin</artifactId>
-                <version>1.4.0</version>
-                <executions>
-                    <execution>
-                        <id>Master</id>
-                        <phase>install</phase>
-                        <goals>
-                            <goal>java</goal>
-                        </goals>
-                        <configuration>
-                            <mainClass>pl.pw.edu.mini.dos.master.Master</mainClass>
-                        </configuration>
-                    </execution>
-                </executions>
-            </plugin>
+            <!--<plugin>-->
+                <!--&lt;!&ndash; Execute master when install &ndash;&gt;-->
+                <!--<groupId>org.codehaus.mojo</groupId>-->
+                <!--<artifactId>exec-maven-plugin</artifactId>-->
+                <!--<version>1.4.0</version>-->
+                <!--<executions>-->
+                    <!--<execution>-->
+                        <!--<id>Master</id>-->
+                        <!--<phase>install</phase>-->
+                        <!--<goals>-->
+                            <!--<goal>java</goal>-->
+                        <!--</goals>-->
+                        <!--<configuration>-->
+                            <!--<mainClass>pl.pw.edu.mini.dos.master.Master</mainClass>-->
+                        <!--</configuration>-->
+                    <!--</execution>-->
+                <!--</executions>-->
+            <!--</plugin>-->
             <plugin>
                 <!-- Set Java compiler  -->
                 <groupId>org.apache.maven.plugins</groupId>
