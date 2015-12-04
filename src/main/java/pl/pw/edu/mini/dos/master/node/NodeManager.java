@@ -7,6 +7,9 @@ import pl.pw.edu.mini.dos.communication.masternode.MasterNodeInterface;
 
 import java.util.*;
 
+/**
+ * It manages all the tasks related with nodes.
+ */
 public class NodeManager {
     private static final Logger logger = LoggerFactory.getLogger(NodeManager.class);
     private final Map<Integer, RegisteredNode> registeredNodes;
@@ -17,6 +20,11 @@ public class NodeManager {
         this.nextNodeID = 0;
     }
 
+    /**
+     * Register new node on master.
+     * @param nodeInterface rmi interface of the node
+     * @return ErrorEnum
+     */
     public ErrorEnum newNode(MasterNodeInterface nodeInterface) {
         // Create node
         RegisteredNode newNode = new RegisteredNode(nodeInterface);
@@ -31,6 +39,7 @@ public class NodeManager {
         Integer nodeId;
         synchronized (registeredNodes) {
             nodeId = nextNodeID++;
+            newNode.setID(nodeId);
             registeredNodes.put(nodeId, newNode);
         }
         logger.info("Node registered. nNodes: " + registeredNodes.size());
@@ -58,15 +67,17 @@ public class NodeManager {
     }
 
     /**
-     * Load balancer
+     * Load balancer. It choose a random node that is not down.
      *
      * @return node chosen to run the query
      */
-    public synchronized Map.Entry<Integer, RegisteredNode> selectNode() {
+    public synchronized RegisteredNode selectNode() {
         Random random = new Random();
-        int r = random.nextInt(registeredNodes.size());
-        Integer nodeID = (new ArrayList<>(registeredNodes.keySet())).get(r);
-        return new AbstractMap.SimpleEntry<>(
-                nodeID, registeredNodes.get(nodeID));
+        RegisteredNode node;
+        do {
+            int r = random.nextInt(registeredNodes.size());
+            node = registeredNodes.get((new ArrayList<>(registeredNodes.keySet())).get(r));
+        } while(node.isDown());
+        return node;
     }
 }

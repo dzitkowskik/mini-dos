@@ -27,19 +27,7 @@ public class StatusNode {
         this.memory = memory;
     }
 
-    public boolean getStatus() {
-        return this.running;
-    }
-
-    public double getLoadAverage() {
-        return loadAverage;
-    }
-
-    public long getDbSize() {
-        return dbSize;
-    }
-
-    public long getMemory() {
-        return memory;
+    public boolean isDown() {
+        return !this.running;
     }
 }

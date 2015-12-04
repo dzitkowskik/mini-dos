@@ -4,6 +4,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import pl.pw.edu.mini.dos.communication.ErrorEnum;
 
+/**
+ * Checks the status of all registered nodes every spanTime milliseconds.
+ */
 public class PingNodes implements Runnable {
     private static final Logger logger = LoggerFactory.getLogger(PingNodes.class);
     private NodeManager nodeManager;

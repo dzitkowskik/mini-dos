@@ -9,13 +9,11 @@ import pl.pw.edu.mini.dos.communication.masternode.MasterNodeInterface;
 
 import java.util.concurrent.*;
 
-
 public class RegisteredNode {
     private static final Logger logger = LoggerFactory.getLogger(RegisteredNode.class);
     private static final Config config = Config.getConfig();
-
+    private Integer nodeID;
     private MasterNodeInterface node;
-
     private StatusNode statusNode;
 
     public RegisteredNode(MasterNodeInterface node) {
@@ -23,16 +21,20 @@ public class RegisteredNode {
         this.statusNode = new StatusNode();
     }
 
+    public Integer getID() {
+        return nodeID;
+    }
+
+    public void setID(Integer nodeID) {
+        this.nodeID = nodeID;
+    }
+
+    public boolean isDown(){
+        return statusNode.isDown();
+    }
+
     public MasterNodeInterface getInterface() {
         return node;
-    }
-
-    public StatusNode getStatusNode() {
-        return statusNode;
-    }
-
-    public void setStatusNode(StatusNode statusNode) {
-        this.statusNode = statusNode;
     }
 
     /**

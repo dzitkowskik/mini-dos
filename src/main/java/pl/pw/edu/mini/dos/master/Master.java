@@ -3,7 +3,6 @@ package pl.pw.edu.mini.dos.master;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import pl.pw.edu.mini.dos.Config;
-import pl.pw.edu.mini.dos.communication.ErrorHandler;
 import pl.pw.edu.mini.dos.communication.Services;
 import pl.pw.edu.mini.dos.communication.clientmaster.ClientMasterInterface;
 import pl.pw.edu.mini.dos.communication.clientmaster.ExecuteSQLRequest;
@@ -45,9 +44,11 @@ public class Master
         nodeManager = new NodeManager();
         taskManager = new TaskManager();
 
+        // RMI server
         server = new RMIServer(host, port);
         server.startService(Services.MASTER, this);
         logger.info("Master listening at (" + host + ":" + port + ")");
+
         // Ping nodes periodically
         long spanTime = Long.parseLong(config.getProperty("spanPingingTime"));
         pingThread = new Thread(new PingNodes(nodeManager, spanTime));
@@ -72,8 +73,6 @@ public class Master
             if (text.equals("q")) {
                 scanner.close();
                 break;
-            } else if (text.equals("d")) {
-                master.showNodesData();
             }
         }
 
@@ -86,24 +85,10 @@ public class Master
         server.stopService(Services.MASTER, this);
     }
 
-    public void showNodesData() {
-        for (Map.Entry<Integer, RegisteredNode> node : nodeManager.getNodesMap().entrySet()) {
-            try {
-                System.out.println("Data from RegisteredNode " + node.getKey() + ": "
-                        + node.getValue().getInterface().executeSQLOnNode(
-                        new ExecuteSQLOnNodeRequest(taskManager.newTask(node.getKey()),
-                                "SELECT * FROM *;")
-                ).getResult());
-            } catch (RemoteException e) {
-                ErrorHandler.handleError(e, false);
-            }
-        }
-    }
-
     @Override
     public RegisterResponse register(RegisterRequest registerRequest) throws RemoteException {
         return new RegisterResponse(
-                nodeManager.newNode(registerRequest.getNode()));
+                nodeManager.newNode(registerRequest.getNodeInterface()));
     }
 
     @Override
@@ -138,18 +123,15 @@ public class Master
     @Override
     public TableMetadataResponse tableMetadata(TableMetadataRequest tableMetadataRequest)
             throws RemoteException {
+        //TODO change name for createMetadata and the returns
         return null;
     }
 
     @Override
     public ExecuteSQLResponse executeSQL(ExecuteSQLRequest executeSQLRequest) throws RemoteException {
-        // Select node
-        Map.Entry<Integer, RegisteredNode> nodeEntry = nodeManager.selectNode();
-        MasterNodeInterface nodeInterface = nodeEntry.getValue().getInterface();
-        Integer nodeID = nodeEntry.getKey();
-
-        Long taskID = taskManager.newTask(nodeID);
-        ExecuteSQLOnNodeResponse result = nodeInterface.executeSQLOnNode(
+        RegisteredNode node = nodeManager.selectNode();
+        Long taskID = taskManager.newTask(node.getID());
+        ExecuteSQLOnNodeResponse result = node.getInterface().executeSQLOnNode(
                 new ExecuteSQLOnNodeRequest(taskID, executeSQLRequest.getSql()));
         return new ExecuteSQLResponse(result);
     }

@@ -83,6 +83,12 @@ public class Node extends UnicastRemoteObject
     @Override
     public ExecuteSQLOnNodeResponse executeSQLOnNode(ExecuteSQLOnNodeRequest executeSQLOnNodeRequest)
             throws RemoteException {
+        logger.info("Executing task... (10sec)");
+        try {
+            Thread.sleep(10000);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
         Long taskId = executeSQLOnNodeRequest.getTaskId();
         try (SqLiteDb db = new SqLiteDb()) {
             Statement stmt = CCJSqlParserUtil.parse(executeSQLOnNodeRequest.getSql());
