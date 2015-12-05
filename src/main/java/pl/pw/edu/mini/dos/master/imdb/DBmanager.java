@@ -20,7 +20,6 @@ public class DBmanager {
 
     public DBmanager() {
         this.imdb = new IMSqLiteDb();
-        prepareStatements();
     }
 
     /**
@@ -59,12 +58,13 @@ public class DBmanager {
         } finally {
             imdb.close(st);
         }
+        prepareStatements();
     }
 
     /**
      * Prepare the Statements that will be used to be faster.
      */
-    public void prepareStatements(){
+    public void prepareStatements() {
         String newTableInsert = "" +
                 "INSERT INTO tables (table_name, create_statement, next_row_id) " +
                 "VALUES (?,?,0);";
@@ -92,13 +92,20 @@ public class DBmanager {
         }
     }
 
+    /**
+     * Register a table in the db
+     *
+     * @param tableName       table name
+     * @param createStatement sql create statement
+     * @return
+     */
     public ErrorEnum insertTable(String tableName, String createStatement) {
-        try{
+        try {
             newTableInsert.setString(1, tableName);
             newTableInsert.setString(2, createStatement);
             newTableInsert.executeUpdate();
             imdb.commit();
-        } catch (SQLException e){
+        } catch (SQLException e) {
             logger.error("Error at registering table: {} - {}",
                     e.getMessage(), e.getStackTrace());
             imdb.rollback();

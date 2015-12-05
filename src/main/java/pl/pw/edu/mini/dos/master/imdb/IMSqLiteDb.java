@@ -36,7 +36,7 @@ public class IMSqLiteDb implements AutoCloseable {
     public void rollback() {
         try {
             connection.rollback();
-            logger.info("Rollback OK");
+            logger.trace("Rollback OK");
         } catch (SQLException e) {
             logger.error("Rollback failed");
         }
@@ -44,7 +44,7 @@ public class IMSqLiteDb implements AutoCloseable {
 
     public void commit() throws SQLException {
         connection.commit();
-        logger.info("Commit OK");
+        logger.trace("Commit OK");
     }
 
 
