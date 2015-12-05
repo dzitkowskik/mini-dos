@@ -5,8 +5,11 @@ import org.slf4j.LoggerFactory;
 import pl.pw.edu.mini.dos.communication.ErrorEnum;
 
 import java.sql.PreparedStatement;
+import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.util.ArrayList;
+import java.util.List;
 
 public class DBmanager {
     private static final Logger logger = LoggerFactory.getLogger(DBmanager.class);
@@ -17,6 +20,7 @@ public class DBmanager {
     PreparedStatement incrementRowIdUpdate;
     PreparedStatement newRowInsert;
     PreparedStatement newRowNodeInsert;
+    PreparedStatement selectCreateTableStatements;
 
     public DBmanager() {
         this.imdb = new IMSqLiteDb();
@@ -78,6 +82,8 @@ public class DBmanager {
         String newRowNodeInsert = "" +
                 "INSERT INTO nodes (node_id, row_id)" +
                 "VALUES (?,?);";
+        String selectCreateTableStatements = "" +
+                "SELECT create_statement FROM tables;";
 
         try {
             this.newTableInsert = imdb.prepareStatement(newTableInsert);
@@ -85,6 +91,7 @@ public class DBmanager {
             this.incrementRowIdUpdate = imdb.prepareStatement(incrementRowIdUpdate);
             this.newRowInsert = imdb.prepareStatement(newRowInsert);
             this.newRowNodeInsert = imdb.prepareStatement(newRowNodeInsert);
+            this.selectCreateTableStatements = imdb.prepareStatement(selectCreateTableStatements);
         } catch (SQLException e) {
             logger.error("Error at creating prepared statements: {} - {}",
                     e.getMessage(), e.getStackTrace());
@@ -97,7 +104,7 @@ public class DBmanager {
      *
      * @param tableName       table name
      * @param createStatement sql create statement
-     * @return
+     * @return result
      */
     public ErrorEnum insertTable(String tableName, String createStatement) {
         try {
@@ -112,6 +119,27 @@ public class DBmanager {
             return ErrorEnum.REGISTRING_TABLE_ERROR;
         }
         return ErrorEnum.NO_ERROR;
+    }
+
+    /**
+     * Return a list of strings with the create table statements of all registered tables.
+     * @return create statements list
+     */
+    public List<String> getCreateTableStatements(){
+        List<String> createTableStatements = new ArrayList<>();
+        ResultSet rs = null;
+        try {
+            rs = selectCreateTableStatements.executeQuery();
+            while (rs.next()) {
+                createTableStatements.add(rs.getString(1));
+            }
+        } catch (SQLException e) {
+            logger.error("Error at getting create tables statements: {} - {}",
+                    e.getMessage(), e.getStackTrace());
+        } finally {
+            imdb.close(rs);
+        }
+        return createTableStatements;
     }
 
     public void close() {

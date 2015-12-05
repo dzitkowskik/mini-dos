@@ -3,13 +3,12 @@ package pl.pw.edu.mini.dos.master;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import pl.pw.edu.mini.dos.Config;
+import pl.pw.edu.mini.dos.communication.ErrorEnum;
 import pl.pw.edu.mini.dos.communication.Services;
 import pl.pw.edu.mini.dos.communication.clientmaster.ClientMasterInterface;
 import pl.pw.edu.mini.dos.communication.clientmaster.ExecuteSQLRequest;
 import pl.pw.edu.mini.dos.communication.clientmaster.ExecuteSQLResponse;
-import pl.pw.edu.mini.dos.communication.masternode.ExecuteSQLOnNodeRequest;
-import pl.pw.edu.mini.dos.communication.masternode.ExecuteSQLOnNodeResponse;
-import pl.pw.edu.mini.dos.communication.masternode.MasterNodeInterface;
+import pl.pw.edu.mini.dos.communication.masternode.*;
 import pl.pw.edu.mini.dos.communication.nodemaster.*;
 import pl.pw.edu.mini.dos.communication.nodenode.NodeNodeInterface;
 import pl.pw.edu.mini.dos.master.imdb.DBmanager;
@@ -94,8 +93,17 @@ public class Master
 
     @Override
     public RegisterResponse register(RegisterRequest registerRequest) throws RemoteException {
-        return new RegisterResponse(
-                nodeManager.newNode(registerRequest.getNodeInterface()));
+        // Register node
+        ErrorEnum ok = nodeManager.newNode(registerRequest.getNodeInterface());
+        if(!ok.equals(ErrorEnum.NO_ERROR)){
+            return new RegisterResponse(ok);
+        }
+        // Send node create tables
+        ExecuteCreateTablesResponse response =
+                registerRequest.getNodeInterface().createTables
+                (new ExecuteCreateTablesRequest(dbManager.getCreateTableStatements()));
+
+        return new RegisterResponse(response.getError());
     }
 
     @Override
