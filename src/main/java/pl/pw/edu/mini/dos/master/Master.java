@@ -12,6 +12,7 @@ import pl.pw.edu.mini.dos.communication.masternode.ExecuteSQLOnNodeResponse;
 import pl.pw.edu.mini.dos.communication.masternode.MasterNodeInterface;
 import pl.pw.edu.mini.dos.communication.nodemaster.*;
 import pl.pw.edu.mini.dos.communication.nodenode.NodeNodeInterface;
+import pl.pw.edu.mini.dos.master.imdb.DBmanager;
 import pl.pw.edu.mini.dos.master.node.NodeManager;
 import pl.pw.edu.mini.dos.master.node.PingNodes;
 import pl.pw.edu.mini.dos.master.rmi.RMIServer;
@@ -34,6 +35,7 @@ public class Master
     private Thread pingThread;
     private NodeManager nodeManager;
     private TaskManager taskManager;
+    private DBmanager dbManager;
 
     public Master() throws RemoteException {
         this("127.0.0.1", 1099);
@@ -43,6 +45,10 @@ public class Master
         // Get managers
         nodeManager = new NodeManager();
         taskManager = new TaskManager();
+        dbManager = new DBmanager();
+
+        // Prepare in-memory db
+        dbManager.prepareDB();
 
         // RMI server
         server = new RMIServer(host, port);
@@ -83,6 +89,7 @@ public class Master
     public void stopMaster() {
         pingThread.interrupt();
         server.stopService(Services.MASTER, this);
+        dbManager.close();
     }
 
     @Override
@@ -121,10 +128,11 @@ public class Master
     }
 
     @Override
-    public TableMetadataResponse tableMetadata(TableMetadataRequest tableMetadataRequest)
+    public CreateMetadataResponse createMetadata(CreateMetadataRequest createMetadataRequest)
             throws RemoteException {
-        //TODO change name for createMetadata and the returns
-        return null;
+        return new CreateMetadataResponse(dbManager.insertTable(
+                createMetadataRequest.getTable(),
+                createMetadataRequest.getCreateStatement()));
     }
 
     @Override

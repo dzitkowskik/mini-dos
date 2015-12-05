@@ -29,7 +29,7 @@ public class RegisteredNode {
         this.nodeID = nodeID;
     }
 
-    public boolean isDown(){
+    public boolean isDown() {
         return statusNode.isDown();
     }
 

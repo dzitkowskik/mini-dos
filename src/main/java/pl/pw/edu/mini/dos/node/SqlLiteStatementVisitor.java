@@ -138,6 +138,7 @@ public class SqlLiteStatementVisitor implements StatementVisitor {
     @Override
     public void visit(CreateTable createTable) {
         // TODO: Implement it like insert
+        // createTable.toString() -> get create query
         logger.info("I GOT CREATE TABLE {}", createTable.getTable().getName());
         try {
             db.ExecuteQuery(createTable.toString());
