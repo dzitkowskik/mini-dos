@@ -42,7 +42,8 @@ public class Master
 
     public Master(String host, int port) throws RemoteException {
         // Get managers
-        nodeManager = new NodeManager();
+        nodeManager = new NodeManager(
+                Integer.parseInt(config.getProperty("replicationFactor")));
         taskManager = new TaskManager();
         dbManager = new DBmanager();
 
@@ -95,26 +96,39 @@ public class Master
     public RegisterResponse register(RegisterRequest registerRequest) throws RemoteException {
         // Register node
         ErrorEnum ok = nodeManager.newNode(registerRequest.getNodeInterface());
-        if(!ok.equals(ErrorEnum.NO_ERROR)){
+        if (!ok.equals(ErrorEnum.NO_ERROR)) {
             return new RegisterResponse(ok);
         }
         // Send node create tables
         ExecuteCreateTablesResponse response =
                 registerRequest.getNodeInterface().createTables
-                (new ExecuteCreateTablesRequest(dbManager.getCreateTableStatements()));
-
+                        (new ExecuteCreateTablesRequest(dbManager.getCreateTableStatements()));
         return new RegisterResponse(response.getError());
     }
 
     @Override
     public InsertMetadataResponse insertMetadata(InsertMetadataRequest insertMetadataRequest)
             throws RemoteException {
-        List<NodeNodeInterface> nodes = new ArrayList<>(nodeManager.numNodes());
-        // Insert in all registeredNodes (example)
-        for (MasterNodeInterface n : nodeManager.getNodesInterfaces()) {
-            nodes.add((NodeNodeInterface) n);
+        // Select nodes
+        List<RegisteredNode> nodes = nodeManager.selectNodesInsert();
+        if (nodes == null) {
+            // Number of available nodes less than replication factor
+            return new InsertMetadataResponse(null, ErrorEnum.NOT_ENOUGH_NODES);
         }
-        return new InsertMetadataResponse(nodes);
+        // Insert row metadata (RowId, TableId, NodesIds)
+        List<Integer> nodesIds = new ArrayList<>(nodes.size());
+        List<NodeNodeInterface> nodesInterfaces = new ArrayList<>(nodes.size());
+        for (RegisteredNode node : nodes) {
+            nodesIds.add(node.getID());
+            nodesInterfaces.add((NodeNodeInterface) node.getInterface());
+        }
+        ErrorEnum ok = dbManager.insertRow(
+                insertMetadataRequest.getTable(), nodesIds);
+        if (ok.equals(ErrorEnum.TABLE_NOT_EXIST)) {
+            // The table of the insert doesn't exist
+            return new InsertMetadataResponse(null, ErrorEnum.TABLE_NOT_EXIST);
+        }
+        return new InsertMetadataResponse(nodesInterfaces, ErrorEnum.NO_ERROR);
     }
 
     @Override
@@ -145,7 +159,7 @@ public class Master
 
     @Override
     public ExecuteSQLResponse executeSQL(ExecuteSQLRequest executeSQLRequest) throws RemoteException {
-        RegisteredNode node = nodeManager.selectNode();
+        RegisteredNode node = nodeManager.selectCoordinatorNode();
         Long taskID = taskManager.newTask(node.getID());
         ExecuteSQLOnNodeResponse result = node.getInterface().executeSQLOnNode(
                 new ExecuteSQLOnNodeRequest(taskID, executeSQLRequest.getSql()));

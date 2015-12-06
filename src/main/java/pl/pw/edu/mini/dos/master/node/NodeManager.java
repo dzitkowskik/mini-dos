@@ -4,6 +4,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import pl.pw.edu.mini.dos.communication.ErrorEnum;
 import pl.pw.edu.mini.dos.communication.masternode.MasterNodeInterface;
+import pl.pw.edu.mini.dos.communication.nodenode.NodeNodeInterface;
 
 import java.util.*;
 
@@ -14,14 +15,17 @@ public class NodeManager {
     private static final Logger logger = LoggerFactory.getLogger(NodeManager.class);
     private final Map<Integer, RegisteredNode> registeredNodes;
     private Integer nextNodeID;
+    private int replicationFactor;
 
-    public NodeManager() {
+    public NodeManager(int replicationFactor) {
         this.registeredNodes = new HashMap<>();
         this.nextNodeID = 0;
+        this.replicationFactor = replicationFactor;
     }
 
     /**
      * Register new node on master.
+     *
      * @param nodeInterface rmi interface of the node
      * @return ErrorEnum
      */
@@ -67,17 +71,43 @@ public class NodeManager {
     }
 
     /**
-     * Load balancer. It choose a random node that is not down.
+     * Selects a node that will be responsible of manage a client task.
+     * The strategy used is to select a random node.
      *
-     * @return node chosen to run the query
+     * @return node chosen
      */
-    public synchronized RegisteredNode selectNode() {
-        Random random = new Random();
+    public synchronized RegisteredNode selectCoordinatorNode() {
+        Random random = new Random(System.nanoTime());
         RegisteredNode node;
         do {
             int r = random.nextInt(registeredNodes.size());
             node = registeredNodes.get((new ArrayList<>(registeredNodes.keySet())).get(r));
-        } while(node.isDown());
+        } while (node.isDown());
         return node;
+    }
+
+    /**
+     * Select a list of nodes where data must be inserted.
+     * The strategy used is to select a random list of node.
+     * The number of nodes is determined by the configured replication factor.
+     *
+     * @return list of interfaces of nodes chosen
+     */
+    public synchronized List<RegisteredNode> selectNodesInsert() {
+        Random random = new Random(System.nanoTime());
+        List<RegisteredNode> nodes = new ArrayList<>(this.getNodes());
+        Collections.shuffle(nodes, random);
+        List<RegisteredNode> selectedNodes = new ArrayList<>(replicationFactor);
+        Iterator<RegisteredNode> it = nodes.iterator();
+        do {
+            RegisteredNode node = it.next();
+            if (!node.isDown()) {
+                selectedNodes.add(node);
+            }
+        } while (selectedNodes.size() < replicationFactor && it.hasNext());
+        if (selectedNodes.size() == replicationFactor) {
+            return selectedNodes;
+        }
+        return null; // Not enough nodes
     }
 }

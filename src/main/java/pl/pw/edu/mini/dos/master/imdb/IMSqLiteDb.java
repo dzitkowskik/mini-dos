@@ -2,6 +2,7 @@ package pl.pw.edu.mini.dos.master.imdb;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.sqlite.SQLiteConfig;
 
 import java.sql.*;
 
@@ -18,7 +19,10 @@ public class IMSqLiteDb implements AutoCloseable {
 
         // Connect to db
         try {
-            this.connection = DriverManager.getConnection("jdbc:sqlite::memory:");
+            SQLiteConfig config = new SQLiteConfig();
+            config.enforceForeignKeys(true);
+            this.connection = DriverManager.getConnection(
+                    "jdbc:sqlite::memory:", config.toProperties());
             this.connection.setAutoCommit(false);
         } catch (SQLException e) {
             logger.error("Cannot connect to sqlite database - {}", e.getMessage());

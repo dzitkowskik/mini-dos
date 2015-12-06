@@ -142,12 +142,51 @@ public class DBmanager {
         return createTableStatements;
     }
 
+    /**
+     * Insert metadata related with the insert (RowId, TableId, NodesIds).
+     * @param tableName tablename
+     * @param nodeIds list of nodes ids where data will be insert
+     * @return result
+     */
+    public ErrorEnum insertRow(String tableName, List<Integer> nodeIds){
+        ResultSet rs = null;
+        try{
+            // Get rowId
+            nextRowIdSelect.setString(1, tableName);
+            rs = nextRowIdSelect.executeQuery();
+            Long rowId = rs.getLong(1);
+            // Update next rowId
+            incrementRowIdUpdate.setString(1, tableName);
+            incrementRowIdUpdate.executeUpdate();
+            // Insert row
+            newRowInsert.setLong(1, rowId);
+            newRowInsert.setString(2, tableName);
+            newRowInsert.executeUpdate();
+            // Insert row nodes
+            for (Integer nodeId : nodeIds) {
+                newRowNodeInsert.setInt(1,nodeId);
+                newRowNodeInsert.setLong(2,rowId);
+                newRowNodeInsert.executeUpdate();
+            }
+            imdb.commit();
+        } catch (SQLException e){
+            logger.error("Error at registering row: {} - {}",
+                    e.getMessage(), e.getStackTrace());
+            imdb.rollback();
+            return ErrorEnum.TABLE_NOT_EXIST;
+        } finally {
+            imdb.close(rs);
+        }
+        return ErrorEnum.NO_ERROR;
+    }
+
     public void close() {
         imdb.close(newTableInsert);
         imdb.close(nextRowIdSelect);
         imdb.close(incrementRowIdUpdate);
         imdb.close(newRowInsert);
         imdb.close(newRowNodeInsert);
+        imdb.close(selectCreateTableStatements);
         imdb.close();
     }
 }

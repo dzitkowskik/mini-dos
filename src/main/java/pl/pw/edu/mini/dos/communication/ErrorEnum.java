@@ -9,10 +9,12 @@ public enum ErrorEnum {
     DENIAL_OF_PERMITS("No permissions to call remote method"),
     REMOTE_EXCEPTION("Exception while remote method was being executed"),
     INCORRECT_NAME("The name has no associated binding"),
-    ANOTHER_ERROR("Error"),
     SQL_EXECUTION_ERROR("Error while executing sql query"),
     SQL_PARSING_ERROR("Sql cannot be parsed"),
-    REGISTRING_TABLE_ERROR("The table cannot be registered in master");
+    REGISTRING_TABLE_ERROR("The table cannot be registered in master"),
+    TABLE_NOT_EXIST("Error at inserting data becouse the table doesn't exist"),
+    NOT_ENOUGH_NODES("The number of nodes available is less than replication factor"),
+    ANOTHER_ERROR("Error");
 
     private final String description;
 
