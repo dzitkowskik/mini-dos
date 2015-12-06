@@ -141,9 +141,6 @@ public class DBmanager {
      */
     public List<String> getCreateTableStatements(List<String> tables) {
         List<String> createTableStatements = new ArrayList<>();
-        if (tables.size() == 0) {
-            return createTableStatements;
-        }
         // Build select
         PreparedStatement st = null;
         String select = "" +
@@ -167,6 +164,7 @@ public class DBmanager {
         } catch (SQLException e) {
             logger.error("Error at getting create tables statements: {} - {}",
                     e.getMessage(), e.getStackTrace());
+            return null; // Table not exist
         } finally {
             imdb.close(rs);
             imdb.close(st);
@@ -219,9 +217,6 @@ public class DBmanager {
      */
     public List<Integer> getNodesHaveTables(List<String> tables) {
         List<Integer> nodes = new ArrayList<>();
-        if (tables.size() == 0) {
-            return nodes;
-        }
         // Build select
         PreparedStatement st = null;
         String select = "" +
@@ -247,6 +242,7 @@ public class DBmanager {
         } catch (SQLException e) {
             logger.error("Error at getting nodes: {} - {}",
                     e.getMessage(), e.getStackTrace());
+            return null; // Table not exist
         } finally {
             imdb.close(rs);
             imdb.close(st);

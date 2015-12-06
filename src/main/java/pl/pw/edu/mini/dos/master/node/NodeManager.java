@@ -62,6 +62,10 @@ public class NodeManager {
         return interfaces;
     }
 
+    public MasterNodeInterface getNodeInterface(Integer nodeID){
+        return registeredNodes.get(nodeID).getInterface();
+    }
+
     public Map<Integer, RegisteredNode> getNodesMap() {
         return registeredNodes;
     }

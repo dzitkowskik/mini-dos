@@ -134,7 +134,21 @@ public class Master
     @Override
     public SelectMetadataResponse selectMetadata(SelectMetadataRequest selectMetadataRequest)
             throws RemoteException {
-        return null;
+        List<String> tables = selectMetadataRequest.getTables();
+        if(tables == null || tables.size()==0){
+            return new SelectMetadataResponse(null,null,ErrorEnum.ANOTHER_ERROR);
+        }
+        List<String> createTableStatements = dbManager.getCreateTableStatements(tables);
+        List<Integer> nodesIDs = dbManager.getNodesHaveTables(tables);
+        if(createTableStatements == null || nodesIDs == null){
+            return new SelectMetadataResponse(null,null, ErrorEnum.TABLE_NOT_EXIST);
+        }
+        List<NodeNodeInterface> nodesInterfaces = new ArrayList<>(nodesIDs.size());
+        for(Integer nodeID : nodesIDs){
+            nodesInterfaces.add((NodeNodeInterface)nodeManager.getNodeInterface(nodeID));
+        }
+        return new SelectMetadataResponse(nodesInterfaces,
+                createTableStatements,ErrorEnum.NO_ERROR);
     }
 
     @Override
