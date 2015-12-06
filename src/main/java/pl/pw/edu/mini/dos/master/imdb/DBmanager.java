@@ -3,12 +3,14 @@ package pl.pw.edu.mini.dos.master.imdb;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import pl.pw.edu.mini.dos.communication.ErrorEnum;
+import pl.pw.edu.mini.dos.communication.nodenode.NodeNodeInterface;
 
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 
 public class DBmanager {
@@ -111,9 +113,10 @@ public class DBmanager {
 
     /**
      * Return a list of strings with the create table statements of all registered tables.
+     *
      * @return create statements list
      */
-    public List<String> getCreateTableStatements(){
+    public List<String> getCreateTableStatements() {
         List<String> createTableStatements = new ArrayList<>();
         ResultSet rs = null;
         try {
@@ -132,13 +135,14 @@ public class DBmanager {
 
     /**
      * Insert metadata related with the insert (RowId, TableId, NodesIds).
+     *
      * @param tableName tablename
-     * @param nodeIds list of nodes ids where data will be insert
+     * @param nodeIds   list of nodes ids where data will be insert
      * @return result
      */
-    public ErrorEnum insertRow(String tableName, List<Integer> nodeIds){
+    public ErrorEnum insertRow(String tableName, List<Integer> nodeIds) {
         ResultSet rs = null;
-        try{
+        try {
             // Get rowId
             nextRowIdSelect.setString(1, tableName);
             rs = nextRowIdSelect.executeQuery();
@@ -150,11 +154,11 @@ public class DBmanager {
             for (Integer nodeId : nodeIds) {
                 newRowInsert.setLong(1, rowId);
                 newRowInsert.setString(2, tableName);
-                newRowInsert.setInt(3,nodeId);
+                newRowInsert.setInt(3, nodeId);
                 newRowInsert.executeUpdate();
             }
             imdb.commit();
-        } catch (SQLException e){
+        } catch (SQLException e) {
             logger.error("Error at registering row: {} - {}",
                     e.getMessage(), e.getStackTrace());
             imdb.rollback();
@@ -163,6 +167,50 @@ public class DBmanager {
             imdb.close(rs);
         }
         return ErrorEnum.NO_ERROR;
+    }
+
+    /**
+     * Given a list of tables, it return the ids of the nodes
+     * which have data of these tables.
+     *
+     * @param tables list with names of the tables
+     * @return list of nodesIds
+     */
+    public List<Integer> getNodesHaveTables(List<String> tables) {
+        List<Integer> nodes = new ArrayList<>();
+        if (tables.size() == 0) {
+            return nodes;
+        }
+        // Build select
+        PreparedStatement st = null;
+        String select = "" +
+                "SELECT DISTINCT node_id " +
+                "FROM tables " +
+                "NATURAL JOIN  rows " +
+                "WHERE table_name=? ";
+        for (int i = 1; i < tables.size(); i++) {
+            select += "OR table_name=? ";
+        }
+        select += ";";
+        // Execute select
+        ResultSet rs = null;
+        try {
+            st = imdb.prepareStatement(select);
+            for (int i = 1; i <= tables.size(); i++) {
+                st.setString(i, tables.get(i - 1));
+            }
+            rs = st.executeQuery();
+            while (rs.next()) {
+                nodes.add(rs.getInt(1));
+            }
+        } catch (SQLException e) {
+            logger.error("Error at getting nodes: {} - {}",
+                    e.getMessage(), e.getStackTrace());
+        } finally {
+            imdb.close(rs);
+            imdb.close(st);
+        }
+        return nodes;
     }
 
     public void close() {
