@@ -1,11 +1,21 @@
 package pl.pw.edu.mini.dos.communication.nodemaster;
 
-public class SelectMetadataRequest {
-    public int rowId;
-    public String table;
+import java.util.List;
 
-    public SelectMetadataRequest(int rowId, String table) {
+public class SelectMetadataRequest {
+    private int rowId;
+    private List<String> tables;
+
+    public SelectMetadataRequest(int rowId, List<String> tables) {
         this.rowId = rowId;
-        this.table = table;
+        this.tables = tables;
+    }
+
+    public int getRowId() {
+        return rowId;
+    }
+
+    public List<String> getTables() {
+        return tables;
     }
 }
