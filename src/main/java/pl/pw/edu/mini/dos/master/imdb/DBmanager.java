@@ -134,6 +134,47 @@ public class DBmanager {
     }
 
     /**
+     * Return a list of strings with the create table statements of the given tables.
+     *
+     * @param tables list of tables names
+     * @return list of create table statements of the given tables
+     */
+    public List<String> getCreateTableStatements(List<String> tables) {
+        List<String> createTableStatements = new ArrayList<>();
+        if (tables.size() == 0) {
+            return createTableStatements;
+        }
+        // Build select
+        PreparedStatement st = null;
+        String select = "" +
+                "SELECT create_statement FROM tables " +
+                "WHERE table_name=? ";
+        for (int i = 1; i < tables.size(); i++) {
+            select += "OR table_name=? ";
+        }
+        select += ";";
+        // Execute select
+        ResultSet rs = null;
+        try {
+            st = imdb.prepareStatement(select);
+            for (int i = 1; i <= tables.size(); i++) {
+                st.setString(i, tables.get(i - 1));
+            }
+            rs = st.executeQuery();
+            while (rs.next()) {
+                createTableStatements.add(rs.getString(1));
+            }
+        } catch (SQLException e) {
+            logger.error("Error at getting create tables statements: {} - {}",
+                    e.getMessage(), e.getStackTrace());
+        } finally {
+            imdb.close(rs);
+            imdb.close(st);
+        }
+        return createTableStatements;
+    }
+
+    /**
      * Insert metadata related with the insert (RowId, TableId, NodesIds).
      *
      * @param tableName tablename
