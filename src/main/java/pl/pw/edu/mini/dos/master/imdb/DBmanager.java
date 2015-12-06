@@ -13,7 +13,7 @@ import java.util.List;
 
 public class DBmanager {
     private static final Logger logger = LoggerFactory.getLogger(DBmanager.class);
-    private IMSqLiteDb imdb;
+    private SQLiteDb imdb;
     // Prepared statements
     PreparedStatement newTableInsert;
     PreparedStatement nextRowIdSelect;
@@ -23,7 +23,7 @@ public class DBmanager {
     PreparedStatement selectCreateTableStatements;
 
     public DBmanager() {
-        this.imdb = new IMSqLiteDb();
+        this.imdb = new SQLiteDb();
     }
 
     /**

@@ -6,13 +6,20 @@ import org.sqlite.SQLiteConfig;
 
 import java.sql.*;
 
-public class IMSqLiteDb implements AutoCloseable {
-    private static final Logger logger = LoggerFactory.getLogger(IMSqLiteDb.class);
+/**
+ * Provides the required methods to interact with the SQLite data base.
+ * *It uses only one connection because in SQLite it is faster than use
+ * many connections or a pool of connections.
+ */
+public class SQLiteDb implements AutoCloseable {
+    private static final Logger logger = LoggerFactory.getLogger(SQLiteDb.class);
+    private static final String DB_URL = "jdbc:sqlite::memory:";
+    private static final String DRIVER = "org.sqlite.JDBC";
     private Connection connection;
 
-    public IMSqLiteDb() {
+    public SQLiteDb() {
         try {
-            Class.forName("org.sqlite.JDBC");
+            Class.forName(DRIVER);
         } catch (ClassNotFoundException e) {
             logger.error("Cannot find sqlite driver - {}", e.getMessage());
         }
@@ -22,7 +29,7 @@ public class IMSqLiteDb implements AutoCloseable {
             SQLiteConfig config = new SQLiteConfig();
             config.enforceForeignKeys(true);
             this.connection = DriverManager.getConnection(
-                    "jdbc:sqlite::memory:", config.toProperties());
+                    DB_URL, config.toProperties());
             this.connection.setAutoCommit(false);
         } catch (SQLException e) {
             logger.error("Cannot connect to sqlite database - {}", e.getMessage());
@@ -46,11 +53,14 @@ public class IMSqLiteDb implements AutoCloseable {
         }
     }
 
-    public void commit() throws SQLException {
-        connection.commit();
-        logger.trace("Commit OK");
+    public void commit() {
+        try {
+            connection.commit();
+            logger.trace("Commit OK");
+        } catch (SQLException e) {
+            logger.error("Commit failed");
+        }
     }
-
 
     public void close(Statement statement) {
         if (statement != null) {
