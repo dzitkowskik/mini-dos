@@ -116,7 +116,12 @@ public class Node extends UnicastRemoteObject
     @Override
     public ExecuteCreateTablesResponse createTables(
             ExecuteCreateTablesRequest executeCreateTablesRequest) throws RemoteException {
-        return null;
+            boolean ok = dbManager.createTables(
+                    executeCreateTablesRequest.getCreateTableStatements());
+            if(!ok){
+                return new ExecuteCreateTablesResponse(ErrorEnum.ANOTHER_ERROR);
+            }
+        return new ExecuteCreateTablesResponse(ErrorEnum.NO_ERROR);
     }
 
     @Override

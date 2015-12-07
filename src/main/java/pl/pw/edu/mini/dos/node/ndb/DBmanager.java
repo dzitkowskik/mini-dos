@@ -5,6 +5,11 @@ import org.slf4j.LoggerFactory;
 import pl.pw.edu.mini.dos.Config;
 import pl.pw.edu.mini.dos.communication.nodenode.ExecuteSqlRequest;
 
+import java.sql.Connection;
+import java.sql.SQLException;
+import java.sql.Statement;
+import java.util.List;
+
 public class DBmanager {
     private static final Logger logger = LoggerFactory.getLogger(DBmanager.class);
     private static final Config config = Config.getConfig();
@@ -13,7 +18,7 @@ public class DBmanager {
 
     public DBmanager(boolean inMemory) {
         pathToDBFile = "jdbc:sqlite:";
-        if(inMemory) {
+        if (inMemory) {
             pathToDBFile += ":memory:";
         } else {
             pathToDBFile += config.getProperty("nodeDatabasePath");
@@ -21,7 +26,38 @@ public class DBmanager {
         this.db = SQLiteDb.getInstance();
     }
 
-    public SQLiteJob newSQLiteJob(ExecuteSqlRequest executeSqlRequest){
+    public SQLiteJob newSQLiteJob(ExecuteSqlRequest executeSqlRequest) {
         return new SQLiteJob(db.getConnection(pathToDBFile), executeSqlRequest);
+    }
+
+    /**
+     * Execute the given create table statements in local db.
+     *
+     * @param createTableStatements create table statements
+     * @return true: success
+     */
+    public boolean createTables(List<String> createTableStatements) {
+        Connection conn = null;
+        Statement st = null;
+        try {
+            conn = db.getConnection(pathToDBFile);
+            st = conn.createStatement();
+            for (String createTableStatement : createTableStatements) {
+                try {
+                    st.executeUpdate(createTableStatement);
+                } catch (SQLException e) {
+                    logger.debug("Table already exists: " + e.getMessage().toString());
+                }
+            }
+        } catch (SQLException e) {
+            db.rollback(conn);
+            logger.error(e.getMessage());
+            return false;
+        } finally {
+            db.commit(conn);
+            db.close(st);
+            db.close(conn);
+        }
+        return true;
     }
 }

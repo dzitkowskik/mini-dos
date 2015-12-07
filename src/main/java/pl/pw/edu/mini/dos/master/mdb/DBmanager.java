@@ -61,7 +61,7 @@ public class DBmanager {
     /**
      * Prepare the Statements that will be used to be faster.
      */
-    public void prepareStatements() {
+    private void prepareStatements() {
         String newTableInsert = "" +
                 "INSERT INTO tables (table_name, create_statement, next_row_id) " +
                 "VALUES (?,?,0);";
