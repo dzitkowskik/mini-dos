@@ -1,7 +1,5 @@
-package pl.pw.edu.mini.dos.node;
+package pl.pw.edu.mini.dos.node.ndb;
 
-import javafx.concurrent.Task;
-import javafx.util.Pair;
 import net.sf.jsqlparser.statement.SetStatement;
 import net.sf.jsqlparser.statement.StatementVisitor;
 import net.sf.jsqlparser.statement.Statements;
@@ -21,39 +19,31 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import pl.pw.edu.mini.dos.communication.ErrorEnum;
 import pl.pw.edu.mini.dos.communication.masternode.ExecuteSQLOnNodeResponse;
-import pl.pw.edu.mini.dos.communication.nodemaster.InsertMetadataRequest;
-import pl.pw.edu.mini.dos.communication.nodemaster.InsertMetadataResponse;
-import pl.pw.edu.mini.dos.communication.nodemaster.NodeMasterInterface;
+import pl.pw.edu.mini.dos.communication.nodemaster.*;
 import pl.pw.edu.mini.dos.communication.nodenode.ExecuteSqlRequest;
 import pl.pw.edu.mini.dos.communication.nodenode.ExecuteSqlResponse;
 import pl.pw.edu.mini.dos.communication.nodenode.NodeNodeInterface;
+import pl.pw.edu.mini.dos.node.task.TaskManager;
 
 import java.rmi.RemoteException;
-import java.sql.SQLException;
 
-/**
- * Created by ghash on 02.12.2015.
- */
 public class SqlLiteStatementVisitor implements StatementVisitor {
     private static final Logger logger = LoggerFactory.getLogger(SqlLiteStatementVisitor.class);
-    private SqLiteDb db;
     private NodeMasterInterface master;
     private NodeNodeInterface thisNode;
     private ExecuteSQLOnNodeResponse result;
     private Long taskId;
 
     public SqlLiteStatementVisitor(
-            SqLiteDb db,
-            NodeMasterInterface master,
-            NodeNodeInterface node,
-            Long taskId) {
-        this.db = db;
+            NodeMasterInterface master, NodeNodeInterface node, Long taskId) {
         this.master = master;
         this.taskId = taskId;
         this.thisNode = node;
     }
 
-    public ExecuteSQLOnNodeResponse getResult(){ return this.result; }
+    public ExecuteSQLOnNodeResponse getResult() {
+        return this.result;
+    }
 
     @Override
     public void visit(Select select) {
@@ -78,41 +68,41 @@ public class SqlLiteStatementVisitor implements StatementVisitor {
         String tableName = insert.getTable().getName();
 
         // Get nodes to insert data into
-        InsertMetadataResponse insertMetadataResponse = null;
+        InsertMetadataResponse insertMetadataResponse;
         try {
             insertMetadataResponse =
                     master.insertMetadata(new InsertMetadataRequest(tableName));
         } catch (RemoteException e) {
             logger.error("Cannot get insert metadata from master: {}", e.getMessage());
+            this.result = new ExecuteSQLOnNodeResponse("", ErrorEnum.REMOTE_EXCEPTION);
+            return;
         }
 
-        int tasksNumber = insertMetadataResponse.getNodes().size();
-        TaskCompletion.getInstance().add(taskId, tasksNumber);
+        if (!insertMetadataResponse.getError().equals(ErrorEnum.NO_ERROR)) {
+            logger.error("Error at inserting metadata in master");
+            this.result = new ExecuteSQLOnNodeResponse("", insertMetadataResponse.getError());
+            return;
+        }
+
+        int numSubTasks = insertMetadataResponse.getNodes().size();
+        TaskManager.getInstance().add(taskId, numSubTasks);
 
         // Insert data to nodes pointed by master
         try {
-            for (int i = 0; i < tasksNumber; i++) {
-                NodeNodeInterface node = insertMetadataResponse.getNodes().get(i);
-                ExecuteSqlResponse response =
-                    node.executeSql(new ExecuteSqlRequest(taskId, insert.toString(), thisNode));
-                if(response.errorType != ErrorEnum.NO_ERROR) {
-                    TaskCompletion.getInstance().update(
-                            taskId,
-                            response.errorType,
-                            response.result,
-                            response.result);
-                }
+            for (NodeNodeInterface node : insertMetadataResponse.getNodes()) {
+                node.executeSql(new ExecuteSqlRequest(
+                        taskId, insert.toString(), thisNode));
             }
         } catch (RemoteException e) {
             logger.error("Cannot insert data to another node: {}", e.getMessage());
-            TaskCompletion.getInstance().additionalError(taskId, e.getMessage());
+            TaskManager.getInstance().updateSubTask(
+                    taskId, ErrorEnum.REMOTE_EXCEPTION, e.getMessage());
         }
 
-        Pair<ErrorEnum, String> result = TaskCompletion.getInstance().waitForCompletion(taskId);
-
+        ExecuteSqlResponse response = TaskManager.getInstance().waitForCompletion(taskId);
         logger.info("Insert is DONE!");
 
-        this.result = new ExecuteSQLOnNodeResponse(result.getValue(), result.getKey());
+        this.result = new ExecuteSQLOnNodeResponse(response.getResult(), response.getError());
     }
 
     @Override
@@ -137,21 +127,47 @@ public class SqlLiteStatementVisitor implements StatementVisitor {
 
     @Override
     public void visit(CreateTable createTable) {
-        // TODO: Implement it like insert
-        // createTable.toString() -> get create query
-        logger.info("I GOT CREATE TABLE {}", createTable.getTable().getName());
+        String tableName = createTable.getTable().getName();
+        String createStatement = createTable.toString(); // TODO check if ; is needed
+        logger.debug(createStatement + " --> " + tableName);
+
+        // Send metadata to master
+        CreateMetadataResponse createMetadataResponse;
         try {
-            db.ExecuteQuery(createTable.toString());
-            db.commit();
-            this.result = new ExecuteSQLOnNodeResponse("table created", ErrorEnum.NO_ERROR);
-        } catch (SQLException e) {
-            logger.error("Error executing sql query: {} error: {} stack: {}",
-                    createTable.toString(),
-                    e.getMessage(),
-                    e.getStackTrace());
-            db.rollback();
-            this.result = new ExecuteSQLOnNodeResponse(e.getMessage(), ErrorEnum.SQL_EXECUTION_ERROR);
+            createMetadataResponse =
+                    master.createMetadata(new CreateMetadataRequest(
+                            tableName, createStatement));
+        } catch (RemoteException e) {
+            logger.error("Cannot insert metadata in master: {}", e.getMessage());
+            this.result = new ExecuteSQLOnNodeResponse("", ErrorEnum.REMOTE_EXCEPTION);
+            return;
         }
+
+        if (!createMetadataResponse.getError().equals(ErrorEnum.NO_ERROR)) {
+            logger.error("Error at inserting metadata in master");
+            this.result = new ExecuteSQLOnNodeResponse("", createMetadataResponse.getError());
+            return;
+        }
+
+        int numSubTasks = createMetadataResponse.getNodes().size();
+        TaskManager.getInstance().add(taskId, numSubTasks);
+
+        // Create table in nodes pointed by master
+        try {
+            for (NodeNodeInterface node : createMetadataResponse.getNodes()) {
+                node.executeSql(new ExecuteSqlRequest(
+                        taskId, createTable.toString(), thisNode));
+            }
+        } catch (RemoteException e) {
+            logger.error("Cannot create table in another node: {}", e.getMessage());
+            TaskManager.getInstance().updateSubTask(
+                    taskId, ErrorEnum.REMOTE_EXCEPTION, e.getMessage());
+        }
+
+        ExecuteSqlResponse response = TaskManager.getInstance().waitForCompletion(taskId);
+        logger.info("Create table is DONE!");
+
+        this.result = new ExecuteSQLOnNodeResponse(response.getResult(), response.getError());
     }
 
     @Override

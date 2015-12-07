@@ -1,4 +1,4 @@
-package pl.pw.edu.mini.dos.master.imdb;
+package pl.pw.edu.mini.dos.master.mdb;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -11,13 +11,12 @@ import java.sql.*;
  * *It uses only one connection because in SQLite it is faster than use
  * many connections or a pool of connections.
  */
-public class SQLiteDb implements AutoCloseable {
+public class SQLiteDb {
     private static final Logger logger = LoggerFactory.getLogger(SQLiteDb.class);
-    private static final String DB_URL = "jdbc:sqlite::memory:";
     private static final String DRIVER = "org.sqlite.JDBC";
     private Connection connection;
 
-    public SQLiteDb() {
+    public SQLiteDb(String dbURL) {
         try {
             Class.forName(DRIVER);
         } catch (ClassNotFoundException e) {
@@ -29,7 +28,7 @@ public class SQLiteDb implements AutoCloseable {
             SQLiteConfig config = new SQLiteConfig();
             config.enforceForeignKeys(true);
             this.connection = DriverManager.getConnection(
-                    DB_URL, config.toProperties());
+                    dbURL, config.toProperties());
             this.connection.setAutoCommit(false);
         } catch (SQLException e) {
             logger.error("Cannot connect to sqlite database - {}", e.getMessage());
@@ -87,7 +86,7 @@ public class SQLiteDb implements AutoCloseable {
             this.connection.close();
             logger.info("Sqlite connection closed");
         } catch (SQLException e) {
-            logger.error("Error while closing sqlite connection - ", e.getMessage());
+            logger.error("Error while closing sqlite connection: {}", e.getMessage());
         }
     }
 }

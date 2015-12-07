@@ -4,22 +4,26 @@ import pl.pw.edu.mini.dos.communication.ErrorEnum;
 
 import java.io.Serializable;
 
-/**
- * Created by Karol Dzitkowski on 03.12.2015.
- */
 public class AskToCommitRequest implements Serializable {
-    public Long taskId;
-    public ErrorEnum errorType;
-    public String errorMessage;
-    public String queryResult;
+    private Long taskId;
+    private ErrorEnum errorType;
+    private String result; // The query result or the error message
 
-    public AskToCommitRequest(Long taskId,
-                              ErrorEnum errorType,
-                              String errorMessage,
-                              String queryResult) {
+    public AskToCommitRequest(Long taskId, ErrorEnum errorType, String result) {
         this.taskId = taskId;
-        this.errorMessage = errorMessage;
         this.errorType = errorType;
-        this.queryResult = queryResult;
+        this.result = result;
+    }
+
+    public Long getTaskId() {
+        return taskId;
+    }
+
+    public ErrorEnum getErrorType() {
+        return errorType;
+    }
+
+    public String getResult() {
+        return result;
     }
 }

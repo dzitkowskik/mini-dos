@@ -1,4 +1,4 @@
-package pl.pw.edu.mini.dos.node;
+package pl.pw.edu.mini.dos.node.rmi;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

@@ -11,7 +11,7 @@ import pl.pw.edu.mini.dos.communication.clientmaster.ExecuteSQLResponse;
 import pl.pw.edu.mini.dos.communication.masternode.*;
 import pl.pw.edu.mini.dos.communication.nodemaster.*;
 import pl.pw.edu.mini.dos.communication.nodenode.NodeNodeInterface;
-import pl.pw.edu.mini.dos.master.imdb.DBmanager;
+import pl.pw.edu.mini.dos.master.mdb.DBmanager;
 import pl.pw.edu.mini.dos.master.node.NodeManager;
 import pl.pw.edu.mini.dos.master.node.PingNodes;
 import pl.pw.edu.mini.dos.master.rmi.RMIServer;
@@ -135,20 +135,20 @@ public class Master
     public SelectMetadataResponse selectMetadata(SelectMetadataRequest selectMetadataRequest)
             throws RemoteException {
         List<String> tables = selectMetadataRequest.getTables();
-        if(tables == null || tables.size()==0){
-            return new SelectMetadataResponse(null,null,ErrorEnum.ANOTHER_ERROR);
+        if (tables == null || tables.size() == 0) {
+            return new SelectMetadataResponse(null, null, ErrorEnum.ANOTHER_ERROR);
         }
         List<String> createTableStatements = dbManager.getCreateTableStatements(tables);
         List<Integer> nodesIDs = dbManager.getNodesHaveTables(tables);
-        if(createTableStatements == null || nodesIDs == null){
-            return new SelectMetadataResponse(null,null, ErrorEnum.TABLE_NOT_EXIST);
+        if (createTableStatements == null || nodesIDs == null) {
+            return new SelectMetadataResponse(null, null, ErrorEnum.TABLE_NOT_EXIST);
         }
         List<NodeNodeInterface> nodesInterfaces = new ArrayList<>(nodesIDs.size());
-        for(Integer nodeID : nodesIDs){
-            nodesInterfaces.add((NodeNodeInterface)nodeManager.getNodeInterface(nodeID));
+        for (Integer nodeID : nodesIDs) {
+            nodesInterfaces.add(nodeManager.<NodeNodeInterface>getNodeInterface(nodeID));
         }
         return new SelectMetadataResponse(nodesInterfaces,
-                createTableStatements,ErrorEnum.NO_ERROR);
+                createTableStatements, ErrorEnum.NO_ERROR);
     }
 
     @Override
@@ -166,9 +166,11 @@ public class Master
     @Override
     public CreateMetadataResponse createMetadata(CreateMetadataRequest createMetadataRequest)
             throws RemoteException {
-        return new CreateMetadataResponse(dbManager.insertTable(
-                createMetadataRequest.getTable(),
-                createMetadataRequest.getCreateStatement()));
+        return new CreateMetadataResponse(
+                nodeManager.<NodeNodeInterface>getNodesInterfaces(),
+                dbManager.insertTable(
+                        createMetadataRequest.getTable(),
+                        createMetadataRequest.getCreateStatement()));
     }
 
     @Override

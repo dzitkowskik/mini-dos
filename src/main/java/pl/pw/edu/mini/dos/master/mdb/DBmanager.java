@@ -1,30 +1,29 @@
-package pl.pw.edu.mini.dos.master.imdb;
+package pl.pw.edu.mini.dos.master.mdb;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import pl.pw.edu.mini.dos.communication.ErrorEnum;
-import pl.pw.edu.mini.dos.communication.nodenode.NodeNodeInterface;
 
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayList;
-import java.util.Iterator;
 import java.util.List;
 
 public class DBmanager {
     private static final Logger logger = LoggerFactory.getLogger(DBmanager.class);
+    private static final String DB_URL = "jdbc:sqlite::memory:";
     private SQLiteDb imdb;
     // Prepared statements
-    PreparedStatement newTableInsert;
-    PreparedStatement nextRowIdSelect;
-    PreparedStatement incrementRowIdUpdate;
-    PreparedStatement newRowInsert;
-    PreparedStatement selectCreateTableStatements;
+    private PreparedStatement newTableInsert;
+    private PreparedStatement nextRowIdSelect;
+    private PreparedStatement incrementRowIdUpdate;
+    private PreparedStatement newRowInsert;
+    private PreparedStatement selectCreateTableStatements;
 
     public DBmanager() {
-        this.imdb = new SQLiteDb();
+        this.imdb = new SQLiteDb(DB_URL);
     }
 
     /**

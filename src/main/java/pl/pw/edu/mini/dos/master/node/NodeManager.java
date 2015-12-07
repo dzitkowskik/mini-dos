@@ -54,16 +54,16 @@ public class NodeManager {
         return new ArrayList<>(registeredNodes.values());
     }
 
-    public List<MasterNodeInterface> getNodesInterfaces() {
-        List<MasterNodeInterface> interfaces = new ArrayList<>(registeredNodes.size());
+    public <T> List<T> getNodesInterfaces() {
+        List<T> interfaces = new ArrayList<>(registeredNodes.size());
         for (RegisteredNode node : registeredNodes.values()) {
-            interfaces.add(node.getInterface());
+            interfaces.add((T) node.getInterface());
         }
         return interfaces;
     }
 
-    public MasterNodeInterface getNodeInterface(Integer nodeID){
-        return registeredNodes.get(nodeID).getInterface();
+    public <T> T getNodeInterface(Integer nodeID){
+        return (T) registeredNodes.get(nodeID).getInterface();
     }
 
     public Map<Integer, RegisteredNode> getNodesMap() {

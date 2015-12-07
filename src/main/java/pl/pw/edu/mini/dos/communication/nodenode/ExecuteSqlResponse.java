@@ -4,16 +4,23 @@ import pl.pw.edu.mini.dos.communication.ErrorEnum;
 
 import java.io.Serializable;
 
-/**
- * Created by Karol Dzitkowski on 03.12.2015.
- */
 public class ExecuteSqlResponse implements Serializable {
-    public ErrorEnum errorType;
-    public String result;
+    private String result;
+    private ErrorEnum error;
 
+    public ExecuteSqlResponse() {
+    }
 
-    public ExecuteSqlResponse(ErrorEnum errorType, String result) {
-        this.errorType = errorType;
+    public ExecuteSqlResponse(String result, ErrorEnum error) {
         this.result = result;
+        this.error = error;
+    }
+
+    public String getResult() {
+        return result;
+    }
+
+    public ErrorEnum getError() {
+        return error;
     }
 }
