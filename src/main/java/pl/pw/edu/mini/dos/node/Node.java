@@ -88,7 +88,7 @@ public class Node extends UnicastRemoteObject
         workQueue.shutdown();
         while (!workQueue.isTerminated()) {
             try {
-                workQueue.wait(100);
+                Thread.sleep(100);
             } catch (InterruptedException e) {
                 logger.error(e.getMessage());
             }

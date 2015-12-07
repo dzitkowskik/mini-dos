@@ -165,9 +165,13 @@ public class SqlLiteStatementVisitor implements StatementVisitor {
         }
 
         ExecuteSqlResponse response = TaskManager.getInstance().waitForCompletion(taskId);
+        if(!response.getError().equals(ErrorEnum.NO_ERROR)){
+            logger.info("Error at creating table!");
+            this.result = new ExecuteSQLOnNodeResponse(response.getResult(), response.getError());
+            return;
+        }
         logger.info("Create table is DONE!");
-
-        this.result = new ExecuteSQLOnNodeResponse(response.getResult(), response.getError());
+        this.result = new ExecuteSQLOnNodeResponse(tableName + " created!", response.getError());
     }
 
     @Override

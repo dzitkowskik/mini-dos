@@ -53,7 +53,7 @@ public class TaskManager {
         }
         try {
             while (!subTasks.isTaskCompleted()) {
-                subTasks.wait(100);
+                Thread.sleep(100);
             }
         } catch (InterruptedException e) {
             logger.error("Wait interrupted: {}", e.getMessage());

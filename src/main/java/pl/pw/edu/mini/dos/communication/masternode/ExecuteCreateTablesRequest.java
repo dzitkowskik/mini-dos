@@ -1,8 +1,9 @@
 package pl.pw.edu.mini.dos.communication.masternode;
 
+import java.io.Serializable;
 import java.util.List;
 
-public class ExecuteCreateTablesRequest {
+public class ExecuteCreateTablesRequest implements Serializable {
     // List of create stataments of all the tables
     private List<String> createTableStatements;
 

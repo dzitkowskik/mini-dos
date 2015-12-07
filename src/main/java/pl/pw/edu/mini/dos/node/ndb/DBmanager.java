@@ -9,6 +9,7 @@ import java.sql.Connection;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.List;
+import java.util.Random;
 
 public class DBmanager {
     private static final Logger logger = LoggerFactory.getLogger(DBmanager.class);
@@ -17,11 +18,12 @@ public class DBmanager {
     private String pathToDBFile;
 
     public DBmanager(boolean inMemory) {
+        Random rn = new Random();
         pathToDBFile = "jdbc:sqlite:";
         if (inMemory) {
             pathToDBFile += ":memory:";
         } else {
-            pathToDBFile += config.getProperty("nodeDatabasePath");
+            pathToDBFile += config.getProperty("nodeDatabasePath") + rn.nextInt();
         }
         this.db = SQLiteDb.getInstance();
     }

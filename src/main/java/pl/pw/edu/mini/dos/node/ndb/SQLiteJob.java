@@ -33,10 +33,9 @@ public class SQLiteJob implements Runnable {
             int rowsAffected = st.executeUpdate();
             result = rowsAffected + " rows affected";
         } catch (SQLException e) {
-            logger.error("Error executing sql query: {} error: {} stack: {}",
+            logger.error("Error executing sql query: {} error: {}",
                     request.getSql(),
-                    e.getMessage(),
-                    e.getStackTrace());
+                    e.getMessage());
             ok = ErrorEnum.SQL_EXECUTION_ERROR;
             result = e.getMessage();
         }

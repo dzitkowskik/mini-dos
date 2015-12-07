@@ -2,7 +2,9 @@ package pl.pw.edu.mini.dos.communication.masternode;
 
 import pl.pw.edu.mini.dos.communication.ErrorEnum;
 
-public class ExecuteCreateTablesResponse {
+import java.io.Serializable;
+
+public class ExecuteCreateTablesResponse implements Serializable {
     private ErrorEnum error;
 
     public ExecuteCreateTablesResponse(ErrorEnum error) {

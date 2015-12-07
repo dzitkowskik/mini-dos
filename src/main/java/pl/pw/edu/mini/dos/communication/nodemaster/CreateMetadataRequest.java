@@ -1,6 +1,8 @@
 package pl.pw.edu.mini.dos.communication.nodemaster;
 
-public class CreateMetadataRequest {
+import java.io.Serializable;
+
+public class CreateMetadataRequest implements Serializable {
     private String table;
     private String createStatement;
 
