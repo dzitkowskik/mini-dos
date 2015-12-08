@@ -13,10 +13,12 @@ import net.sf.jsqlparser.statement.execute.Execute;
 import net.sf.jsqlparser.statement.insert.Insert;
 import net.sf.jsqlparser.statement.replace.Replace;
 import net.sf.jsqlparser.statement.select.Select;
+import net.sf.jsqlparser.statement.select.WithItem;
 import net.sf.jsqlparser.statement.truncate.Truncate;
 import net.sf.jsqlparser.statement.update.Update;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import pl.pw.edu.mini.dos.Helper;
 import pl.pw.edu.mini.dos.communication.ErrorEnum;
 import pl.pw.edu.mini.dos.communication.masternode.ExecuteSQLOnNodeResponse;
 import pl.pw.edu.mini.dos.communication.nodemaster.*;
@@ -26,6 +28,8 @@ import pl.pw.edu.mini.dos.communication.nodenode.NodeNodeInterface;
 import pl.pw.edu.mini.dos.node.task.TaskManager;
 
 import java.rmi.RemoteException;
+import java.util.LinkedList;
+import java.util.List;
 
 public class SqlLiteStatementVisitor implements StatementVisitor {
     private static final Logger logger = LoggerFactory.getLogger(SqlLiteStatementVisitor.class);
@@ -47,8 +51,76 @@ public class SqlLiteStatementVisitor implements StatementVisitor {
 
     @Override
     public void visit(Select select) {
+        logger.info("I GOT SELECT: {}", select.getSelectBody().toString());
 
+        if (select.getWithItemsList() == null) {
+            logger.info("select.getWithItemsList() is empty");
+        } else {
+            for(WithItem withItem : select.getWithItemsList()) {
+                logger.info(withItem.toString());
+            }
+        }
+
+        // Get table name
+        // TODO: it is not so easy..
+        String tableName = select.getSelectBody().toString().split(" ")[3];
+        logger.info("Table name: " + tableName);
+
+        List tableNameList = new LinkedList<>();
+        tableNameList.add(tableName);
+
+        // Get nodes to select data from
+        SelectMetadataResponse selectMetadataResponse;
+        try {
+            selectMetadataResponse =
+                    master.selectMetadata(new SelectMetadataRequest(tableNameList));
+        } catch (RemoteException e) {
+            logger.error("Cannot get insert metadata from master: {}", e.getMessage());
+            this.result = new ExecuteSQLOnNodeResponse("", ErrorEnum.REMOTE_EXCEPTION);
+            return;
+        }
+
+        if (!selectMetadataResponse.getError().equals(ErrorEnum.NO_ERROR)) {
+            logger.error("Error at inserting metadata in master");
+            this.result = new ExecuteSQLOnNodeResponse("", selectMetadataResponse.getError());
+            return;
+        }
+
+        //
+        int numSubTasks = selectMetadataResponse.getNodes().size();
+        TaskManager.getInstance().add(taskId, numSubTasks); // ?
+
+        // Select data from nodes pointed by master
+        List<ExecuteSqlResponse> executeSqlResponses = new LinkedList<>();
+        try {
+            for (NodeNodeInterface node : selectMetadataResponse.getNodes()) {
+                logger.info("Send request to node " + node.toString());
+                ExecuteSqlResponse executeSqlResponse =
+                        node.executeSql(new ExecuteSqlRequest(
+                        taskId, select.toString(), thisNode));
+                executeSqlResponses.add(executeSqlResponse);
+                logger.info("Get request from node {result=" + executeSqlResponse.getResult()
+                        + " data=" + executeSqlResponse.getData() + "}");
+            }
+        } catch (RemoteException e) {
+            logger.error("Cannot select data from another node: {}", e.getMessage());
+            TaskManager.getInstance().updateSubTask(
+                    taskId, ErrorEnum.REMOTE_EXCEPTION, e.getMessage());
+        }
+
+        if (executeSqlResponses.size() == 0) {
+            logger.info("I get no data from another Nodes.");
+            this.result = new ExecuteSQLOnNodeResponse("", ErrorEnum.NO_ERROR);
+            return;
+        }
+
+        logger.info("Select is DONE!");
+
+        String resultOfQuery = Helper.executeSqlResponseListToString(executeSqlResponses);
+        this.result = new ExecuteSQLOnNodeResponse(
+                resultOfQuery, executeSqlResponses.get(0).getError()); // TODO: merger error from all
     }
+
 
     @Override
     public void visit(Delete delete) {

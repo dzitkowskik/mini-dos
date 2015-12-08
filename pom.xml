@@ -54,6 +54,12 @@
             <artifactId>jsqlparser</artifactId>
             <version>${sqlparser.version}</version>
         </dependency>
+        <dependency>
+            <!-- DBUtils -->
+            <groupId>commons-dbutils</groupId>
+            <artifactId>commons-dbutils</artifactId>
+            <version>1.5</version>
+        </dependency>
     </dependencies>
 
     <build>

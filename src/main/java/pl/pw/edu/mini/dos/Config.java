@@ -7,6 +7,7 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
+import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.Properties;
 
@@ -19,7 +20,7 @@ public class Config {
     private Properties props;
 
     public Config() {
-        URL configFileUrl = this.getClass().getClassLoader().getResource("config.properties");
+        URL configFileUrl = Helper.getResources(this.getClass(), "config.properties");
 
         try {
             if(configFileUrl == null) {

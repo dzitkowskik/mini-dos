@@ -106,6 +106,7 @@ public class Node extends UnicastRemoteObject
             Statement stmt = CCJSqlParserUtil.parse(executeSQLOnNodeRequest.getSql());
             SqlLiteStatementVisitor visitor = new SqlLiteStatementVisitor(master, this, taskId);
             stmt.accept(visitor);
+            logger.info("Sending response for select: " + visitor.getResult().getResult());
             return visitor.getResult();
         } catch (JSQLParserException e) {
             logger.error("Sql parsing error: {} - {}", e.getMessage(), e.getStackTrace());
@@ -140,7 +141,7 @@ public class Node extends UnicastRemoteObject
         // Create and shedule sqlite job to execute
         SQLiteJob job = dbManager.newSQLiteJob(request);
         workQueue.execute(job);
-        return new ExecuteSqlResponse();
+        return job.getExecuteSqlResponse();
     }
 
     @Override

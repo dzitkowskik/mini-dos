@@ -2,6 +2,7 @@ package pl.pw.edu.mini.dos.node.rmi;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import pl.pw.edu.mini.dos.Helper;
 import pl.pw.edu.mini.dos.communication.ErrorHandler;
 
 import java.io.File;
@@ -37,7 +38,7 @@ public class RMIClient implements Serializable {
 
     private void setPolicyPath() {
         String pathToPolicy = null;
-        pathToPolicy = this.getClass().getClassLoader().getResource("client.policy").getFile();
+        pathToPolicy = Helper.getResources(this.getClass(), "client.policy").getFile();
         if (pathToPolicy != null) {
             System.setProperty("java.security.policy", pathToPolicy);
         }

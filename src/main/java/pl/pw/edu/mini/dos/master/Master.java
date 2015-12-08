@@ -1,8 +1,10 @@
 package pl.pw.edu.mini.dos.master;
 
+import org.apache.log4j.Level;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import pl.pw.edu.mini.dos.Config;
+import pl.pw.edu.mini.dos.Helper;
 import pl.pw.edu.mini.dos.communication.ErrorEnum;
 import pl.pw.edu.mini.dos.communication.Services;
 import pl.pw.edu.mini.dos.communication.clientmaster.ClientMasterInterface;
@@ -135,6 +137,7 @@ public class Master
     public SelectMetadataResponse selectMetadata(SelectMetadataRequest selectMetadataRequest)
             throws RemoteException {
         List<String> tables = selectMetadataRequest.getTables();
+        logger.info("Get metadata select request for tables: " + Helper.CollectionToString(tables));
         if (tables == null || tables.size() == 0) {
             return new SelectMetadataResponse(null, null, ErrorEnum.ANOTHER_ERROR);
         }
@@ -145,8 +148,11 @@ public class Master
         }
         List<NodeNodeInterface> nodesInterfaces = new ArrayList<>(nodesIDs.size());
         for (Integer nodeID : nodesIDs) {
+            logger.info("  add node with id = " + nodeID);
             nodesInterfaces.add(nodeManager.<NodeNodeInterface>getNodeInterface(nodeID));
         }
+
+        logger.info("Set metadata select response (nodeCount=" + nodesInterfaces.size() + ")");
         return new SelectMetadataResponse(nodesInterfaces,
                 createTableStatements, ErrorEnum.NO_ERROR);
     }
