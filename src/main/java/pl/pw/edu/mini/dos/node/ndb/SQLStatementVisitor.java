@@ -31,14 +31,14 @@ import java.rmi.RemoteException;
 import java.util.LinkedList;
 import java.util.List;
 
-public class SqlLiteStatementVisitor implements StatementVisitor {
-    private static final Logger logger = LoggerFactory.getLogger(SqlLiteStatementVisitor.class);
+public class SQLStatementVisitor implements StatementVisitor {
+    private static final Logger logger = LoggerFactory.getLogger(SQLStatementVisitor.class);
     private NodeMasterInterface master;
     private NodeNodeInterface thisNode;
     private ExecuteSQLOnNodeResponse result;
     private Long taskId;
 
-    public SqlLiteStatementVisitor(
+    public SQLStatementVisitor(
             NodeMasterInterface master, NodeNodeInterface node, Long taskId) {
         this.master = master;
         this.taskId = taskId;
@@ -62,21 +62,18 @@ public class SqlLiteStatementVisitor implements StatementVisitor {
             }
         }
 
-        // Get table name
-        // TODO: it is not so easy..
-        String tableName = select.getSelectBody().toString().split(" ")[3];
-        logger.info("Table name: " + tableName);
-
-        List tableNameList = new LinkedList<>();
-        tableNameList.add(tableName);
+        // Get tables names
+        SQLSelectTablesFinder tablesFinder = new SQLSelectTablesFinder();
+        List<String> tables = tablesFinder.getTableList(select);
+        logger.info("Tables: " + Helper.collectionToString(tables));
 
         // Get nodes to select data from
         SelectMetadataResponse selectMetadataResponse;
         try {
             selectMetadataResponse =
-                    master.selectMetadata(new SelectMetadataRequest(tableNameList));
+                    master.selectMetadata(new SelectMetadataRequest(tables));
         } catch (RemoteException e) {
-            logger.error("Cannot get insert metadata from master: {}", e.getMessage());
+            logger.error("Cannot get select metadata from master: {}", e.getMessage());
             this.result = new ExecuteSQLOnNodeResponse("", ErrorEnum.REMOTE_EXCEPTION);
             return;
         }
@@ -87,39 +84,39 @@ public class SqlLiteStatementVisitor implements StatementVisitor {
             return;
         }
 
-        //
-        int numSubTasks = selectMetadataResponse.getNodes().size();
-        TaskManager.getInstance().add(taskId, numSubTasks); // ?
-
-        // Select data from nodes pointed by master
-        List<ExecuteSqlResponse> executeSqlResponses = new LinkedList<>();
-        try {
-            for (NodeNodeInterface node : selectMetadataResponse.getNodes()) {
-                logger.info("Send request to node " + node.toString());
-                ExecuteSqlResponse executeSqlResponse =
-                        node.executeSql(new ExecuteSqlRequest(
-                        taskId, select.toString(), thisNode));
-                executeSqlResponses.add(executeSqlResponse);
-                logger.info("Get request from node {result=" + executeSqlResponse.getResult()
-                        + " data=" + executeSqlResponse.getData() + "}");
-            }
-        } catch (RemoteException e) {
-            logger.error("Cannot select data from another node: {}", e.getMessage());
-            TaskManager.getInstance().updateSubTask(
-                    taskId, ErrorEnum.REMOTE_EXCEPTION, e.getMessage());
-        }
-
-        if (executeSqlResponses.size() == 0) {
-            logger.info("I get no data from another Nodes.");
-            this.result = new ExecuteSQLOnNodeResponse("", ErrorEnum.NO_ERROR);
-            return;
-        }
+//        // Create task
+//        int numSubTasks = selectMetadataResponse.getNodes().size();
+//        TaskManager.getInstance().add(taskId, numSubTasks); // ?
+//
+//        // Select data from nodes pointed by master
+//        List<ExecuteSqlResponse> executeSqlResponses = new LinkedList<>();
+//        try {
+//            for (NodeNodeInterface node : selectMetadataResponse.getNodes()) {
+//                logger.info("Send request to node " + node.toString());
+//                ExecuteSqlResponse executeSqlResponse =
+//                        node.executeSql(new ExecuteSqlRequest(
+//                        taskId, select.toString(), thisNode));
+//                executeSqlResponses.add(executeSqlResponse);
+//                logger.info("Get request from node {result=" + executeSqlResponse.getResult()
+//                        + " data=" + executeSqlResponse.getData() + "}");
+//            }
+//        } catch (RemoteException e) {
+//            logger.error("Cannot select data from another node: {}", e.getMessage());
+//            TaskManager.getInstance().updateSubTask(
+//                    taskId, ErrorEnum.REMOTE_EXCEPTION, e.getMessage());
+//        }
+//
+//        if (executeSqlResponses.size() == 0) {
+//            logger.info("I get no data from another Nodes.");
+//            this.result = new ExecuteSQLOnNodeResponse("", ErrorEnum.NO_ERROR);
+//            return;
+//        }
 
         logger.info("Select is DONE!");
 
-        String resultOfQuery = Helper.executeSqlResponseListToString(executeSqlResponses);
+        // String resultOfQuery = Helper.executeSqlResponseListToString(executeSqlResponses);
         this.result = new ExecuteSQLOnNodeResponse(
-                resultOfQuery, executeSqlResponses.get(0).getError()); // TODO: merger error from all
+                "asdf,asdf,asdf", ErrorEnum.NO_ERROR); // TODO: merger error from all
     }
 
 

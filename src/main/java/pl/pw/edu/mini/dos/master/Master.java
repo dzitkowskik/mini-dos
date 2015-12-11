@@ -135,6 +135,7 @@ public class Master
     @Override
     public SelectMetadataResponse selectMetadata(SelectMetadataRequest selectMetadataRequest)
             throws RemoteException {
+        // Get create tables and node that have the data
         List<String> tables = selectMetadataRequest.getTables();
         logger.info("Get metadata select request for tables: " + Helper.collectionToString(tables));
         if (tables == null || tables.size() == 0) {

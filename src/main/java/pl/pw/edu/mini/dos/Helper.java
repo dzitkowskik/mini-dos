@@ -58,7 +58,7 @@ public class Helper {
 
         Iterator iterator = list.iterator();
 
-        String value = (String) iterator.next();
+        String value = iterator.next().toString();
         StringBuilder stringBuilder = new StringBuilder();
         stringBuilder.append(value);
 

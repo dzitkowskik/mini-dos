@@ -15,7 +15,7 @@ import pl.pw.edu.mini.dos.communication.nodemaster.RegisterRequest;
 import pl.pw.edu.mini.dos.communication.nodenode.*;
 import pl.pw.edu.mini.dos.node.ndb.DBmanager;
 import pl.pw.edu.mini.dos.node.ndb.SQLiteJob;
-import pl.pw.edu.mini.dos.node.ndb.SqlLiteStatementVisitor;
+import pl.pw.edu.mini.dos.node.ndb.SQLStatementVisitor;
 import pl.pw.edu.mini.dos.node.rmi.RMIClient;
 import pl.pw.edu.mini.dos.node.task.TaskManager;
 
@@ -104,7 +104,7 @@ public class Node extends UnicastRemoteObject
         Long taskId = executeSQLOnNodeRequest.getTaskId();
         try {
             Statement stmt = CCJSqlParserUtil.parse(executeSQLOnNodeRequest.getSql());
-            SqlLiteStatementVisitor visitor = new SqlLiteStatementVisitor(master, this, taskId);
+            SQLStatementVisitor visitor = new SQLStatementVisitor(master, this, taskId);
             stmt.accept(visitor);
             logger.info("Sending response for select: " + visitor.getResult().getResult());
             return visitor.getResult();
