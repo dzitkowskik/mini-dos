@@ -4,12 +4,14 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import pl.pw.edu.mini.dos.Config;
 import pl.pw.edu.mini.dos.communication.nodenode.ExecuteSqlRequest;
+import pl.pw.edu.mini.dos.communication.nodenode.ExecuteSqlResponse;
 
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.List;
 import java.util.Random;
+import java.util.concurrent.Callable;
 
 public class DBmanager {
     private static final Logger logger = LoggerFactory.getLogger(DBmanager.class);
@@ -29,8 +31,19 @@ public class DBmanager {
         this.db = SQLiteDb.getInstance();
     }
 
-    public SQLiteJob newSQLiteJob(ExecuteSqlRequest executeSqlRequest) {
-        return new SQLiteJob(db.getConnection(pathToDBFile), executeSqlRequest);
+    /**
+     * Create a new Callable that will execute the sql request in a new thread of node.
+     * @param executeSqlRequest sql request
+     * @return callable sql job
+     */
+    public Callable<ExecuteSqlResponse> newSQLJob(ExecuteSqlRequest executeSqlRequest) {
+        if (executeSqlRequest.getSql().matches("(SELECT|select).*")) {
+            // Selects
+            return new SQLReadJob(db.getConnection(pathToDBFile), executeSqlRequest);
+        } else {
+            // Creates, Inserts...
+            return new SQLWriteJob(db.getConnection(pathToDBFile), executeSqlRequest);
+        }
     }
 
     /**

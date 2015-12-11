@@ -14,7 +14,6 @@ import pl.pw.edu.mini.dos.communication.nodemaster.NodeMasterInterface;
 import pl.pw.edu.mini.dos.communication.nodemaster.RegisterRequest;
 import pl.pw.edu.mini.dos.communication.nodenode.*;
 import pl.pw.edu.mini.dos.node.ndb.DBmanager;
-import pl.pw.edu.mini.dos.node.ndb.SQLiteJob;
 import pl.pw.edu.mini.dos.node.ndb.SQLStatementVisitor;
 import pl.pw.edu.mini.dos.node.rmi.RMIClient;
 import pl.pw.edu.mini.dos.node.task.TaskManager;
@@ -26,6 +25,7 @@ import java.rmi.server.UnicastRemoteObject;
 import java.util.Scanner;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 
 public class Node extends UnicastRemoteObject
         implements MasterNodeInterface, NodeNodeInterface, Serializable {
@@ -136,12 +136,10 @@ public class Node extends UnicastRemoteObject
     }
 
     @Override
-    public ExecuteSqlResponse executeSql(ExecuteSqlRequest request) throws RemoteException {
+    public Future<ExecuteSqlResponse> executeSql(ExecuteSqlRequest request) throws RemoteException {
         logger.info("Got sql to execute: {}", request.getSql());
         // Create and shedule sqlite job to execute
-        SQLiteJob job = dbManager.newSQLiteJob(request);
-        workQueue.execute(job);
-        return new ExecuteSqlResponse();
+        return workQueue.submit(dbManager.newSQLJob(request));
     }
 
     @Override
