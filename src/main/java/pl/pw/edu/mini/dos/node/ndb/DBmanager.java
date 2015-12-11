@@ -18,12 +18,13 @@ public class DBmanager {
     private String pathToDBFile;
 
     public DBmanager(boolean inMemory) {
-        Random rn = new Random();
+        Random r = new Random();
         pathToDBFile = "jdbc:sqlite:";
         if (inMemory) {
             pathToDBFile += ":memory:";
         } else {
-            pathToDBFile += config.getProperty("nodeDatabasePath") + rn.nextInt();
+            // Random name of the db to not share db with other node
+            pathToDBFile += r.nextInt(1000) + config.getProperty("nodeDatabasePath");
         }
         this.db = SQLiteDb.getInstance();
     }

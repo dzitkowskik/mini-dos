@@ -39,35 +39,10 @@ public class Client {
             client = new Client();
         }
 
-        // for tests {
-        String command = "CREATE TABLE DEPARTMENT(ID INT PRIMARY KEY      NOT NULL," +
-                " DEPT           CHAR(50) NOT NULL," +
-                "   EMP_ID         INT      NOT NULL);";
-        System.out.println(command);
-        String result = client.executeSQL(command);
-        System.out.println("Result: " + result);
-
-        command = "INSERT INTO DEPARTMENT VALUES (1, \"Warsaw Department\", 2);";
-        System.out.println(command);
-        result = client.executeSQL(command);
-        System.out.println("Result: " + result);
-
-        try {
-            Thread.sleep(300);
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        }
-        command = "SELECT * FROM DEPARTMENT;";
-        System.out.println(command);
-        result = client.executeSQL(command);
-        System.out.println("Result: " + result);
-
-        // }
-
         Scanner scanner = new Scanner(System.in);
         System.out.println("Type the query or enter 'q' to exit:");
         while (scanner.hasNext()) {
-            command = scanner.nextLine();
+            String command = scanner.nextLine();
             logger.debug("Command: " + command);
 
             if (command.equals("q")) {
@@ -75,7 +50,7 @@ public class Client {
                 break;
             }
 
-            result = client.executeSQL(command);
+            String result = client.executeSQL(command);
             System.out.println("Result: " + result);
         }
 

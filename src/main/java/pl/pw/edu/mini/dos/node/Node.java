@@ -117,11 +117,11 @@ public class Node extends UnicastRemoteObject
     @Override
     public ExecuteCreateTablesResponse createTables(
             ExecuteCreateTablesRequest executeCreateTablesRequest) throws RemoteException {
-            boolean ok = dbManager.createTables(
-                    executeCreateTablesRequest.getCreateTableStatements());
-            if(!ok){
-                return new ExecuteCreateTablesResponse(ErrorEnum.ANOTHER_ERROR);
-            }
+        boolean ok = dbManager.createTables(
+                executeCreateTablesRequest.getCreateTableStatements());
+        if (!ok) {
+            return new ExecuteCreateTablesResponse(ErrorEnum.ANOTHER_ERROR);
+        }
         return new ExecuteCreateTablesResponse(ErrorEnum.NO_ERROR);
     }
 
@@ -141,7 +141,7 @@ public class Node extends UnicastRemoteObject
         // Create and shedule sqlite job to execute
         SQLiteJob job = dbManager.newSQLiteJob(request);
         workQueue.execute(job);
-        return job.getExecuteSqlResponse();
+        return new ExecuteSqlResponse();
     }
 
     @Override

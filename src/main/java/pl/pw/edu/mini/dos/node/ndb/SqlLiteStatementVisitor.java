@@ -51,7 +51,8 @@ public class SqlLiteStatementVisitor implements StatementVisitor {
 
     @Override
     public void visit(Select select) {
-        logger.info("I GOT SELECT: {}", select.getSelectBody().toString());
+        logger.info("Coordinator node: select request");
+        logger.debug("Select: " + select.getSelectBody().toString());
 
         if (select.getWithItemsList() == null) {
             logger.info("select.getWithItemsList() is empty");
@@ -134,7 +135,8 @@ public class SqlLiteStatementVisitor implements StatementVisitor {
 
     @Override
     public void visit(Insert insert) {
-        logger.info("I GOT INSERT TO TABLE {}", insert.getTable().getName());
+        logger.info("Coordinator node: insert request");
+        logger.debug("Insert data in table " + insert.getTable().getName());
 
         // Get table name
         String tableName = insert.getTable().getName();
@@ -172,7 +174,7 @@ public class SqlLiteStatementVisitor implements StatementVisitor {
         }
 
         ExecuteSqlResponse response = TaskManager.getInstance().waitForCompletion(taskId);
-        logger.info("Insert is DONE!");
+        logger.info("Coordinator node: Insert is DONE!");
 
         this.result = new ExecuteSQLOnNodeResponse(response.getResult(), response.getError());
     }
@@ -199,8 +201,9 @@ public class SqlLiteStatementVisitor implements StatementVisitor {
 
     @Override
     public void visit(CreateTable createTable) {
+        logger.info("Coordinator node: createTable request");
         String tableName = createTable.getTable().getName();
-        String createStatement = createTable.toString(); // TODO check if ; is needed
+        String createStatement = createTable.toString();
         logger.debug(createStatement + " --> " + tableName);
 
         // Send metadata to master
@@ -238,11 +241,11 @@ public class SqlLiteStatementVisitor implements StatementVisitor {
 
         ExecuteSqlResponse response = TaskManager.getInstance().waitForCompletion(taskId);
         if(!response.getError().equals(ErrorEnum.NO_ERROR)){
-            logger.info("Error at creating table!");
+            logger.error("Error at creating table!");
             this.result = new ExecuteSQLOnNodeResponse(response.getResult(), response.getError());
             return;
         }
-        logger.info("Create table is DONE!");
+        logger.info("Coordinator node: create table is DONE!");
         this.result = new ExecuteSQLOnNodeResponse(tableName + " created!", response.getError());
     }
 

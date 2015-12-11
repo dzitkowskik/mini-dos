@@ -1,6 +1,5 @@
 package pl.pw.edu.mini.dos.node.ndb;
 
-import org.apache.commons.dbutils.DbUtils;
 import org.apache.commons.dbutils.QueryRunner;
 import org.apache.commons.dbutils.ResultSetHandler;
 import org.slf4j.Logger;
@@ -19,7 +18,7 @@ public class SQLiteJob implements Runnable {
     private static final Logger logger = LoggerFactory.getLogger(SQLiteJob.class);
     private Connection conn;
     private ExecuteSqlRequest request;
-    private ExecuteSqlResponse executeSqlResponse;
+    private ExecuteSqlResponse response;
     private ResultSetHandler<Object[]> handler = null;
 
     public SQLiteJob(Connection conn, ExecuteSqlRequest request) {
@@ -52,12 +51,12 @@ public class SQLiteJob implements Runnable {
     }
 
     public void runReadQuery() {
+        logger.info("Start executing sqlite read job");
+        logger.info("Run: " + request.getSql());
         ErrorEnum errorCode = ErrorEnum.NO_ERROR;
         Object[] result;
         try {
             QueryRunner run = new QueryRunner();
-
-            logger.info("Run select: " + request.getSql());
             result = run.query(conn, request.getSql(), getHandler());
         } catch (SQLException e) {
             logger.error("Error executing sql query: {} error: {}",
@@ -73,11 +72,13 @@ public class SQLiteJob implements Runnable {
             }
         }
 
-        logger.info("Running select finished with result: " + Helper.ArrayToString(result));
-        executeSqlResponse = new ExecuteSqlResponse(Helper.ArrayToString(result), errorCode, result);
+        logger.info("Running select finished with result:\n" + Helper.arrayToString(result));
+        response = new ExecuteSqlResponse(Helper.arrayToString(result), errorCode, result);
     }
 
     public void runWriteQuery() {
+        logger.info("Start executing sqlite write job");
+        logger.info("Run: " + request.getSql());
         ErrorEnum errorCode = ErrorEnum.NO_ERROR;
         String result;
         PreparedStatement st;
@@ -118,16 +119,12 @@ public class SQLiteJob implements Runnable {
                 logger.error("Error while closing sqlite connection: {} ", e.getMessage());
             }
         }
-        executeSqlResponse = new ExecuteSqlResponse(result, errorCode);
+        response = new ExecuteSqlResponse(result, errorCode);
     }
 
     @Override
     public void run() {
-        logger.info("Start executing sqlite job");
-        String sql = request.getSql();
-
-        if (sql.startsWith("SELECT")) {
-            logger.info("select");
+        if (request.getSql().matches("(SELECT|select).*")) {
             runReadQuery();
         } else {
             runWriteQuery();
@@ -135,6 +132,6 @@ public class SQLiteJob implements Runnable {
     }
 
     public ExecuteSqlResponse getExecuteSqlResponse() {
-        return executeSqlResponse;
+        return response;
     }
 }

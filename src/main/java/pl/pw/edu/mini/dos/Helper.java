@@ -1,5 +1,7 @@
 package pl.pw.edu.mini.dos;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import pl.pw.edu.mini.dos.communication.nodenode.ExecuteSqlResponse;
 
 import java.io.File;
@@ -10,12 +12,10 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
-/*
- * Created by Karol Dzitkowski on 11/21/15.
- */
-
 public class Helper {
-    public static <T> String ArrayToString(T[] array, String splitter) {
+    private static final Logger logger = LoggerFactory.getLogger(Helper.class);
+
+    public static <T> String arrayToString(T[] array, String splitter) {
         if (array.length == 0) return "";
 
         StringBuilder stringBuilder = new StringBuilder(array[0].toString());
@@ -26,8 +26,8 @@ public class Helper {
         return stringBuilder.toString();
     }
 
-    public static <T> String ArrayToString(T[] array) {
-        return ArrayToString(array, ", ");
+    public static <T> String arrayToString(T[] array) {
+        return arrayToString(array, ", ");
     }
 
     public static String executeSqlResponseListToString(
@@ -38,12 +38,12 @@ public class Helper {
 
         ExecuteSqlResponse value = (ExecuteSqlResponse) iterator.next();
         StringBuilder stringBuilder = new StringBuilder();
-        stringBuilder.append(Helper.ArrayToString(value.getData()));
+        stringBuilder.append(Helper.arrayToString(value.getData()));
 
         while (iterator.hasNext()) {
             value = (ExecuteSqlResponse) iterator.next();
             stringBuilder.append(splitter);
-            stringBuilder.append(Helper.ArrayToString(value.getData()));
+            stringBuilder.append(Helper.arrayToString(value.getData()));
         }
         return stringBuilder.toString();
     }
@@ -53,7 +53,7 @@ public class Helper {
         return executeSqlResponseListToString(list, "\n -- ");
     }
 
-    public static <T> String CollectionToString(Collection<T> list, String splitter) {
+    public static <T> String collectionToString(Collection<T> list, String splitter) {
         if (list.size() == 0) return "";
 
         Iterator iterator = list.iterator();
@@ -70,11 +70,11 @@ public class Helper {
         return stringBuilder.toString();
     }
 
-    public static <T> String CollectionToString(Collection<T> list) {
-        return CollectionToString(list, ", ");
+    public static <T> String collectionToString(Collection<T> list) {
+        return collectionToString(list, ", ");
     }
 
-    public static <T> String MapToString(Map<String, T> map, String splitter) {
+    public static <T> String mapToString(Map<String, T> map, String splitter) {
         if (map.size() == 0) return "";
 
         Iterator iterator = map.keySet().iterator();
@@ -95,22 +95,24 @@ public class Helper {
         return stringBuilder.toString();
     }
 
-    public static <T> String MapToString(Map<String, T> map) {
-        return MapToString(map, ", ");
+    public static <T> String mapToString(Map<String, T> map) {
+        return mapToString(map, ", ");
     }
 
     // fix for jar
     public static URL getResources(Class instance, String res) {
         URL configFileUrl = instance.getClassLoader().getResource(res);
+        if (configFileUrl == null) {
+            return null;
+        }
+        logger.debug(configFileUrl.toString());
+        int pos = configFileUrl.toString().lastIndexOf(":");
 
-        System.out.println(configFileUrl.toString());
-        int pos =  configFileUrl.toString().lastIndexOf(":");
-
-        File f = new File(configFileUrl.toString().substring(pos+1));
-        System.out.println(f.getAbsolutePath());
+        File f = new File(configFileUrl.toString().substring(pos + 1));
+        logger.debug(f.getAbsolutePath());
         if (!f.exists()) {
             f = f.getParentFile().getParentFile().getParentFile().getAbsoluteFile();
-            System.out.println(f);
+            logger.debug(f.toString());
             f = new File(f.getAbsolutePath()
                     + "/src/main/resources/" + res);
             try {
@@ -119,7 +121,6 @@ public class Helper {
                 e.printStackTrace();
             }
         }
-
         return configFileUrl;
     }
 }

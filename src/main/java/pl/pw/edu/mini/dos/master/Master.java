@@ -1,6 +1,5 @@
 package pl.pw.edu.mini.dos.master;
 
-import org.apache.log4j.Level;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import pl.pw.edu.mini.dos.Config;
@@ -137,7 +136,7 @@ public class Master
     public SelectMetadataResponse selectMetadata(SelectMetadataRequest selectMetadataRequest)
             throws RemoteException {
         List<String> tables = selectMetadataRequest.getTables();
-        logger.info("Get metadata select request for tables: " + Helper.CollectionToString(tables));
+        logger.info("Get metadata select request for tables: " + Helper.collectionToString(tables));
         if (tables == null || tables.size() == 0) {
             return new SelectMetadataResponse(null, null, ErrorEnum.ANOTHER_ERROR);
         }
@@ -146,13 +145,11 @@ public class Master
         if (createTableStatements == null || nodesIDs == null) {
             return new SelectMetadataResponse(null, null, ErrorEnum.TABLE_NOT_EXIST);
         }
+        logger.info("Nodes which have the data: " + Helper.collectionToString(nodesIDs));
         List<NodeNodeInterface> nodesInterfaces = new ArrayList<>(nodesIDs.size());
         for (Integer nodeID : nodesIDs) {
-            logger.info("  add node with id = " + nodeID);
             nodesInterfaces.add(nodeManager.<NodeNodeInterface>getNodeInterface(nodeID));
         }
-
-        logger.info("Set metadata select response (nodeCount=" + nodesInterfaces.size() + ")");
         return new SelectMetadataResponse(nodesInterfaces,
                 createTableStatements, ErrorEnum.NO_ERROR);
     }
