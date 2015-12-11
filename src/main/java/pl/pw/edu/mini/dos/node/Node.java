@@ -150,10 +150,10 @@ public class Node extends UnicastRemoteObject
         ExecuteSqlResponse response =
                 TaskManager.getInstance().waitForCompletion(request.getTaskId());
         if (response.getError() == ErrorEnum.NO_ERROR) {
-            logger.info("Coordinator order to commit");
+            logger.info("Coordinator: order to commit");
             return new AskToCommitResponse(true);
         } else {
-            logger.info("Coordinator order to rollback");
+            logger.info("Coordinator: order to rollback");
             return new AskToCommitResponse(false);
         }
     }

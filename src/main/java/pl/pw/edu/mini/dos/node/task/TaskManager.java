@@ -1,15 +1,16 @@
 package pl.pw.edu.mini.dos.node.task;
 
-import javafx.util.Pair;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import pl.pw.edu.mini.dos.communication.ErrorEnum;
-import pl.pw.edu.mini.dos.communication.nodenode.ExecuteSqlResponse;
 
-import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.List;
 
+/**
+ * TaskManager manages the status of the tasks.
+ * Each task (client's request) is composed in several subtask
+ * each one executed in one node.
+ */
 public class TaskManager {
     private static final Logger logger = LoggerFactory.getLogger(TaskManager.class);
     private static TaskManager instance;
@@ -26,27 +27,40 @@ public class TaskManager {
         return instance;
     }
 
-
-    public void add(Long taskId, Integer tasksNumber) {
+    /**
+     * Add task.
+     *
+     * @param taskId         task id
+     * @param subTasksNumber number of subtasks
+     */
+    public void add(Long taskId, Integer subTasksNumber) {
         synchronized (tasks) {
-            tasks.put(taskId, new SubTasks(tasksNumber));
+            tasks.put(taskId, new SubTasks(subTasksNumber));
         }
     }
 
-    public void updateSubTask(Long taskId, ErrorEnum subTaskError, String subTaskResult) {
+    /**
+     * Update status of a subtask.
+     *
+     * @param taskId       task id
+     * @param subTaskError subtask status
+     */
+    public void updateSubTask(Long taskId, ErrorEnum subTaskError) {
         SubTasks subTasks;
         synchronized (tasks) {
             subTasks = tasks.get(taskId);
         }
-        if (!subTasks.isTaskCompleted()) {
-            if (!subTaskError.equals(ErrorEnum.NO_ERROR)) {
-                subTasks.setError(subTaskError);
-            }
-            subTasks.addSubTaskResult(subTaskResult);
+        if (!subTasks.isTaskCompleted() && !subTaskError.equals(ErrorEnum.NO_ERROR)) {
+            subTasks.setError(true);
         }
     }
 
-    public ExecuteSqlResponse waitForCompletion(Long taskId) {
+    /**
+     * Wait until all the subtask of the given task are done.
+     *
+     * @param taskId task id
+     */
+    public void waitForCompletion(Long taskId) {
         SubTasks subTasks;
         synchronized (tasks) {
             subTasks = tasks.get(taskId);
@@ -58,43 +72,31 @@ public class TaskManager {
         } catch (InterruptedException e) {
             logger.error("Wait interrupted: {}", e.getMessage());
             tasks.remove(taskId);
-            return new ExecuteSqlResponse(e.getMessage(), ErrorEnum.ANOTHER_ERROR);
         }
-        ExecuteSqlResponse response =
-                new ExecuteSqlResponse(subTasks.getResults().toString(), subTasks.getError());
         tasks.remove(taskId);
-        return response;
     }
 
     private class SubTasks {
         private int subTasks;
-        private ErrorEnum errorType;
-        private List<String> results;
+        private int completedSubTasks;
+        private boolean error;
 
         public SubTasks(Integer subTasks) {
             this.subTasks = subTasks;
-            this.errorType = ErrorEnum.NO_ERROR;
-            this.results = new ArrayList<>(subTasks);
+            this.error = false;
+            completedSubTasks = 0;
         }
 
         public boolean isTaskCompleted() {
-            return errorType != ErrorEnum.NO_ERROR || subTasks == results.size();
+            return error || subTasks == completedSubTasks;
         }
 
-        public ErrorEnum getError() {
-            return errorType;
+        public boolean getError() {
+            return error;
         }
 
-        public void setError(ErrorEnum subTaskError) {
-            this.errorType = subTaskError;
-        }
-
-        public List<String> getResults() {
-            return results;
-        }
-
-        public void addSubTaskResult(String subTaskResult) {
-            this.results.add(subTaskResult);
+        public void setError(boolean subTaskError) {
+            this.error = subTaskError;
         }
     }
 }
