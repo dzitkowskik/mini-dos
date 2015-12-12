@@ -114,7 +114,7 @@ public class Master
         List<RegisteredNode> nodes = nodeManager.selectNodesInsert();
         if (nodes == null) {
             // Number of available nodes less than replication factor
-            return new InsertMetadataResponse(null, ErrorEnum.NOT_ENOUGH_NODES);
+            return new InsertMetadataResponse(null, null, ErrorEnum.NOT_ENOUGH_NODES);
         }
         // Insert row metadata (RowId, TableId, NodesIds)
         List<Integer> nodesIds = new ArrayList<>(nodes.size());
@@ -123,13 +123,13 @@ public class Master
             nodesIds.add(node.getID());
             nodesInterfaces.add((NodeNodeInterface) node.getInterface());
         }
-        ErrorEnum ok = dbManager.insertRow(
+        Long rowId = dbManager.insertRow(
                 insertMetadataRequest.getTable(), nodesIds);
-        if (ok.equals(ErrorEnum.TABLE_NOT_EXIST)) {
+        if (rowId == null) {
             // The table of the insert doesn't exist
-            return new InsertMetadataResponse(null, ErrorEnum.TABLE_NOT_EXIST);
+            return new InsertMetadataResponse(null, null, ErrorEnum.TABLE_NOT_EXIST);
         }
-        return new InsertMetadataResponse(nodesInterfaces, ErrorEnum.NO_ERROR);
+        return new InsertMetadataResponse(rowId, nodesInterfaces, ErrorEnum.NO_ERROR);
     }
 
     @Override

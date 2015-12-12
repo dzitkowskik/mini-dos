@@ -131,6 +131,7 @@ public class SQLStatementVisitor implements StatementVisitor {
     @Override
     public void visit(Insert insert) {
         logger.info("Coordinator node: insert request");
+        // Get table name
         String tableName = insert.getTable().getName();
         logger.debug("Insert data in table " + tableName);
 
@@ -151,6 +152,12 @@ public class SQLStatementVisitor implements StatementVisitor {
             return;
         }
 
+        // Add rowID and version columss
+        String insertStatement = insert.toString();
+        insertStatement = insertStatement.substring(0,insertStatement.lastIndexOf(')'));
+        insertStatement += "," + insertMetadataResponse.getRowId();
+        insertStatement += "," + taskId + ");";
+
         // Register task and subtasks
         int numSubTasks = insertMetadataResponse.getNodes().size();
         TaskManager.getInstance().add(taskId, numSubTasks);
@@ -160,7 +167,7 @@ public class SQLStatementVisitor implements StatementVisitor {
         for (NodeNodeInterface node : insertMetadataResponse.getNodes()) {
             try {
                 node.executeSql(new ExecuteSqlRequest(
-                        taskId, insert.toString(), thisNode));
+                        taskId, insertStatement, thisNode));
             } catch (RemoteException e) {
                 logger.error("Cannot insert table in another node: {}", e.getMessage());
                 TaskManager.getInstance().updateSubTask(
@@ -228,9 +235,10 @@ public class SQLStatementVisitor implements StatementVisitor {
         logger.info("Coordinator node: createTable request");
         // Get table name
         String tableName = createTable.getTable().getName();
-        // Get create statement and add rowID and version colunms
-        String createStatement = createTable.toString().split("\\);")[0];
-        createStatement += ", row_id INTEGER NOT NULL";
+        // Get create statement and add rowID and version columss
+        String createStatement = createTable.toString();
+        createStatement = createStatement.substring(0,createStatement.lastIndexOf(')'));
+        createStatement += ", row_id INTEGER PRIMARY KEY NOT NULL";
         createStatement += ", version INTEGER NOT NULL);";
         logger.debug(createStatement + " --> " + tableName);
 
@@ -263,7 +271,7 @@ public class SQLStatementVisitor implements StatementVisitor {
         for (NodeNodeInterface node : createMetadataResponse.getNodes()) {
             try {
                 node.executeSql(new ExecuteSqlRequest(
-                        taskId, createTable.toString(), thisNode));
+                        taskId, createStatement, thisNode));
             } catch (RemoteException e) {
                 logger.error("Cannot create table in another node: {}", e.getMessage());
                 TaskManager.getInstance().updateSubTask(

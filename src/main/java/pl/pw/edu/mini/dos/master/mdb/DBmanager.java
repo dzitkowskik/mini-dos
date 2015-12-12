@@ -176,15 +176,16 @@ public class DBmanager {
      *
      * @param tableName tablename
      * @param nodeIds   list of nodes ids where data will be insert
-     * @return result
+     * @return rowid
      */
-    public ErrorEnum insertRow(String tableName, List<Integer> nodeIds) {
+    public Long insertRow(String tableName, List<Integer> nodeIds) {
         ResultSet rs = null;
+        Long rowId;
         try {
             // Get rowId
             nextRowIdSelect.setString(1, tableName);
             rs = nextRowIdSelect.executeQuery();
-            Long rowId = rs.getLong(1);
+            rowId = rs.getLong(1);
             // Update next rowId
             incrementRowIdUpdate.setString(1, tableName);
             incrementRowIdUpdate.executeUpdate();
@@ -200,11 +201,11 @@ public class DBmanager {
             logger.error("Error at registering row: {} - {}",
                     e.getMessage(), e.getStackTrace());
             imdb.rollback();
-            return ErrorEnum.TABLE_NOT_EXIST;
+            return null;
         } finally {
             imdb.close(rs);
         }
-        return ErrorEnum.NO_ERROR;
+        return rowId;
     }
 
     /**
