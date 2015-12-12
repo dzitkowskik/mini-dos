@@ -239,7 +239,8 @@ public class SQLStatementVisitor implements StatementVisitor {
         String createStatement = createTable.toString();
         createStatement = createStatement.substring(0,createStatement.lastIndexOf(')'));
         createStatement += ", row_id INTEGER PRIMARY KEY NOT NULL";
-        createStatement += ", version INTEGER NOT NULL);";
+        createStatement += ", version INTEGER NOT NULL";
+        createStatement += ")WITHOUT ROWID;";
         logger.debug(createStatement + " --> " + tableName);
 
         // Send metadata to master
