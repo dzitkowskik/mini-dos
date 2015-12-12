@@ -9,7 +9,6 @@ import pl.pw.edu.mini.dos.Config;
 import pl.pw.edu.mini.dos.communication.ErrorEnum;
 import pl.pw.edu.mini.dos.communication.ErrorHandler;
 import pl.pw.edu.mini.dos.communication.Services;
-import pl.pw.edu.mini.dos.communication.clientmaster.ExecuteSQLResponse;
 import pl.pw.edu.mini.dos.communication.masternode.*;
 import pl.pw.edu.mini.dos.communication.nodemaster.NodeMasterInterface;
 import pl.pw.edu.mini.dos.communication.nodemaster.RegisterRequest;

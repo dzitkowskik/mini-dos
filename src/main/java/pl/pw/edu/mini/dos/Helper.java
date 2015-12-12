@@ -30,29 +30,6 @@ public class Helper {
         return arrayToString(array, ", ");
     }
 
-    public static String executeSqlResponseListToString(
-            List<GetSqlResultResponse> list, String splitter) {
-        if (list.size() == 0) return "";
-
-        Iterator iterator = list.iterator();
-
-        GetSqlResultResponse value = (GetSqlResultResponse) iterator.next();
-        StringBuilder stringBuilder = new StringBuilder();
-        stringBuilder.append(Helper.arrayToString(value.getResult()));
-
-        while (iterator.hasNext()) {
-            value = (GetSqlResultResponse) iterator.next();
-            stringBuilder.append(splitter);
-            stringBuilder.append(Helper.arrayToString(value.getResult()));
-        }
-        return stringBuilder.toString();
-    }
-
-    public static String executeSqlResponseListToString(
-            List<GetSqlResultResponse> list) {
-        return executeSqlResponseListToString(list, "\n -- ");
-    }
-
     public static <T> String collectionToString(Collection<T> list, String splitter) {
         if (list.size() == 0) return "";
 
@@ -63,7 +40,7 @@ public class Helper {
         stringBuilder.append(value);
 
         while (iterator.hasNext()) {
-            value = (String) iterator.next();
+            value = iterator.next().toString();
             stringBuilder.append(splitter);
             stringBuilder.append(value);
         }

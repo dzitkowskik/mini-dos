@@ -1,15 +1,16 @@
 package pl.pw.edu.mini.dos.node.ndb;
 
-import org.apache.commons.dbutils.QueryRunner;
 import org.apache.commons.dbutils.ResultSetHandler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import pl.pw.edu.mini.dos.Helper;
 import pl.pw.edu.mini.dos.communication.ErrorEnum;
 import pl.pw.edu.mini.dos.communication.nodenode.ExecuteSqlRequest;
 import pl.pw.edu.mini.dos.communication.nodenode.GetSqlResultResponse;
+import pl.pw.edu.mini.dos.communication.nodenode.SerializableResultSet;
 
 import java.sql.*;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.Callable;
 
 /**
@@ -31,13 +32,13 @@ public class SQLReadJob implements Callable<GetSqlResultResponse> {
         logger.info("Start executing SQLite read job");
         logger.debug("Run: " + request.getSql());
 
-        Object[] result = new String[]{ "" };
+        String result = "";
+        SerializableResultSet rs = null;
         ErrorEnum errorCode = ErrorEnum.NO_ERROR;
 
         // Execute SQL
         try {
-            QueryRunner run = new QueryRunner();
-            result = run.query(conn, request.getSql(), getHandler());
+            rs = runSelect(request.getSql());
         } catch (SQLException e) {
             logger.error("Error({}): {} at {}",
                     e.getErrorCode(),
@@ -53,30 +54,44 @@ public class SQLReadJob implements Callable<GetSqlResultResponse> {
             }
         }
         logger.info("SQLite read job finished");
-        logger.debug("Result: " + Helper.arrayToString(result));
-        return new GetSqlResultResponse(result, errorCode);
+        logger.debug(rs.toString());
+        return new GetSqlResultResponse(result, rs, errorCode);
     }
 
     /**
-     * DbUtils. Create a ResultSetHandler implementation to convert a
-     * result set into Object[].
-     * @return ResultSetHandler
+     * Execute SELECT and returns a pair with a list of the types of each column
+     * and a list of arrays, each one corresponds to one row of the obtained result set.
+     *
+     * @param select select SQL statement
+     * @return pair of two lists (types, data)
      */
-    private ResultSetHandler<Object[]> getHandler() {
-        if (handler == null) {
-            handler = rs -> {
-                if (!rs.next()) {
-                    return null;
+    public SerializableResultSet runSelect(String select) throws SQLException {
+        List<String> columnsTypes = new ArrayList<>();
+        List<Object[]> data = new ArrayList<>();
+        // Execute select
+        PreparedStatement st = null;
+        ResultSet rs = null;
+        try {
+            st = conn.prepareStatement(select);
+            rs = st.executeQuery();
+            // Save columns types
+            ResultSetMetaData meta = rs.getMetaData();
+            int cols = meta.getColumnCount();
+            for (int c = 1; c <= cols; c++) {
+                columnsTypes.add(meta.getColumnTypeName(c));
+            }
+            // Save data
+            while (rs.next()) {
+                Object[] row = new Object[cols];
+                for (int c = 1; c <= cols; c++) {
+                    row[c - 1] = rs.getObject(c);
                 }
-                ResultSetMetaData meta = rs.getMetaData();
-                int cols = meta.getColumnCount();
-                Object[] result = new Object[cols];
-                for (int i = 0; i < cols; i++) {
-                    result[i] = rs.getObject(i + 1);
-                }
-                return result;
-            };
+                data.add(row);
+            }
+        } finally {
+            rs.close();
+            st.close();
         }
-        return handler;
+        return new SerializableResultSet(columnsTypes, data);
     }
 }

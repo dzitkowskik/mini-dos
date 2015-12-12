@@ -75,10 +75,12 @@ public class TaskManager {
             logger.error("Wait interrupted: {}", e.getMessage());
             tasks.remove(taskId);
         }
-        boolean error = task.getError();
+        return task.getError();
+    }
+
+    public void removeTask(Long taskId){
         tasks.remove(taskId);
         logger.debug("Task {} removed", taskId);
-        return error;
     }
 
     private class Task {

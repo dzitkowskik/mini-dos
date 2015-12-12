@@ -77,8 +77,6 @@ public class SQLWriteJob implements Callable<GetSqlResultResponse> {
         }
         logger.info("SQLite write job finished");
         logger.debug("Result: " + result);
-        return new GetSqlResultResponse(
-                new String[]{ result },
-                errorCode);
+        return new GetSqlResultResponse(result, errorCode);
     }
 }
