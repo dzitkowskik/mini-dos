@@ -226,8 +226,12 @@ public class SQLStatementVisitor implements StatementVisitor {
     @Override
     public void visit(CreateTable createTable) {
         logger.info("Coordinator node: createTable request");
+        // Get table name
         String tableName = createTable.getTable().getName();
-        String createStatement = createTable.toString();
+        // Get create statement and add rowID and version colunms
+        String createStatement = createTable.toString().split("\\);")[0];
+        createStatement += ", row_id INTEGER NOT NULL";
+        createStatement += ", version INTEGER NOT NULL);";
         logger.debug(createStatement + " --> " + tableName);
 
         // Send metadata to master
