@@ -2,7 +2,7 @@ package pl.pw.edu.mini.dos.communication.nodenode;
 
 import java.rmi.Remote;
 import java.rmi.RemoteException;
-import java.util.concurrent.Future;
+import java.util.concurrent.ExecutionException;
 
 public interface NodeNodeInterface extends Remote {
     /**
@@ -10,10 +10,18 @@ public interface NodeNodeInterface extends Remote {
      * Asks another note to execute sql on his sqlite db
      *
      * @param request Data for executing request (sql and taskId).
-     * @return If executing query was successful.
      */
-    Future<ExecuteSqlResponse> executeSql(ExecuteSqlRequest request)
+    ExecuteSqlResponse executeSql(ExecuteSqlRequest request)
             throws RemoteException;
+
+    /**
+     * Return the result of executeSql.
+     *
+     * @param request taskid
+     * @return result of the execution
+     */
+    GetSqlResultResponse getSqlResult(GetSqlResultRequest request)
+            throws RemoteException, ExecutionException, InterruptedException;
 
     /**
      * Asks node who commissioned a task (executeSql) if it should commit
@@ -26,4 +34,6 @@ public interface NodeNodeInterface extends Remote {
      */
     AskToCommitResponse askToCommit(AskToCommitRequest request)
             throws RemoteException;
+
+
 }

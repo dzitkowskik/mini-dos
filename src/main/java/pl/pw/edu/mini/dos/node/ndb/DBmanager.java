@@ -5,6 +5,7 @@ import org.slf4j.LoggerFactory;
 import pl.pw.edu.mini.dos.Config;
 import pl.pw.edu.mini.dos.communication.nodenode.ExecuteSqlRequest;
 import pl.pw.edu.mini.dos.communication.nodenode.ExecuteSqlResponse;
+import pl.pw.edu.mini.dos.communication.nodenode.GetSqlResultResponse;
 
 import java.sql.Connection;
 import java.sql.SQLException;
@@ -36,7 +37,7 @@ public class DBmanager {
      * @param executeSqlRequest sql request
      * @return callable sql job
      */
-    public Callable<ExecuteSqlResponse> newSQLJob(ExecuteSqlRequest executeSqlRequest) {
+    public Callable<GetSqlResultResponse> newSQLJob(ExecuteSqlRequest executeSqlRequest) {
         if (executeSqlRequest.getSql().matches("(SELECT|select).*")) {
             // Selects
             return new SQLReadJob(db.getConnection(pathToDBFile), executeSqlRequest);

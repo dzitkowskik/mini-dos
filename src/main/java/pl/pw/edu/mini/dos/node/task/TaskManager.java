@@ -14,7 +14,7 @@ import java.util.HashMap;
 public class TaskManager {
     private static final Logger logger = LoggerFactory.getLogger(TaskManager.class);
     private static TaskManager instance;
-    private final HashMap<Long, SubTasks> tasks;
+    private final HashMap<Long, Task> tasks;
 
     private TaskManager() {
         tasks = new HashMap<>();
@@ -35,7 +35,7 @@ public class TaskManager {
      */
     public void add(Long taskId, Integer subTasksNumber) {
         synchronized (tasks) {
-            tasks.put(taskId, new SubTasks(subTasksNumber));
+            tasks.put(taskId, new Task(subTasksNumber));
         }
     }
 
@@ -46,49 +46,54 @@ public class TaskManager {
      * @param subTaskError subtask status
      */
     public void updateSubTask(Long taskId, ErrorEnum subTaskError) {
-        SubTasks subTasks;
+        Task task;
         synchronized (tasks) {
-            subTasks = tasks.get(taskId);
+            task = tasks.get(taskId);
         }
-        if (!subTasks.isTaskCompleted() && !subTaskError.equals(ErrorEnum.NO_ERROR)) {
-            subTasks.setError(true);
+        if (!task.isTaskCompleted() && !subTaskError.equals(ErrorEnum.NO_ERROR)) {
+            task.setError(true);
         }
+        task.subTaskCompleted();
     }
 
     /**
      * Wait until all the subtask of the given task are done.
      *
      * @param taskId task id
+     * @return true if no error / false if no error
      */
-    public void waitForCompletion(Long taskId) {
-        SubTasks subTasks;
+    public boolean waitForCompletion(Long taskId) {
+        Task task;
         synchronized (tasks) {
-            subTasks = tasks.get(taskId);
+            task = tasks.get(taskId);
         }
         try {
-            while (!subTasks.isTaskCompleted()) {
+            while (!task.isTaskCompleted()) {
                 Thread.sleep(100);
             }
         } catch (InterruptedException e) {
             logger.error("Wait interrupted: {}", e.getMessage());
             tasks.remove(taskId);
         }
+        boolean error = task.getError();
         tasks.remove(taskId);
+        logger.debug("Task {} removed", taskId);
+        return error;
     }
 
-    private class SubTasks {
-        private int subTasks;
+    private class Task {
+        private int numSubTasks;
         private int completedSubTasks;
         private boolean error;
 
-        public SubTasks(Integer subTasks) {
-            this.subTasks = subTasks;
+        public Task(Integer numSubTasks) {
+            this.numSubTasks = numSubTasks;
             this.error = false;
             completedSubTasks = 0;
         }
 
         public boolean isTaskCompleted() {
-            return error || subTasks == completedSubTasks;
+            return error || numSubTasks == completedSubTasks;
         }
 
         public boolean getError() {
@@ -97,6 +102,10 @@ public class TaskManager {
 
         public void setError(boolean subTaskError) {
             this.error = subTaskError;
+        }
+
+        public void subTaskCompleted(){
+            completedSubTasks++;
         }
     }
 }

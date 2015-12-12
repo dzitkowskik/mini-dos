@@ -7,7 +7,7 @@ import org.slf4j.LoggerFactory;
 import pl.pw.edu.mini.dos.Helper;
 import pl.pw.edu.mini.dos.communication.ErrorEnum;
 import pl.pw.edu.mini.dos.communication.nodenode.ExecuteSqlRequest;
-import pl.pw.edu.mini.dos.communication.nodenode.ExecuteSqlResponse;
+import pl.pw.edu.mini.dos.communication.nodenode.GetSqlResultResponse;
 
 import java.sql.*;
 import java.util.concurrent.Callable;
@@ -15,7 +15,7 @@ import java.util.concurrent.Callable;
 /**
  * Execute SELECT in a new thread of node.
  */
-public class SQLReadJob implements Callable<ExecuteSqlResponse> {
+public class SQLReadJob implements Callable<GetSqlResultResponse> {
     private static final Logger logger = LoggerFactory.getLogger(SQLReadJob.class);
     private Connection conn;
     private ExecuteSqlRequest request;
@@ -27,9 +27,9 @@ public class SQLReadJob implements Callable<ExecuteSqlResponse> {
     }
 
     @Override
-    public ExecuteSqlResponse call() throws Exception {
+    public GetSqlResultResponse call() throws Exception {
         logger.info("Start executing SQLite read job");
-        logger.info("Run: " + request.getSql());
+        logger.debug("Run: " + request.getSql());
 
         Object[] result = new String[]{ "" };
         ErrorEnum errorCode = ErrorEnum.NO_ERROR;
@@ -52,8 +52,9 @@ public class SQLReadJob implements Callable<ExecuteSqlResponse> {
                 errorCode = ErrorEnum.SQL_EXECUTION_ERROR;
             }
         }
-        logger.info("SQLite read job finished.\nResult:\n" + Helper.arrayToString(result));
-        return new ExecuteSqlResponse(result, errorCode);
+        logger.info("SQLite read job finished");
+        logger.debug("Result: " + Helper.arrayToString(result));
+        return new GetSqlResultResponse(result, errorCode);
     }
 
     /**

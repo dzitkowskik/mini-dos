@@ -9,6 +9,7 @@ import pl.pw.edu.mini.dos.Config;
 import pl.pw.edu.mini.dos.communication.ErrorEnum;
 import pl.pw.edu.mini.dos.communication.ErrorHandler;
 import pl.pw.edu.mini.dos.communication.Services;
+import pl.pw.edu.mini.dos.communication.clientmaster.ExecuteSQLResponse;
 import pl.pw.edu.mini.dos.communication.masternode.*;
 import pl.pw.edu.mini.dos.communication.nodemaster.NodeMasterInterface;
 import pl.pw.edu.mini.dos.communication.nodemaster.RegisterRequest;
@@ -22,7 +23,10 @@ import java.io.Serializable;
 import java.net.URISyntaxException;
 import java.rmi.RemoteException;
 import java.rmi.server.UnicastRemoteObject;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Scanner;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
@@ -33,9 +37,10 @@ public class Node extends UnicastRemoteObject
     private static final Logger logger = LoggerFactory.getLogger(Node.class);
     private static final Config config = Config.getConfig();
 
-    private ExecutorService workQueue;
     private NodeMasterInterface master;
     private DBmanager dbManager;
+    private ExecutorService workQueue;
+    private Map<Long, Future<GetSqlResultResponse>> runningTasks;
 
     public Node() throws RemoteException {
         this("127.0.0.1", "1099", "127.0.0.1");
@@ -46,11 +51,12 @@ public class Node extends UnicastRemoteObject
 
         dbManager = new DBmanager(false); // Manager for persistent db
 
-        // CREATE THREAD POOL
+        // Create thread pool
         int workerThreads = Integer.parseInt(config.getProperty("nodeWorkerThreads"));
         workQueue = Executors.newFixedThreadPool(workerThreads);
+        runningTasks = new HashMap<>();
 
-        // RUN SERVICES
+        // Run services
         RMIClient client = new RMIClient(masterHost, Integer.parseInt(masterPort));
         try {
             master = (NodeMasterInterface) client.getService(Services.MASTER);
@@ -71,7 +77,7 @@ public class Node extends UnicastRemoteObject
             node = new Node();
         }
         Scanner scanner = new Scanner(System.in);
-        System.out.println("*Enter 'q' to stop node or 'n' to generate new data.");
+        System.out.println("*Enter 'q' to stop node.");
         while (scanner.hasNext()) {
             String text = scanner.next();
             if (text.equals("q")) {
@@ -136,25 +142,38 @@ public class Node extends UnicastRemoteObject
     }
 
     @Override
-    public Future<ExecuteSqlResponse> executeSql(ExecuteSqlRequest request) throws RemoteException {
+    public ExecuteSqlResponse executeSql(ExecuteSqlRequest request) throws RemoteException {
         logger.info("Got sql to execute: {}", request.getSql());
         // Create and shedule sqlite job to execute
-        return workQueue.submit(dbManager.newSQLJob(request));
+        runningTasks.put(request.getTaskId(),
+                workQueue.submit(dbManager.newSQLJob(request)));
+        return new ExecuteSqlResponse();
+    }
+
+    @Override
+    public GetSqlResultResponse getSqlResult(GetSqlResultRequest request)
+            throws RemoteException, ExecutionException, InterruptedException {
+        // Get runing task
+        Future<GetSqlResultResponse> task = runningTasks.get(request.getTaskId());
+        // Get result
+        GetSqlResultResponse response = task.get();
+        runningTasks.remove(request.getTaskId());
+        return response;
     }
 
     @Override
     public AskToCommitResponse askToCommit(AskToCommitRequest request) throws RemoteException {
-        logger.info("askToCommit start");
-        TaskManager.getInstance().updateSubTask(
-                request.getTaskId(), request.getErrorType(), request.getResult());
-        ExecuteSqlResponse response =
-                TaskManager.getInstance().waitForCompletion(request.getTaskId());
-        if (response.getError() == ErrorEnum.NO_ERROR) {
-            logger.info("Coordinator: order to commit");
-            return new AskToCommitResponse(true);
-        } else {
+        // Update status of the subtask
+        TaskManager.getInstance().updateSubTask(request.getTaskId(), request.getErrorType());
+        // Wait untill all subtasks are done
+        boolean error = TaskManager.getInstance().waitForCompletion(request.getTaskId());
+        // Decide if order to commit or rollback
+        if (error) {
             logger.info("Coordinator: order to rollback");
             return new AskToCommitResponse(false);
+        } else {
+            logger.info("Coordinator: order to commit");
+            return new AskToCommitResponse(true);
         }
     }
 }

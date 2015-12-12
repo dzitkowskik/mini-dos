@@ -2,7 +2,7 @@ package pl.pw.edu.mini.dos;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import pl.pw.edu.mini.dos.communication.nodenode.ExecuteSqlResponse;
+import pl.pw.edu.mini.dos.communication.nodenode.GetSqlResultResponse;
 
 import java.io.File;
 import java.net.MalformedURLException;
@@ -31,25 +31,25 @@ public class Helper {
     }
 
     public static String executeSqlResponseListToString(
-            List<ExecuteSqlResponse> list, String splitter) {
+            List<GetSqlResultResponse> list, String splitter) {
         if (list.size() == 0) return "";
 
         Iterator iterator = list.iterator();
 
-        ExecuteSqlResponse value = (ExecuteSqlResponse) iterator.next();
+        GetSqlResultResponse value = (GetSqlResultResponse) iterator.next();
         StringBuilder stringBuilder = new StringBuilder();
-        stringBuilder.append(Helper.arrayToString(value.getData()));
+        stringBuilder.append(Helper.arrayToString(value.getResult()));
 
         while (iterator.hasNext()) {
-            value = (ExecuteSqlResponse) iterator.next();
+            value = (GetSqlResultResponse) iterator.next();
             stringBuilder.append(splitter);
-            stringBuilder.append(Helper.arrayToString(value.getData()));
+            stringBuilder.append(Helper.arrayToString(value.getResult()));
         }
         return stringBuilder.toString();
     }
 
     public static String executeSqlResponseListToString(
-            List<ExecuteSqlResponse> list) {
+            List<GetSqlResultResponse> list) {
         return executeSqlResponseListToString(list, "\n -- ");
     }
 

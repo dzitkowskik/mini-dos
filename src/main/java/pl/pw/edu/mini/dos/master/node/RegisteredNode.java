@@ -1,7 +1,5 @@
 package pl.pw.edu.mini.dos.master.node;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import pl.pw.edu.mini.dos.Config;
 import pl.pw.edu.mini.dos.communication.ErrorEnum;
 import pl.pw.edu.mini.dos.communication.masternode.CheckStatusResponse;
@@ -10,7 +8,6 @@ import pl.pw.edu.mini.dos.communication.masternode.MasterNodeInterface;
 import java.util.concurrent.*;
 
 public class RegisteredNode {
-    private static final Logger logger = LoggerFactory.getLogger(RegisteredNode.class);
     private static final Config config = Config.getConfig();
     private Integer nodeID;
     private MasterNodeInterface node;
@@ -56,7 +53,7 @@ public class RegisteredNode {
                     status.getMemory());
         } catch (ExecutionException e) {
             this.statusNode.setDown();
-            return ErrorEnum.HOST_IS_UNAVAILABLE;
+            return ErrorEnum.REMOTE_EXCEPTION;
         } catch (TimeoutException e) {
             response.cancel(true);
             this.statusNode.setDown();
