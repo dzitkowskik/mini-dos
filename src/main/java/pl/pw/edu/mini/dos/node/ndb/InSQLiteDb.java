@@ -7,24 +7,16 @@ import org.sqlite.SQLiteConfig;
 import java.sql.*;
 
 /**
- * Provides the required methods to interact with the SQLite data base.
+ * Provides the required methods to interact with the SQLite in-memory data base.
+ * *It uses only ONE connection because the in-memory SLQite database ceases to
+ * exist as soon as the database connection is closed.
  */
-public class SQLiteDb {
-    private static final Logger logger = LoggerFactory.getLogger(SQLiteDb.class);
+public class InSQLiteDb {
+    private static final Logger logger = LoggerFactory.getLogger(InSQLiteDb.class);
     private static final String DRIVER = "org.sqlite.JDBC";
-    private static SQLiteDb instance = null;
+    private Connection connection;
 
-    private SQLiteDb() {
-    }
-
-    public static SQLiteDb getInstance() {
-        if (instance == null) {
-            instance = new SQLiteDb();
-        }
-        return instance;
-    }
-
-    public Connection getConnection(String dbURL) {
+    public InSQLiteDb(String dbURL) {
         try {
             Class.forName(DRIVER);
         } catch (ClassNotFoundException e) {
@@ -32,31 +24,37 @@ public class SQLiteDb {
         }
 
         // Connect to db
-        Connection conn = null;
         try {
             SQLiteConfig config = new SQLiteConfig();
             config.enforceForeignKeys(true);
-            conn = DriverManager.getConnection(
+            this.connection = DriverManager.getConnection(
                     dbURL, config.toProperties());
-            conn.setAutoCommit(false);
+            this.connection.setAutoCommit(false);
         } catch (SQLException e) {
             logger.error("Cannot connect to sqlite database - {}", e.getMessage());
         }
-        return conn;
     }
 
-    public void rollback(Connection conn) {
+    public Statement createStatement() throws SQLException {
+        return this.connection.createStatement();
+    }
+
+    public PreparedStatement prepareStatement(String sql) throws SQLException {
+        return this.connection.prepareStatement(sql);
+    }
+
+    public void rollback() {
         try {
-            conn.rollback();
+            connection.rollback();
             logger.trace("Rollback OK");
         } catch (SQLException e) {
             logger.error("Rollback failed");
         }
     }
 
-    public void commit(Connection conn) {
+    public void commit() {
         try {
-            conn.commit();
+            connection.commit();
             logger.trace("Commit OK");
         } catch (SQLException e) {
             logger.error("Commit failed");
@@ -83,9 +81,9 @@ public class SQLiteDb {
         }
     }
 
-    public void close(Connection conn) {
+    public void close() {
         try {
-            conn.close();
+            this.connection.close();
             logger.info("Sqlite connection closed");
         } catch (SQLException e) {
             logger.error("Error while closing sqlite connection: {}", e.getMessage());

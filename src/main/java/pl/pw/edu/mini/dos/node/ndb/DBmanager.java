@@ -1,34 +1,30 @@
 package pl.pw.edu.mini.dos.node.ndb;
 
-import javafx.util.Pair;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import pl.pw.edu.mini.dos.Config;
 import pl.pw.edu.mini.dos.communication.nodenode.ExecuteSqlRequest;
-import pl.pw.edu.mini.dos.communication.nodenode.ExecuteSqlResponse;
 import pl.pw.edu.mini.dos.communication.nodenode.GetSqlResultResponse;
 
 import java.sql.*;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
 import java.util.concurrent.Callable;
 
+/**
+ *  Manages the persistant SQLite database of node.
+ */
 public class DBmanager {
     private static final Logger logger = LoggerFactory.getLogger(DBmanager.class);
     private static final Config config = Config.getConfig();
     private SQLiteDb db;
     private String pathToDBFile;
 
-    public DBmanager(boolean inMemory) {
+    public DBmanager() {
         Random r = new Random();
         pathToDBFile = "jdbc:sqlite:";
-        if (inMemory) {
-            pathToDBFile += ":memory:";
-        } else {
-            // Random name of the db to not share db with other node
-            pathToDBFile += r.nextInt(1000) + config.getProperty("nodeDatabasePath");
-        }
+        // Random name of the db to not share db with other node
+        pathToDBFile += r.nextInt(1000) + config.getProperty("nodeDatabasePath");
         this.db = SQLiteDb.getInstance();
     }
 
@@ -64,7 +60,7 @@ public class DBmanager {
                 try {
                     st.executeUpdate(createTableStatement);
                 } catch (SQLException e) {
-                    logger.debug("Table already exists: " + e.getMessage().toString());
+                    logger.debug("Table already exists: " + e.getMessage());
                 }
             }
         } catch (SQLException e) {

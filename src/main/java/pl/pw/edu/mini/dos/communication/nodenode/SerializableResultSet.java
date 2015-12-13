@@ -21,13 +21,6 @@ public class SerializableResultSet implements Serializable {
         return data;
     }
 
-    public int getColumnCount() {
-        if (columnsTypes == null) {
-            return 0;
-        }
-        return columnsTypes.size();
-    }
-
     @Override
     public String toString() {
         String str = "";

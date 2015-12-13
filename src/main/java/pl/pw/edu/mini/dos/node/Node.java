@@ -48,7 +48,7 @@ public class Node extends UnicastRemoteObject
     public Node(String masterHost, String masterPort, String myIp) throws RemoteException {
         System.setProperty("java.rmi.server.hostname", myIp);   // TODO: It's necessary?
 
-        dbManager = new DBmanager(false); // Manager for persistent db
+        dbManager = new DBmanager(); // Manager for persistent db
 
         // Create thread pool
         int workerThreads = Integer.parseInt(config.getProperty("nodeWorkerThreads"));

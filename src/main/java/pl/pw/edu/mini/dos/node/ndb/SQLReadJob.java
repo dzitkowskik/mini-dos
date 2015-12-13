@@ -1,6 +1,5 @@
 package pl.pw.edu.mini.dos.node.ndb;
 
-import org.apache.commons.dbutils.ResultSetHandler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import pl.pw.edu.mini.dos.communication.ErrorEnum;
@@ -20,7 +19,6 @@ public class SQLReadJob implements Callable<GetSqlResultResponse> {
     private static final Logger logger = LoggerFactory.getLogger(SQLReadJob.class);
     private Connection conn;
     private ExecuteSqlRequest request;
-    private ResultSetHandler<Object[]> handler = null;
 
     public SQLReadJob(Connection conn, ExecuteSqlRequest request) {
         this.conn = conn;

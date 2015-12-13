@@ -13,7 +13,6 @@ import net.sf.jsqlparser.statement.execute.Execute;
 import net.sf.jsqlparser.statement.insert.Insert;
 import net.sf.jsqlparser.statement.replace.Replace;
 import net.sf.jsqlparser.statement.select.Select;
-import net.sf.jsqlparser.statement.select.WithItem;
 import net.sf.jsqlparser.statement.truncate.Truncate;
 import net.sf.jsqlparser.statement.update.Update;
 import org.slf4j.Logger;
@@ -26,7 +25,6 @@ import pl.pw.edu.mini.dos.communication.nodenode.*;
 import pl.pw.edu.mini.dos.node.task.TaskManager;
 
 import java.rmi.RemoteException;
-import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.ExecutionException;
 
@@ -76,40 +74,63 @@ public class SQLStatementVisitor implements StatementVisitor {
             return;
         }
 
-        // Get data from nodes pointed by master
-        // Send requests
-        String selectAll = "SELECT * FROM " + tablesNames.get(0) + ";";
-        for (NodeNodeInterface node : selectMetadataResponse.getNodes()) {
-            try {
-                node.executeSql(new ExecuteSqlRequest(
-                        taskId, selectAll, thisNode));
-            } catch (RemoteException e) {
-                logger.error("Cannot get data from another node: {}", e.getMessage());
-                this.result = new ExecuteSQLOnNodeResponse("", ErrorEnum.REMOTE_EXCEPTION);
-                return;
-            }
-        }
-        // Get responses
+        // Create in-memory db
+        InDBmanager inDbManager = new InDBmanager();
+        // Create needed tables
+        inDbManager.createTables(selectMetadataResponse.getCreateTableStatements());
+
+        // For each table
         ErrorEnum error = ErrorEnum.NO_ERROR;
-        for (NodeNodeInterface node : selectMetadataResponse.getNodes()) {
-            GetSqlResultResponse response = null;
-            try {
-                response = node.getSqlResult(new GetSqlResultRequest(taskId));
-            } catch (RemoteException e) {
-                logger.error("Cannot get data from another node: {}", e.getMessage());
-                error = ErrorEnum.REMOTE_EXCEPTION;
-            } catch (ExecutionException e) {
-                logger.error("Error at getting result: {}", e.getMessage());
-                error = ErrorEnum.REMOTE_EXCEPTION;
-            } catch (InterruptedException e) {
-                logger.error("Operation interrupted", e.getMessage());
-                error = ErrorEnum.ANOTHER_ERROR;
+        for (String table : tablesNames) {
+            // Send requests to get the needed data
+            String selectAll = "SELECT * FROM " + table + ";";
+            for (NodeNodeInterface node : selectMetadataResponse.getNodes()) {
+                try {
+                    node.executeSql(new ExecuteSqlRequest(
+                            taskId, selectAll, thisNode));
+                } catch (RemoteException e) {
+                    logger.error("Cannot get data from another node: {}", e.getMessage());
+                    error = ErrorEnum.REMOTE_EXCEPTION;
+                }
             }
-            logger.debug("Response:\n" + response.getData().toString());
-            if (response != null && !response.getError().equals(ErrorEnum.NO_ERROR)) {
-                error = response.getError(); // Last error is stored
+            // Get responses and proccess data
+            for (int i = 0; i < selectMetadataResponse.getNodes().size(); i++) {
+                NodeNodeInterface node = selectMetadataResponse.getNodes().get(i);
+                GetSqlResultResponse response = null;
+                try {
+                    response = node.getSqlResult(new GetSqlResultRequest(taskId));
+                } catch (RemoteException e) {
+                    logger.error("Cannot get data from another node: {}", e.getMessage());
+                    error = ErrorEnum.REMOTE_EXCEPTION;
+                } catch (ExecutionException e) {
+                    logger.error("Error at getting result: {}", e.getMessage());
+                    error = ErrorEnum.REMOTE_EXCEPTION;
+                } catch (InterruptedException e) {
+                    logger.error("Operation interrupted", e.getMessage());
+                    error = ErrorEnum.ANOTHER_ERROR;
+                }
+                if (response == null || !response.getError().equals(ErrorEnum.NO_ERROR)) {
+                    // Last error is stored
+                    error = response == null ? ErrorEnum.ANOTHER_ERROR : response.getError();
+                } else {
+                    // Import received table to in-memory db
+                    inDbManager.importTable(table + i,
+                            response.getData().getColumnsTypes(),
+                            response.getData().getData());
+                    logger.debug(inDbManager.selectAll(table + i));
+                }
             }
         }
+
+        // TODO create temportal table
+        // INSERT INTO A_temp
+        // SELECT * FROM A1
+        // UNION
+        // SELECT * FROM A2
+        // UNION
+        // SELECT * FROM A3
+
+        // TODO execute select
 
         // Check final result
         if (!error.equals(ErrorEnum.NO_ERROR)) {
@@ -118,9 +139,13 @@ public class SQLStatementVisitor implements StatementVisitor {
                     "Error at proccessing the select", error);
             return;
         }
+
+        // TODO return result of select
         logger.info("Coordinator node: select proccessed!");
         this.result = new ExecuteSQLOnNodeResponse(
                 "Success in selecting data", error);
+        // Close in-memory db
+        inDbManager.close();
     }
 
 
