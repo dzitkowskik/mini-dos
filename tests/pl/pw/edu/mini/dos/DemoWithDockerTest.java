@@ -2,9 +2,7 @@ package pl.pw.edu.mini.dos;
 
 import org.junit.Test;
 
-import static junit.framework.Assert.assertNotNull;
-import static pl.pw.edu.mini.dos.TestsHelper.getMasterIp;
-import static pl.pw.edu.mini.dos.TestsHelper.getNextIp;
+import static junit.framework.Assert.assertEquals;
 
 public class DemoWithDockerTest {
     @org.junit.Before
@@ -18,19 +16,27 @@ public class DemoWithDockerTest {
     }
 
     @Test
-    public void testDemoInDocker() throws InterruptedException {
-        String ip = getMasterIp();
-        assertNotNull(ip);
-        TestsHelper.masterIp = getNextIp(ip);
-        String ipNode = getNextIp(ip);
+    public void testIsDockerEnvironmentOk() throws InterruptedException {
+        DockerRunner docker = DockerRunner.getInstance();
+        DockerRunner.DockerThread thread1 = docker.runMasterInDocker("Master");
+        Thread.sleep(500);
+        DockerRunner.DockerThread thread2 = docker.runNodeInDocker("Node #1");
+        DockerRunner.DockerThread thread3 = docker.runNodeInDocker("Node #2");
+        DockerRunner.DockerThread thread4 = docker.runClientInDocker("Client");
 
-        TestsHelper.runMasterDemoInDocker();
-        Thread.sleep(300);
-        TestsHelper.runNodeDemoInDocker(ipNode);
-        Thread.sleep(300);
-        TestsHelper.runNodeDemoInDocker(getNextIp(ipNode));
+        for (int i = 0; i < 16; i++) {
+            Thread.sleep(1000);
+        }
 
-        Thread.sleep(15000);
+        DockerRunner.getInstance().stopThreads();
+
+        Thread.sleep(1000);
+
+        // when was everything ok, 143 should be
+        assertEquals(143, thread1.exitVal);
+        assertEquals(143, thread2.exitVal);
+        assertEquals(143, thread3.exitVal);
+        assertEquals(143, thread4.exitVal);
     }
 
 }
