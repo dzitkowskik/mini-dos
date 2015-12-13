@@ -75,6 +75,5 @@ public class Client {
 
     public void stopClient() {
         master = null;
-        System.exit(0); // Unfortunately, this is only way, to close RMI...
     }
 }

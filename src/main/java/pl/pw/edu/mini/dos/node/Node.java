@@ -20,6 +20,7 @@ import pl.pw.edu.mini.dos.node.task.TaskManager;
 
 import java.io.Serializable;
 import java.net.URISyntaxException;
+import java.rmi.NoSuchObjectException;
 import java.rmi.RemoteException;
 import java.rmi.server.UnicastRemoteObject;
 import java.util.HashMap;
@@ -99,8 +100,12 @@ public class Node extends UnicastRemoteObject
             }
         }
         master = null;
-        // TODO: REALLY??!! THIS RMI SUCKS!!
-        System.exit(0); // Unfortunately, this is only way, to close RMI...
+
+        try {
+            unexportObject(this, true);
+        } catch (NoSuchObjectException e) {
+            logger.error(e.getMessage());
+        }
     }
 
     @Override

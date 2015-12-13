@@ -183,6 +183,7 @@ public class Master
         Long taskID = taskManager.newTask(node.getID());
         ExecuteSQLOnNodeResponse result = node.getInterface().executeSQLOnNode(
                 new ExecuteSQLOnNodeRequest(taskID, executeSQLRequest.getSql()));
+        logger.info("Send response to client:" + result.getResult());
         return new ExecuteSQLResponse(result);
     }
 }
