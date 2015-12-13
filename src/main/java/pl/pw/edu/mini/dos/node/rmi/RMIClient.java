@@ -16,10 +16,14 @@ import java.security.AccessControlException;
 import java.security.AllPermission;
 
 public class RMIClient implements Serializable {
-    /** Logger */
+    /**
+     * Logger
+     */
     private static final Logger logger = LoggerFactory.getLogger(RMIClient.class);
 
     private Registry registry;
+    int count = 3;
+    int timeout = 3;
 
     public RMIClient(String serverHost, int serverPort) {
         setPolicyPath();
@@ -54,11 +58,21 @@ public class RMIClient implements Serializable {
     }
 
     public Remote getService(String serviceName) {
-        try {
-            return registry.lookup(serviceName);
-        } catch (Exception e) {
-            ErrorHandler.handleError(e, true);
+        Exception ee = null;
+        for (int i = 0; i < count; i++) {
+            try {
+                System.out.println("Trying to connect #" + i + "...");
+                return registry.lookup(serviceName);
+            } catch (Exception e) {
+                ee = e;
+            }
+            try {
+                Thread.sleep(timeout * 1000);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
         }
+        ErrorHandler.handleError(ee, true);
         return null;
     }
 }
