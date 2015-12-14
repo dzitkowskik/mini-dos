@@ -123,6 +123,7 @@ public class SQLStatementVisitor implements StatementVisitor {
                     versionsOfTable.add(versionOftable);
                     boolean ok = inDbManager.importTable(versionOftable,
                             response.getData().getColumnsTypes(),
+                            response.getData().getColumnsNames(),
                             response.getData().getData());
                     if (!ok) {
                         logger.error("Error at importing table to imdb");

@@ -62,16 +62,18 @@ public class InDBmanager {
      * @param data         data to insert
      * @return true if no errors
      */
-    public boolean importTable(String tableName, List<String> columnsTypes, List<Object[]> data) {
+    public boolean importTable(
+            String tableName, List<String> columnsTypes,
+            List<String> columnsNames, List<Object[]> data) {
         // Build create table
         String createTable = "CREATE TABLE " + tableName + "(";
         int c;
         for (c = 0; c < columnsTypes.size() - 2; c++) {
-            createTable += "c" + c + " " + columnsTypes.get(c) + ", ";
+            createTable += columnsNames.get(c) + " " + columnsTypes.get(c) + ", ";
         }
-        createTable += "c" + c + " " + columnsTypes.get(c) + " PRIMARY KEY, "; // rowID
+        createTable += columnsNames.get(c) + " " + columnsTypes.get(c) + " PRIMARY KEY, "; // rowID
         c++;
-        createTable += "c" + c + " " + columnsTypes.get(c); // version
+        createTable += columnsNames.get(c) + " " + columnsTypes.get(c); // version
         createTable += ")WITHOUT ROWID;";
         logger.debug("Create table: " + createTable);
 

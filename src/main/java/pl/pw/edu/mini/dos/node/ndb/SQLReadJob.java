@@ -65,6 +65,7 @@ public class SQLReadJob implements Callable<GetSqlResultResponse> {
      */
     public SerializableResultSet runSelect(String select) throws SQLException {
         List<String> columnsTypes = new ArrayList<>();
+        List<String> columnsNames = new ArrayList<>();
         List<Object[]> data = new ArrayList<>();
         // Execute select
         PreparedStatement st = null;
@@ -72,11 +73,12 @@ public class SQLReadJob implements Callable<GetSqlResultResponse> {
         try {
             st = conn.prepareStatement(select);
             rs = st.executeQuery();
-            // Save columns types
+            // Save columns types and names
             ResultSetMetaData meta = rs.getMetaData();
             int cols = meta.getColumnCount();
             for (int c = 1; c <= cols; c++) {
                 columnsTypes.add(meta.getColumnTypeName(c));
+                columnsNames.add(meta.getColumnName(c));
             }
             // Save data
             while (rs.next()) {
@@ -90,6 +92,6 @@ public class SQLReadJob implements Callable<GetSqlResultResponse> {
             rs.close();
             st.close();
         }
-        return new SerializableResultSet(columnsTypes, data);
+        return new SerializableResultSet(columnsTypes, columnsNames, data);
     }
 }
