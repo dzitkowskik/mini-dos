@@ -22,6 +22,10 @@ public class InDBmanager {
         this.imdb = new InSQLiteDb(DB_URL);
     }
 
+    public void close() {
+        imdb.close();
+    }
+
     /**
      * Execute the given create table statements in local db.
      *
@@ -193,22 +197,51 @@ public class InDBmanager {
         return functions;
     }
 
+    public boolean mergeVersionsOfTable(String table, List<String> versions) {
+        // Build create table
+        String createStatement = "CREATE TABLE " + table + "_tmp AS";
+        createStatement += " SELECT * FROM " + versions.get(0);
+        for (int i = 1; i < versions.size(); i++) {
+            createStatement += " UNION";
+            createStatement += " SELECT * FROM " + versions.get(i);
+        }
+        createStatement += ";";
+
+        // Create temportal table
+        PreparedStatement st = null;
+        try {
+            st = imdb.prepareStatement(createStatement);
+            st.executeUpdate();
+        } catch (SQLException e) {
+            imdb.rollback();
+            logger.error(e.getMessage());
+            return false;
+        } finally {
+            imdb.close(st);
+        }
+        return true;
+    }
+
     /**
-     * Return a string with the result of selectAll of a table.
+     * Return a string with the result of execute given select.
+     * It removes the columns rowID and version.
      *
-     * @param table table
+     * @param select select statement
+     * @return string with the result of the select
      */
-    public String selectAll(String table) {
+    public String executeSelect(String select) {
         List<Object[]> data = new ArrayList<>();
         // Execute select
         PreparedStatement st = null;
         ResultSet rs = null;
-        String select = "SELECT * FROM " + table + ";";
         try {
             st = imdb.prepareStatement(select);
             rs = st.executeQuery();
             ResultSetMetaData meta = rs.getMetaData();
             int cols = meta.getColumnCount();
+            if(select.contains("*")){
+                cols = cols -2; // Exclude rowId and version
+            }
             // Save data
             while (rs.next()) {
                 Object[] row = new Object[cols];
@@ -225,15 +258,10 @@ public class InDBmanager {
         }
 
         // Build string
-        String str = ">>> In-memory db: table " + table;
-        str += "\nData (" + data.size() + " rows):";
+        String str = "\nData (" + data.size() + " rows):";
         for (Object[] o : data) {
             str += "\n" + Arrays.toString(o);
         }
         return str;
-    }
-
-    public void close() {
-        imdb.close();
     }
 }

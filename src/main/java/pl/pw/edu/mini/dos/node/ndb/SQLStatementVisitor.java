@@ -25,7 +25,10 @@ import pl.pw.edu.mini.dos.communication.nodenode.*;
 import pl.pw.edu.mini.dos.node.task.TaskManager;
 
 import java.rmi.RemoteException;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ExecutionException;
 
 public class SQLStatementVisitor implements StatementVisitor {
@@ -81,6 +84,7 @@ public class SQLStatementVisitor implements StatementVisitor {
 
         // For each table
         ErrorEnum error = ErrorEnum.NO_ERROR;
+        Map<String, List<String>> versionsOfTables = new HashMap<>(tablesNames.size());
         for (String table : tablesNames) {
             // Send requests to get the needed data
             String selectAll = "SELECT * FROM " + table + ";";
@@ -94,6 +98,7 @@ public class SQLStatementVisitor implements StatementVisitor {
                 }
             }
             // Get responses and proccess data
+            List<String> versionsOfTable = new ArrayList<>(selectMetadataResponse.getNodes().size());
             for (int i = 0; i < selectMetadataResponse.getNodes().size(); i++) {
                 NodeNodeInterface node = selectMetadataResponse.getNodes().get(i);
                 GetSqlResultResponse response = null;
@@ -114,23 +119,40 @@ public class SQLStatementVisitor implements StatementVisitor {
                     error = response == null ? ErrorEnum.ANOTHER_ERROR : response.getError();
                 } else {
                     // Import received table to in-memory db
-                    inDbManager.importTable(table + i,
+                    String versionOftable = table + i;
+                    versionsOfTable.add(versionOftable);
+                    boolean ok = inDbManager.importTable(versionOftable,
                             response.getData().getColumnsTypes(),
                             response.getData().getData());
-                    logger.debug(inDbManager.selectAll(table + i));
+                    if (!ok) {
+                        logger.error("Error at importing table to imdb");
+                        error = ErrorEnum.ANOTHER_ERROR;
+                    }
                 }
+            }
+            versionsOfTables.put(table, versionsOfTable);
+        }
+
+        // Create temportal table merging all versions of the table received
+        for (String table : tablesNames) {
+            boolean ok = inDbManager.mergeVersionsOfTable(table, versionsOfTables.get(table));
+            if (!ok) {
+                logger.error("Error at merging versions of table");
+                error = ErrorEnum.ANOTHER_ERROR;
             }
         }
 
-        // TODO create temportal table
-        // INSERT INTO A_temp
-        // SELECT * FROM A1
-        // UNION
-        // SELECT * FROM A2
-        // UNION
-        // SELECT * FROM A3
+        // Run select in temporal table
+        String selectStatementTmp = selectStatement;
+        for (String table : tablesNames) {
+            selectStatementTmp = selectStatementTmp.replaceAll(table, table + "_tmp");
+        }
+        logger.debug("Execute select from tmp tables:\n" + selectStatementTmp);
+        String result = inDbManager.executeSelect(selectStatementTmp);
 
-        // TODO execute select
+        // TODO drop temporal tables
+        // Close in-memory db
+        inDbManager.close();
 
         // Check final result
         if (!error.equals(ErrorEnum.NO_ERROR)) {
@@ -140,12 +162,8 @@ public class SQLStatementVisitor implements StatementVisitor {
             return;
         }
 
-        // TODO return result of select
         logger.info("Coordinator node: select proccessed!");
-        this.result = new ExecuteSQLOnNodeResponse(
-                "Success in selecting data", error);
-        // Close in-memory db
-        inDbManager.close();
+        this.result = new ExecuteSQLOnNodeResponse(result, error);
     }
 
 
