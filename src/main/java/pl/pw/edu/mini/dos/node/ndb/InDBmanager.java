@@ -240,15 +240,18 @@ public class InDBmanager {
             st = imdb.prepareStatement(select);
             rs = st.executeQuery();
             ResultSetMetaData meta = rs.getMetaData();
-            int cols = meta.getColumnCount();
-            if(select.contains("*")){
-                cols = cols -2; // Exclude rowId and version
+            List<Integer> colIndex = new ArrayList<>(meta.getColumnCount()-2);
+            for (int i = 1; i <= meta.getColumnCount(); i++) {
+                String colName = meta.getColumnName(i);
+                if(!colName.equals("row_id") && !colName.equals("version")){
+                    colIndex.add(i);
+                }
             }
             // Save data
             while (rs.next()) {
-                Object[] row = new Object[cols];
-                for (int c = 1; c <= cols; c++) {
-                    row[c - 1] = rs.getObject(c);
+                Object[] row = new Object[colIndex.size()];
+                for (int i = 0; i < colIndex.size(); i++) {
+                    row[i] = rs.getObject(colIndex.get(i));
                 }
                 data.add(row);
             }
