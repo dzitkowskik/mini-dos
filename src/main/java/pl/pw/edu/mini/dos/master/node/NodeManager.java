@@ -4,7 +4,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import pl.pw.edu.mini.dos.communication.ErrorEnum;
 import pl.pw.edu.mini.dos.communication.masternode.MasterNodeInterface;
-import pl.pw.edu.mini.dos.communication.nodenode.NodeNodeInterface;
 
 import java.util.*;
 
@@ -13,7 +12,7 @@ import java.util.*;
  */
 public class NodeManager {
     private static final Logger logger = LoggerFactory.getLogger(NodeManager.class);
-    private final Map<Integer, RegisteredNode> registeredNodes;
+    final Map<Integer, RegisteredNode> registeredNodes;
     private Integer nextNodeID;
     private int replicationFactor;
 
