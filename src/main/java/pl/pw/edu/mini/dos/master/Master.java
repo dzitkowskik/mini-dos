@@ -9,20 +9,25 @@ import pl.pw.edu.mini.dos.communication.Services;
 import pl.pw.edu.mini.dos.communication.clientmaster.ClientMasterInterface;
 import pl.pw.edu.mini.dos.communication.clientmaster.ExecuteSQLRequest;
 import pl.pw.edu.mini.dos.communication.clientmaster.ExecuteSQLResponse;
-import pl.pw.edu.mini.dos.communication.masternode.*;
+import pl.pw.edu.mini.dos.communication.masternode.ExecuteCreateTablesRequest;
+import pl.pw.edu.mini.dos.communication.masternode.ExecuteCreateTablesResponse;
+import pl.pw.edu.mini.dos.communication.masternode.ExecuteSQLOnNodeRequest;
+import pl.pw.edu.mini.dos.communication.masternode.ExecuteSQLOnNodeResponse;
 import pl.pw.edu.mini.dos.communication.nodemaster.*;
 import pl.pw.edu.mini.dos.communication.nodenode.NodeNodeInterface;
 import pl.pw.edu.mini.dos.master.mdb.DBmanager;
 import pl.pw.edu.mini.dos.master.node.NodeManager;
 import pl.pw.edu.mini.dos.master.node.PingNodes;
-import pl.pw.edu.mini.dos.master.rmi.RMIServer;
 import pl.pw.edu.mini.dos.master.node.RegisteredNode;
+import pl.pw.edu.mini.dos.master.rmi.RMIServer;
 import pl.pw.edu.mini.dos.master.task.TaskManager;
 
 import java.io.Serializable;
 import java.rmi.RemoteException;
 import java.rmi.server.UnicastRemoteObject;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Scanner;
 
 public class Master
         extends UnicastRemoteObject
@@ -33,7 +38,7 @@ public class Master
     private RMIServer server;
 
     private Thread pingThread;
-    private NodeManager nodeManager;
+    NodeManager nodeManager;
     private TaskManager taskManager;
     private DBmanager dbManager;
 
