@@ -15,7 +15,7 @@ import java.rmi.RemoteException;
  * To change this template use File | Settings | File Templates.
  */
 public class MasterNodeRegisterMock implements MasterNodeInterface {
-    private static final Logger logger = LoggerFactory.getLogger(Master.class);
+    private static final Logger logger = LoggerFactory.getLogger(MasterNodeRegisterMock.class);
 
     @Override
     public ExecuteSQLOnNodeResponse executeSQLOnNode(ExecuteSQLOnNodeRequest executeSQLOnNodeRequest) throws RemoteException {
