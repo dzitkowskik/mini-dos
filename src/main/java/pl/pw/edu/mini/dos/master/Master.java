@@ -3,16 +3,16 @@ package pl.pw.edu.mini.dos.master;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import pl.pw.edu.mini.dos.Config;
-import pl.pw.edu.mini.dos.communication.ErrorHandler;
+import pl.pw.edu.mini.dos.Helper;
+import pl.pw.edu.mini.dos.communication.ErrorEnum;
 import pl.pw.edu.mini.dos.communication.Services;
 import pl.pw.edu.mini.dos.communication.clientmaster.ClientMasterInterface;
 import pl.pw.edu.mini.dos.communication.clientmaster.ExecuteSQLRequest;
 import pl.pw.edu.mini.dos.communication.clientmaster.ExecuteSQLResponse;
-import pl.pw.edu.mini.dos.communication.masternode.ExecuteSQLOnNodeRequest;
-import pl.pw.edu.mini.dos.communication.masternode.ExecuteSQLOnNodeResponse;
-import pl.pw.edu.mini.dos.communication.masternode.MasterNodeInterface;
+import pl.pw.edu.mini.dos.communication.masternode.*;
 import pl.pw.edu.mini.dos.communication.nodemaster.*;
 import pl.pw.edu.mini.dos.communication.nodenode.NodeNodeInterface;
+import pl.pw.edu.mini.dos.master.mdb.DBmanager;
 import pl.pw.edu.mini.dos.master.node.NodeManager;
 import pl.pw.edu.mini.dos.master.node.PingNodes;
 import pl.pw.edu.mini.dos.master.rmi.RMIServer;
@@ -35,6 +35,7 @@ public class Master
     private Thread pingThread;
     private NodeManager nodeManager;
     private TaskManager taskManager;
+    private DBmanager dbManager;
 
     public Master() throws RemoteException {
         this("127.0.0.1", 1099);
@@ -42,12 +43,19 @@ public class Master
 
     public Master(String host, int port) throws RemoteException {
         // Get managers
-        nodeManager = new NodeManager();
+        nodeManager = new NodeManager(
+                Integer.parseInt(config.getProperty("replicationFactor")));
         taskManager = new TaskManager();
+        dbManager = new DBmanager();
 
+        // Prepare in-memory db
+        dbManager.prepareDB();
+
+        // RMI server
         server = new RMIServer(host, port);
         server.startService(Services.MASTER, this);
         logger.info("Master listening at (" + host + ":" + port + ")");
+
         // Ping nodes periodically
         long spanTime = Long.parseLong(config.getProperty("spanPingingTime"));
         pingThread = new Thread(new PingNodes(nodeManager, spanTime));
@@ -72,8 +80,6 @@ public class Master
             if (text.equals("q")) {
                 scanner.close();
                 break;
-            } else if (text.equals("d")) {
-                master.showNodesData();
             }
         }
 
@@ -84,43 +90,69 @@ public class Master
     public void stopMaster() {
         pingThread.interrupt();
         server.stopService(Services.MASTER, this);
-    }
-
-    public void showNodesData() {
-        for (Map.Entry<Integer, RegisteredNode> node : nodeManager.getNodesMap().entrySet()) {
-            try {
-                System.out.println("Data from RegisteredNode " + node.getKey() + ": "
-                        + node.getValue().getInterface().executeSQLOnNode(
-                        new ExecuteSQLOnNodeRequest(taskManager.newTask(node.getKey()),
-                                "SELECT * FROM *;")
-                ).getResult());
-            } catch (RemoteException e) {
-                ErrorHandler.handleError(e, false);
-            }
-        }
+        dbManager.close();
     }
 
     @Override
     public RegisterResponse register(RegisterRequest registerRequest) throws RemoteException {
-        return new RegisterResponse(
-                nodeManager.newNode(registerRequest.getNode()));
+        // Register node
+        ErrorEnum ok = nodeManager.newNode(registerRequest.getNodeInterface());
+        if (!ok.equals(ErrorEnum.NO_ERROR)) {
+            return new RegisterResponse(ok);
+        }
+        // Send node create tables
+        ExecuteCreateTablesResponse response =
+                registerRequest.getNodeInterface().createTables
+                        (new ExecuteCreateTablesRequest(dbManager.getCreateTableStatements()));
+        return new RegisterResponse(response.getError());
     }
 
     @Override
     public InsertMetadataResponse insertMetadata(InsertMetadataRequest insertMetadataRequest)
             throws RemoteException {
-        List<NodeNodeInterface> nodes = new ArrayList<>(nodeManager.numNodes());
-        // Insert in all registeredNodes (example)
-        for (MasterNodeInterface n : nodeManager.getNodesInterfaces()) {
-            nodes.add((NodeNodeInterface) n);
+        // Select nodes
+        List<RegisteredNode> nodes = nodeManager.selectNodesInsert();
+        if (nodes == null) {
+            // Number of available nodes less than replication factor
+            return new InsertMetadataResponse(null, null, ErrorEnum.NOT_ENOUGH_NODES);
         }
-        return new InsertMetadataResponse(nodes);
+        // Insert row metadata (RowId, TableId, NodesIds)
+        List<Integer> nodesIds = new ArrayList<>(nodes.size());
+        List<NodeNodeInterface> nodesInterfaces = new ArrayList<>(nodes.size());
+        for (RegisteredNode node : nodes) {
+            nodesIds.add(node.getID());
+            nodesInterfaces.add((NodeNodeInterface) node.getInterface());
+        }
+        Long rowId = dbManager.insertRow(
+                insertMetadataRequest.getTable(), nodesIds);
+        if (rowId == null) {
+            // The table of the insert doesn't exist
+            return new InsertMetadataResponse(null, null, ErrorEnum.TABLE_NOT_EXIST);
+        }
+        return new InsertMetadataResponse(rowId, nodesInterfaces, ErrorEnum.NO_ERROR);
     }
 
     @Override
     public SelectMetadataResponse selectMetadata(SelectMetadataRequest selectMetadataRequest)
             throws RemoteException {
-        return null;
+        // Get create tables and node that have the data
+        List<String> tables = selectMetadataRequest.getTables();
+        logger.info("Get metadata select request for tables: " + Helper.collectionToString(tables));
+        if (tables == null || tables.size() == 0) {
+            return new SelectMetadataResponse(null, null, ErrorEnum.ANOTHER_ERROR);
+        }
+        List<String> createTableStatements = dbManager.getCreateTableStatements(tables);
+        List<Integer> nodesIDs = dbManager.getNodesHaveTables(tables);
+        if (createTableStatements == null || nodesIDs == null) {
+            return new SelectMetadataResponse(null, null, ErrorEnum.TABLE_NOT_EXIST);
+        }
+        logger.info("Nodes which have the data: " + Helper.collectionToString(nodesIDs));
+        List<NodeNodeInterface> nodesInterfaces = new ArrayList<>(nodesIDs.size());
+        for (Integer nodeID : nodesIDs) {
+            nodesInterfaces.add(nodeManager.<NodeNodeInterface>getNodeInterface(nodeID));
+        }
+        return new SelectMetadataResponse(nodesInterfaces,
+                createTableStatements, ErrorEnum.NO_ERROR);
     }
 
     @Override
@@ -136,21 +168,22 @@ public class Master
     }
 
     @Override
-    public TableMetadataResponse tableMetadata(TableMetadataRequest tableMetadataRequest)
+    public CreateMetadataResponse createMetadata(CreateMetadataRequest createMetadataRequest)
             throws RemoteException {
-        return null;
+        return new CreateMetadataResponse(
+                nodeManager.<NodeNodeInterface>getNodesInterfaces(),
+                dbManager.insertTable(
+                        createMetadataRequest.getTable(),
+                        createMetadataRequest.getCreateStatement()));
     }
 
     @Override
     public ExecuteSQLResponse executeSQL(ExecuteSQLRequest executeSQLRequest) throws RemoteException {
-        // Select node
-        Map.Entry<Integer, RegisteredNode> nodeEntry = nodeManager.selectNode();
-        MasterNodeInterface nodeInterface = nodeEntry.getValue().getInterface();
-        Integer nodeID = nodeEntry.getKey();
-
-        Long taskID = taskManager.newTask(nodeID);
-        ExecuteSQLOnNodeResponse result = nodeInterface.executeSQLOnNode(
+        RegisteredNode node = nodeManager.selectCoordinatorNode();
+        Long taskID = taskManager.newTask(node.getID());
+        ExecuteSQLOnNodeResponse result = node.getInterface().executeSQLOnNode(
                 new ExecuteSQLOnNodeRequest(taskID, executeSQLRequest.getSql()));
+        logger.info("Send response to client:" + result.getResult());
         return new ExecuteSQLResponse(result);
     }
 }

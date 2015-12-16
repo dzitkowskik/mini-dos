@@ -41,8 +41,16 @@ public class Client {
 
         Scanner scanner = new Scanner(System.in);
         System.out.println("Type the query or enter 'q' to exit:");
+        System.out.print("ddbms> ");
         while (scanner.hasNext()) {
             String command = scanner.nextLine();
+            while (!command.contains(";")) { // Multiline commands
+                System.out.print("  ...> ");
+                if(scanner.hasNext()){
+                    command += " " + scanner.nextLine();
+                }
+            }
+
             logger.debug("Command: " + command);
 
             if (command.equals("q")) {
@@ -52,6 +60,7 @@ public class Client {
 
             String result = client.executeSQL(command);
             System.out.println("Result: " + result);
+            System.out.print("ddbms> ");
         }
 
         client.stopClient();
@@ -64,17 +73,16 @@ public class Client {
         try {
             response = master.executeSQL(new ExecuteSQLRequest(sql));
         } catch (RemoteException e) {
-            return "Error: " + e.getMessage();
+            return "ERROR - " + e.getMessage();
         }
 
         if(response.getError() != ErrorEnum.NO_ERROR){
-            return "ERROR: " + response.getError() + " - " + response.getResponse();
+            return "ERROR - " + response.getError();
         }
         return response.getResponse();
     }
 
     public void stopClient() {
         master = null;
-        System.exit(0); // Unfortunately, this is only way, to close RMI...
     }
 }

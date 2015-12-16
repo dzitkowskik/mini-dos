@@ -5,13 +5,13 @@ import pl.pw.edu.mini.dos.communication.masternode.MasterNodeInterface;
 import java.io.Serializable;
 
 public class RegisterRequest implements Serializable {
-    private MasterNodeInterface node;
+    private MasterNodeInterface nodeInterface;
 
-    public RegisterRequest(MasterNodeInterface node) {
-        this.node = node;
+    public RegisterRequest(MasterNodeInterface nodeInterface) {
+        this.nodeInterface = nodeInterface;
     }
 
-    public MasterNodeInterface getNode() {
-        return node;
+    public MasterNodeInterface getNodeInterface() {
+        return nodeInterface;
     }
 }

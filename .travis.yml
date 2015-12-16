@@ -1,5 +1,18 @@
 language: java
 jdk:
   - oraclejdk8
-install: false
+
+services:
+  - docker
+sudo: required
+
+before_install:
+  -  docker build -t dos - < Dockerfile
+  -  docker run -t -i dos sh -c 'java -version'
+
+before_script:
+  -  ls target
+  -  docker run -t -i dos sh -c 'ifconfig'
+
+
 script: mvn test

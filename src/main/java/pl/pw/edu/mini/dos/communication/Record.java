@@ -18,6 +18,6 @@ public class Record implements Serializable {
 
     @Override
     public String toString() {
-        return "Record:{" + Helper.MapToString(map) + "}";
+        return "Record:{" + Helper.mapToString(map) + "}";
     }
 }

@@ -2,6 +2,7 @@ package pl.pw.edu.mini.dos.master.rmi;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import pl.pw.edu.mini.dos.Helper;
 import pl.pw.edu.mini.dos.communication.ErrorHandler;
 
 import java.rmi.NotBoundException;
@@ -35,7 +36,7 @@ public class RMIServer {
 
     // TODO: This should be common to all modules, so move it to communication?
     private void setPolicyPath() {
-        String pathToPolicy = this.getClass().getClassLoader().getResource("client.policy").getFile();
+        String pathToPolicy = Helper.getResources(this.getClass(), "client.policy").getFile();
         if (pathToPolicy != null) {
             System.setProperty("java.security.policy", pathToPolicy);
         }

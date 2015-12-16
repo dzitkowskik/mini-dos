@@ -14,6 +14,15 @@ public interface MasterNodeInterface extends Remote {
             throws RemoteException;
 
     /**
+     * When a node registers in Master, Master tells it to create a list of tables in its db
+     * if node doesn't have them.
+     * @param executeCreateTablesRequest list of create tables statements
+     * @return result
+     */
+    ExecuteCreateTablesResponse createTables(ExecuteCreateTablesRequest executeCreateTablesRequest)
+            throws RemoteException;
+
+    /**
      * Send request for status on RegisteredNode. Mainly check is alive.
      *
      * @param checkStatusRequest Now this is empty class.

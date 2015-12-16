@@ -4,7 +4,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 public class TaskManager {
-    private Map<Long,Task> tasks;
+    private Map<Long, Task> tasks;
     private Long nextID;
 
     public TaskManager() {
@@ -14,11 +14,12 @@ public class TaskManager {
 
     /**
      * Create a new task
+     *
      * @return taskId
      */
-    public synchronized Long newTask(Integer node){
+    public synchronized Long newTask(Integer node) {
         Task task = new Task(nextID++, node);
-        tasks.put(task.getIdTask(),task);
+        tasks.put(task.getIdTask(), task);
         return nextID++;
     }
 }

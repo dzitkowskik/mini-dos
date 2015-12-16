@@ -9,7 +9,7 @@ public class InsertMetadataRequest implements Serializable {
         this.table = table;
     }
 
-    public String getTables() {
+    public String getTable() {
         return table;
     }
 }

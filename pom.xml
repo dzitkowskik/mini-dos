@@ -57,6 +57,7 @@
     </dependencies>
 
     <build>
+        <testSourceDirectory>tests</testSourceDirectory>
         <plugins>
             <!--<plugin>-->
                 <!--&lt;!&ndash; Execute master when install &ndash;&gt;-->

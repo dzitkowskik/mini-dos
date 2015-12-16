@@ -1,11 +1,16 @@
 package pl.pw.edu.mini.dos.communication.nodemaster;
 
-public class SelectMetadataRequest {
-    public int rowId;
-    public String table;
+import java.io.Serializable;
+import java.util.List;
 
-    public SelectMetadataRequest(int rowId, String table) {
-        this.rowId = rowId;
-        this.table = table;
+public class SelectMetadataRequest implements Serializable {
+    private List<String> tables;
+
+    public SelectMetadataRequest(List<String> tables) {
+        this.tables = tables;
+    }
+
+    public List<String> getTables() {
+        return tables;
     }
 }

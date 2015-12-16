@@ -1,6 +1,5 @@
 package pl.pw.edu.mini.dos.node;
 
-import javafx.util.Pair;
 import net.sf.jsqlparser.JSQLParserException;
 import net.sf.jsqlparser.parser.CCJSqlParserUtil;
 import net.sf.jsqlparser.statement.Statement;
@@ -14,12 +13,23 @@ import pl.pw.edu.mini.dos.communication.masternode.*;
 import pl.pw.edu.mini.dos.communication.nodemaster.NodeMasterInterface;
 import pl.pw.edu.mini.dos.communication.nodemaster.RegisterRequest;
 import pl.pw.edu.mini.dos.communication.nodenode.*;
+import pl.pw.edu.mini.dos.node.ndb.DBmanager;
+import pl.pw.edu.mini.dos.node.ndb.SQLStatementVisitor;
+import pl.pw.edu.mini.dos.node.rmi.RMIClient;
+import pl.pw.edu.mini.dos.node.task.TaskManager;
 
 import java.io.Serializable;
 import java.net.URISyntaxException;
+import java.rmi.NoSuchObjectException;
 import java.rmi.RemoteException;
 import java.rmi.server.UnicastRemoteObject;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Scanner;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 
 public class Node extends UnicastRemoteObject
         implements MasterNodeInterface, NodeNodeInterface, Serializable {
@@ -27,8 +37,10 @@ public class Node extends UnicastRemoteObject
     private static final Logger logger = LoggerFactory.getLogger(Node.class);
     private static final Config config = Config.getConfig();
 
-    private WorkQueue workQueue;
     private NodeMasterInterface master;
+    private DBmanager dbManager;
+    private ExecutorService workQueue;
+    private Map<Long, Future<GetSqlResultResponse>> runningTasks;
 
     public Node() throws RemoteException {
         this("127.0.0.1", "1099", "127.0.0.1");
@@ -37,11 +49,14 @@ public class Node extends UnicastRemoteObject
     public Node(String masterHost, String masterPort, String myIp) throws RemoteException {
         System.setProperty("java.rmi.server.hostname", myIp);   // TODO: It's necessary?
 
-        // CREATE THREAD POOL
-        int workerThreads = Integer.parseInt(config.getProperty("nodeWorkerThreads"));
-        workQueue = new WorkQueue(workerThreads);
+        dbManager = new DBmanager(); // Manager for persistent db
 
-        // RUN SERVICES
+        // Create thread pool
+        int workerThreads = Integer.parseInt(config.getProperty("nodeWorkerThreads"));
+        workQueue = Executors.newFixedThreadPool(workerThreads);
+        runningTasks = new HashMap<>();
+
+        // Run services
         RMIClient client = new RMIClient(masterHost, Integer.parseInt(masterPort));
         try {
             master = (NodeMasterInterface) client.getService(Services.MASTER);
@@ -56,16 +71,16 @@ public class Node extends UnicastRemoteObject
      */
     public static void main(String[] args) throws URISyntaxException, RemoteException {
         Node node;
-        if(args.length == 3) {
+        if (args.length == 3) {
             node = new Node(args[0], args[1], args[2]);
         } else {
             node = new Node();
         }
-        Scanner scanner = new Scanner (System.in);
-        System.out.println("*Enter 'q' to stop node or 'n' to generate new data.");
-        while(scanner.hasNext()) {
+        Scanner scanner = new Scanner(System.in);
+        System.out.println("*Enter 'q' to stop node.");
+        while (scanner.hasNext()) {
             String text = scanner.next();
-            if(text.equals("q")) {
+            if (text.equals("q")) {
                 break;
             }
         }
@@ -75,19 +90,33 @@ public class Node extends UnicastRemoteObject
     }
 
     public void stopNode() {
+        logger.info("Stopping node...");
+        workQueue.shutdown();
+        while (!workQueue.isTerminated()) {
+            try {
+                Thread.sleep(100);
+            } catch (InterruptedException e) {
+                logger.error(e.getMessage());
+            }
+        }
         master = null;
-        // TODO: REALLY??!! THIS RMI SUCKS!!
-        System.exit(0); // Unfortunately, this is only way, to close RMI...
+
+        try {
+            unexportObject(this, true);
+        } catch (NoSuchObjectException e) {
+            logger.error(e.getMessage());
+        }
     }
 
     @Override
     public ExecuteSQLOnNodeResponse executeSQLOnNode(ExecuteSQLOnNodeRequest executeSQLOnNodeRequest)
             throws RemoteException {
         Long taskId = executeSQLOnNodeRequest.getTaskId();
-        try (SqLiteDb db = new SqLiteDb()) {
+        try {
             Statement stmt = CCJSqlParserUtil.parse(executeSQLOnNodeRequest.getSql());
-            SqlLiteStatementVisitor visitor = new SqlLiteStatementVisitor(db, master, this, taskId);
+            SQLStatementVisitor visitor = new SQLStatementVisitor(master, this, taskId);
             stmt.accept(visitor);
+            logger.info("Sending response for select: " + visitor.getResult().getResult());
             return visitor.getResult();
         } catch (JSQLParserException e) {
             logger.error("Sql parsing error: {} - {}", e.getMessage(), e.getStackTrace());
@@ -96,7 +125,19 @@ public class Node extends UnicastRemoteObject
     }
 
     @Override
-    public CheckStatusResponse checkStatus(CheckStatusRequest checkStatusRequest) throws RemoteException {
+    public ExecuteCreateTablesResponse createTables(
+            ExecuteCreateTablesRequest executeCreateTablesRequest) throws RemoteException {
+        boolean ok = dbManager.createTables(
+                executeCreateTablesRequest.getCreateTableStatements());
+        if (!ok) {
+            return new ExecuteCreateTablesResponse(ErrorEnum.ANOTHER_ERROR);
+        }
+        return new ExecuteCreateTablesResponse(ErrorEnum.NO_ERROR);
+    }
+
+    @Override
+    public CheckStatusResponse checkStatus(CheckStatusRequest checkStatusRequest)
+            throws RemoteException {
         Stats stats = new Stats();
         return new CheckStatusResponse(
                 stats.getSystemLoad(),
@@ -106,33 +147,37 @@ public class Node extends UnicastRemoteObject
 
     @Override
     public ExecuteSqlResponse executeSql(ExecuteSqlRequest request) throws RemoteException {
-        logger.info("Got sql to execute: {}", request.sql);
-
+        logger.info("Got sql to execute: {}", request.getSql());
         // Create and shedule sqlite job to execute
-        SQLiteJob job = new SQLiteJob(request);
-        workQueue.execute(job);
+        runningTasks.put(request.getTaskId(),
+                workQueue.submit(dbManager.newSQLJob(request)));
+        return new ExecuteSqlResponse();
+    }
 
-        return new ExecuteSqlResponse(ErrorEnum.NO_ERROR, "");
+    @Override
+    public GetSqlResultResponse getSqlResult(GetSqlResultRequest request)
+            throws RemoteException, ExecutionException, InterruptedException {
+        // Get runing task
+        Future<GetSqlResultResponse> task = runningTasks.get(request.getTaskId());
+        // Get result
+        GetSqlResultResponse response = task.get();
+        runningTasks.remove(request.getTaskId());
+        return response;
     }
 
     @Override
     public AskToCommitResponse askToCommit(AskToCommitRequest request) throws RemoteException {
-        logger.info("askToCommit start");
-
-        TaskCompletion.getInstance().update(
-                request.taskId,
-                request.errorType,
-                request.errorMessage,
-                request.queryResult);
-
-        Pair<ErrorEnum, String> result =
-            TaskCompletion.getInstance().waitForCompletion(request.taskId);
-
-        logger.info("askToCommit end");
-        if(result.getKey() == ErrorEnum.NO_ERROR) {
-            return new AskToCommitResponse(true);
-        } else {
+        // Update status of the subtask
+        TaskManager.getInstance().updateSubTask(request.getTaskId(), request.getErrorType());
+        // Wait untill all subtasks are done
+        boolean error = TaskManager.getInstance().waitForCompletion(request.getTaskId());
+        // Decide if order to commit or rollback
+        if (error) {
+            logger.info("Coordinator: order to rollback");
             return new AskToCommitResponse(false);
+        } else {
+            logger.info("Coordinator: order to commit");
+            return new AskToCommitResponse(true);
         }
     }
 }

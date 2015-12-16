@@ -2,6 +2,7 @@ package pl.pw.edu.mini.dos.client;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import pl.pw.edu.mini.dos.Helper;
 import pl.pw.edu.mini.dos.communication.ErrorHandler;
 
 import java.io.Serializable;
@@ -19,6 +20,8 @@ public class RMIClient implements Serializable {
     private static final Logger logger = LoggerFactory.getLogger(RMIClient.class);
 
     private Registry registry;
+    int count = 3;
+    int timeout = 3;
 
     public RMIClient(String serverHost, int serverPort) {
         setPolicyPath();
@@ -36,7 +39,7 @@ public class RMIClient implements Serializable {
     }
 
     private void setPolicyPath() {
-        String pathToPolicy = this.getClass().getClassLoader().getResource("client.policy").getFile();
+        String pathToPolicy = Helper.getResources(this.getClass(), "client.policy").getFile();
         if (pathToPolicy != null) {
             System.setProperty("java.security.policy", pathToPolicy);
         }
@@ -52,11 +55,21 @@ public class RMIClient implements Serializable {
     }
 
     public Remote getService(String serviceName) {
-        try {
-            return registry.lookup(serviceName);
-        } catch (Exception e) {
-            ErrorHandler.handleError(e, true);
+        Exception ee = null;
+        for (int i = 0; i < count; i++) {
+            try {
+                System.out.println("Trying to connect #" + i + "...");
+                return registry.lookup(serviceName);
+            } catch (Exception e) {
+                ee = e;
+            }
+            try {
+                Thread.sleep(timeout * 1000);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
         }
+        ErrorHandler.handleError(ee, true);
         return null;
     }
 }
