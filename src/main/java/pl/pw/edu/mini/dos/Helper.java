@@ -2,20 +2,19 @@ package pl.pw.edu.mini.dos;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import pl.pw.edu.mini.dos.communication.nodenode.GetSqlResultResponse;
 
 import java.io.File;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.Collection;
 import java.util.Iterator;
-import java.util.List;
 import java.util.Map;
 
 public class Helper {
     private static final Logger logger = LoggerFactory.getLogger(Helper.class);
 
     public static <T> String arrayToString(T[] array, String splitter) {
+        if (array == null) return null;
         if (array.length == 0) return "";
 
         StringBuilder stringBuilder = new StringBuilder(array[0].toString());
@@ -28,6 +27,10 @@ public class Helper {
 
     public static <T> String arrayToString(T[] array) {
         return arrayToString(array, ", ");
+    }
+
+    public static <T> String arrayToStringWithPrefix(T[] array, String splitter, String prefix) {
+        return prefix + arrayToString(array, splitter + prefix);
     }
 
     public static <T> String collectionToString(Collection<T> list, String splitter) {
