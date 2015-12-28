@@ -23,8 +23,8 @@ public class DockerRunner {
 
     private static final Logger logger = LoggerFactory.getLogger(DockerRunner.class);
 
-    //String path = "/home/travis/build/dzitkowskik/mini-dos";
-    String path = "/home/asd/mini-dos";
+    String path = "/home/travis/build/dzitkowskik/mini-dos";
+    //String path = "/home/asd/mini-dos";
 
     String masterPort = "5555";
     String masterIp = null;
