@@ -16,7 +16,7 @@ import java.util.regex.Pattern;
 
 /**
  * This class design for Docker version 1.8.2, which one is on Travis.
- * On 1.9.* that should not working!!! Look to comment below.
+ * On 1.9.* that should not working!!! Install 1.8.2.
  */
 public class DockerRunner {
     static DockerRunner instance = null;
@@ -36,7 +36,6 @@ public class DockerRunner {
 
     DockerRunner() {
         nextIp = getCurrentIp();
-        getNextIp();    // fix for Docker v1.8.2; comment it for v1.9.*
         threadList = new ArrayList<>();
     }
 
@@ -92,6 +91,7 @@ public class DockerRunner {
     }
 
     public DockerThread runMasterInDocker(String machineName) {
+        getNextIp();
         masterIp = nextIp;
 
         String runIpTest = "java"
