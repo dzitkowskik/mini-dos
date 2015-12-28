@@ -47,7 +47,8 @@ public class DockerRunner {
         return instance;
     }
 
-    String mvnRepoPath = "~/.m2/repository/";
+    //String mvnRepoPath = "/home/asd/.m2/repository/";
+    String mvnRepoPath = "/home/travis/.m2/repository/";
     String[] libsPath = new String[]{
             "com/github/jsqlparser/jsqlparser/0.9.4/jsqlparser-0.9.4.jar",
             "junit/junit/4.12/junit-4.12.jar",
