@@ -13,7 +13,7 @@ before_install:
 before_script:
   -  ls target
   -  docker run -t -i dos sh -c 'ifconfig'
-  -  docker run -t -i dos sh -c 'pwd'
+  -  ls /home/travis/build/dzitkowskik/mini-dos -a
 
 
 script: mvn integration-test
