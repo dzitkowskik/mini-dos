@@ -13,6 +13,7 @@ before_install:
 before_script:
   -  ls target
   -  docker run -t -i dos sh -c 'ifconfig'
+  -  docker run -t -i dos sh -c 'pwd'
 
 
 script: mvn integration-test
