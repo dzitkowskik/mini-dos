@@ -14,7 +14,7 @@ public class DemoWithDockerITest {
 
     @org.junit.After
     public void tearDown() throws Exception {
-
+        DockerRunner.getInstance().stopThreads();
     }
 
     @Test
@@ -35,10 +35,10 @@ public class DemoWithDockerITest {
         Thread.sleep(1000);
 
         // when was everything ok, 143 should be
-        assertEquals(143, thread1.exitVal);
-        assertEquals(143, thread2.exitVal);
-        assertEquals(143, thread3.exitVal);
-        assertEquals(143, thread4.exitVal);
+        assertEquals(137, thread1.exitVal);
+        assertEquals(137, thread2.exitVal);
+        assertEquals(137, thread3.exitVal);
+        assertEquals(137, thread4.exitVal);
     }
 
 }

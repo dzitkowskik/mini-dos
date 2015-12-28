@@ -187,6 +187,7 @@ public class DockerRunner {
             killThread(ip);
             ip = getNextIp();
         }
+        threadList.clear();
     }
 
     public void killThread(String name) {
