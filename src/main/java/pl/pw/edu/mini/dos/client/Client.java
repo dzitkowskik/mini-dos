@@ -15,7 +15,7 @@ import java.util.Scanner;
 public class Client {
 
     private static final Logger logger = LoggerFactory.getLogger(Client.class);
-    private ClientMasterInterface master;
+    ClientMasterInterface master;
 
     public Client() throws RemoteException {
         this("127.0.0.1", "1099", "127.0.0.1");

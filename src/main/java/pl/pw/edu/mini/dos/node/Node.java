@@ -37,7 +37,7 @@ public class Node extends UnicastRemoteObject
     private static final Logger logger = LoggerFactory.getLogger(Node.class);
     private static final Config config = Config.getConfig();
 
-    private NodeMasterInterface master;
+    NodeMasterInterface master;
     private DBmanager dbManager;
     private ExecutorService workQueue;
     private Map<Long, Future<GetSqlResultResponse>> runningTasks;
