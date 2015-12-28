@@ -87,6 +87,7 @@ public class DockerRunner {
         thread.start();
         threadList.add(thread);
 
+        TestsHelper.Sleep(0, 100);
         return thread;
     }
 
@@ -114,6 +115,7 @@ public class DockerRunner {
         thread.start();
         threadList.add(thread);
 
+        TestsHelper.Sleep(0, 100);
         return thread;
     }
 
@@ -140,6 +142,7 @@ public class DockerRunner {
         thread.start();
         threadList.add(thread);
 
+        TestsHelper.Sleep(0, 100);
         return thread;
     }
 
@@ -166,6 +169,7 @@ public class DockerRunner {
         thread.start();
         threadList.add(thread);
 
+        TestsHelper.Sleep(0, 100);
         return thread;
     }
 
@@ -206,6 +210,7 @@ public class DockerRunner {
         } catch (IOException | InterruptedException e) {
             logger.error(e.getMessage());
         }
+        logger.info("Threads killed. NextIp=" + nextIp);
     }
 
     String getCurrentIp() {
@@ -222,6 +227,7 @@ public class DockerRunner {
             if (matcher.find()) {
                 //logger.info(matcher.group());
                 ip = matcher.group();
+                logger.info("Current ip = " + ip);
             }
 
         } catch (Throwable t) {

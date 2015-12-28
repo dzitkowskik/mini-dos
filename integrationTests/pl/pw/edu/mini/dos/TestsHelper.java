@@ -69,6 +69,8 @@ public class TestsHelper {
         List<String> out;
         try {
             out = BashRunner.runCommandForResult(cmd);
+            while (out.size() == 0) TestsHelper.Sleep(0, 100);
+
             logger.info("out=" + out);
             Pattern pattern = Pattern.compile("\\b\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\b");
             Matcher matcher = pattern.matcher(out.get(1));
