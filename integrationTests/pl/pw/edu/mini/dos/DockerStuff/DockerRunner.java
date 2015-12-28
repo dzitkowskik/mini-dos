@@ -186,6 +186,8 @@ public class DockerRunner {
 
     public void stopThreads() {
         logger.info("Killing all threads...");
+        String lastIp = nextIp;
+
         String ip = masterIp;
         nextIp = ip;
         for (int i = 0; i < threadList.size(); i++) {
@@ -193,6 +195,8 @@ public class DockerRunner {
             ip = getNextIp();
         }
         threadList.clear();
+
+        nextIp = lastIp;
     }
 
     public void killThread(String name) {
