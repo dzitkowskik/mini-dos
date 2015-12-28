@@ -13,7 +13,7 @@ before_install:
 before_script:
   -  ls target
   -  docker run -t -i dos sh -c 'ifconfig'
-  -  locate .m2
+  -  ls ~ -a
 
 
 script: mvn integration-test
