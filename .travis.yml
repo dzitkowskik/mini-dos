@@ -15,4 +15,4 @@ before_script:
   -  docker run -t -i dos sh -c 'ifconfig'
 
 
-script: mvn test
+script: mvn integration-test
