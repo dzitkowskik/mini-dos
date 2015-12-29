@@ -65,6 +65,11 @@ public class RegisteredNode {
         }
         return ErrorEnum.NO_ERROR;
     }
+
+    @Override
+    public String toString() {
+        return "#" + nodeID + ": " + statusNode;
+    }
 }
 
 

@@ -30,4 +30,14 @@ public class StatusNode {
     public boolean isDown() {
         return !this.running;
     }
+
+    @Override
+    public String toString() {
+        String s = "";
+        s += isDown() ? "DOWN" : "UP";
+        s += " (LA " + loadAverage + ", ";
+        s += "DB size " + String.format("%.2f", dbSize / 1024.0) + "KB, ";
+        s += "Free Mem. " + String.format("%.2f", memory / (1024.0 * 1024)) + "MB)";
+        return s;
+    }
 }

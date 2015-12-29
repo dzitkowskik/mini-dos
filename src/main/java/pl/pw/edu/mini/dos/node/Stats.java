@@ -6,18 +6,18 @@ import java.io.File;
 import java.lang.management.ManagementFactory;
 import java.lang.management.OperatingSystemMXBean;
 
-/*
- * Created by Karol Dzitkowski on 02.12.2015.
- */
-
 public class Stats {
     private static final Config config = Config.getConfig();
-
     private static final OperatingSystemMXBean systemMXBean
-            =  ManagementFactory.getPlatformMXBean(OperatingSystemMXBean.class);
+            = ManagementFactory.getPlatformMXBean(OperatingSystemMXBean.class);
+    private int dbPrefix;
+
+    public Stats(int dbPrefix) {
+        this.dbPrefix = dbPrefix;
+    }
 
     public long getDbSize() {
-        String pathToDBFile = config.getProperty("nodeDatabasePath");
+        String pathToDBFile = dbPrefix + config.getProperty("nodeDatabasePath");
         File file = new File(pathToDBFile);
         return file.length();
     }

@@ -34,4 +34,9 @@ public class Task {
     public void setNode(int node) {
         this.node = node;
     }
+
+    @Override
+    public String toString() {
+        return "#" + idTask + " (n" + node + "): " + status;
+    }
 }

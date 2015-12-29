@@ -28,6 +28,8 @@ import java.rmi.server.UnicastRemoteObject;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Scanner;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 public class Master
         extends UnicastRemoteObject
@@ -81,11 +83,12 @@ public class Master
         Scanner scanner = new Scanner(System.in);
         System.out.println("*Enter 'q' to stop master or 'd' to show the data of nodes:");
         while (scanner.hasNext()) {
-            String text = scanner.next();
+            String text = scanner.nextLine().toLowerCase();
             if (text.equals("q")) {
                 scanner.close();
                 break;
             }
+            master.parseCommand(text);
         }
 
         master.stopMaster();
@@ -96,6 +99,34 @@ public class Master
         pingThread.interrupt();
         server.stopService(Services.MASTER, this);
         dbManager.close();
+    }
+
+    /**
+     * Parse given command and print result.
+     *
+     * @param command command
+     */
+    private void parseCommand(String command) {
+        logger.debug("Parse command: " + command);
+        Pattern selectTask = Pattern.compile("^select (\\*|\\d) from (tasks|nodes);?$");
+        Matcher matcher = selectTask.matcher(command);
+        if (matcher.find()) {
+            if (matcher.group(2).equals("tasks")) {
+                // select tasks
+                if (matcher.group(1).equals("*")) {
+                    System.out.print(taskManager.select());
+                } else {
+                    System.out.print(taskManager.select(Long.parseLong(matcher.group(1))));
+                }
+            } else {
+                // select nodes
+                if (matcher.group(1).equals("*")) {
+                    System.out.print(nodeManager.select());
+                } else {
+                    System.out.print(nodeManager.select(Integer.parseInt(matcher.group(1))));
+                }
+            }
+        }
     }
 
     @Override
@@ -188,6 +219,11 @@ public class Master
         Long taskID = taskManager.newTask(node.getID());
         ExecuteSQLOnNodeResponse result = node.getInterface().executeSQLOnNode(
                 new ExecuteSQLOnNodeRequest(taskID, executeSQLRequest.getSql()));
+        if (result.getError().equals(ErrorEnum.NO_ERROR)) {
+            taskManager.setFinishedTask(taskID);
+        } else {
+            taskManager.setAbortedTask(taskID);
+        }
         logger.info("Send response to client:" + result.getResult());
         return new ExecuteSQLResponse(result);
     }

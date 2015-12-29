@@ -8,7 +8,6 @@ import pl.pw.edu.mini.dos.communication.nodenode.GetSqlResultResponse;
 
 import java.sql.*;
 import java.util.List;
-import java.util.Random;
 import java.util.concurrent.Callable;
 
 /**
@@ -20,11 +19,10 @@ public class DBmanager {
     private SQLiteDb db;
     private String pathToDBFile;
 
-    public DBmanager() {
-        Random r = new Random();
+    public DBmanager(int dbPrefix) {
         pathToDBFile = "jdbc:sqlite:";
         // Random name of the db to not share db with other node
-        pathToDBFile += r.nextInt(1000) + config.getProperty("nodeDatabasePath");
+        pathToDBFile +=  dbPrefix + config.getProperty("nodeDatabasePath");
         this.db = SQLiteDb.getInstance();
     }
 

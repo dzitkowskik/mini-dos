@@ -61,7 +61,7 @@ public class NodeManager {
         return interfaces;
     }
 
-    public <T> T getNodeInterface(Integer nodeID){
+    public <T> T getNodeInterface(Integer nodeID) {
         return (T) registeredNodes.get(nodeID).getInterface();
     }
 
@@ -112,5 +112,24 @@ public class NodeManager {
             return selectedNodes;
         }
         return null; // Not enough nodes
+    }
+
+    /**
+     * @return all nodes with their information
+     */
+    public String select() {
+        String result = "";
+        for (RegisteredNode node : registeredNodes.values()) {
+            result += node.toString() + "\n";
+        }
+        return result;
+    }
+
+    /**
+     * @param nodeID node id
+     * @return information of given task
+     */
+    public String select(Integer nodeID) {
+        return registeredNodes.get(nodeID).toString() + "\n";
     }
 }

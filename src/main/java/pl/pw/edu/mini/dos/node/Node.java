@@ -25,6 +25,7 @@ import java.rmi.RemoteException;
 import java.rmi.server.UnicastRemoteObject;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Random;
 import java.util.Scanner;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
@@ -41,6 +42,7 @@ public class Node extends UnicastRemoteObject
     private DBmanager dbManager;
     private ExecutorService workQueue;
     private Map<Long, Future<GetSqlResultResponse>> runningTasks;
+    private int dbPrefix;
 
     public Node() throws RemoteException {
         this("127.0.0.1", "1099", "127.0.0.1");
@@ -49,7 +51,9 @@ public class Node extends UnicastRemoteObject
     public Node(String masterHost, String masterPort, String myIp) throws RemoteException {
         System.setProperty("java.rmi.server.hostname", myIp);   // TODO: It's necessary?
 
-        dbManager = new DBmanager(); // Manager for persistent db
+        Random r = new Random();
+        dbPrefix = r.nextInt(1000);
+        dbManager = new DBmanager(dbPrefix); // Manager for persistent db
 
         // Create thread pool
         int workerThreads = Integer.parseInt(config.getProperty("nodeWorkerThreads"));
@@ -138,7 +142,7 @@ public class Node extends UnicastRemoteObject
     @Override
     public CheckStatusResponse checkStatus(CheckStatusRequest checkStatusRequest)
             throws RemoteException {
-        Stats stats = new Stats();
+        Stats stats = new Stats(dbPrefix);
         return new CheckStatusResponse(
                 stats.getSystemLoad(),
                 stats.getDbSize(),

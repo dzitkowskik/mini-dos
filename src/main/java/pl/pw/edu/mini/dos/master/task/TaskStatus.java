@@ -1,8 +1,9 @@
 package pl.pw.edu.mini.dos.master.task;
 
 public enum TaskStatus {
-    IN_PROCESS("The task is being processed"),
-    ABORTED("The task was aborted because of some error");
+    IN_PROCESS("in process"),
+    FINISHED("finished"),
+    ABORTED("aborted");
 
     private final String description;
 
