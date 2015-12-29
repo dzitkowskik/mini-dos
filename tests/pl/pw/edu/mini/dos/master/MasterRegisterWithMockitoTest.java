@@ -1,6 +1,9 @@
 package pl.pw.edu.mini.dos.master;
 
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.mockito.Mock;
+import org.mockito.runners.MockitoJUnitRunner;
 import pl.pw.edu.mini.dos.communication.ErrorEnum;
 import pl.pw.edu.mini.dos.communication.masternode.*;
 import pl.pw.edu.mini.dos.communication.nodemaster.RegisterRequest;
@@ -11,7 +14,8 @@ import java.util.List;
 
 import static junit.framework.Assert.assertEquals;
 import static junit.framework.Assert.assertNotNull;
-import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.any;
+import static org.mockito.Mockito.when;
 
 /**
  * Created with IntelliJ IDEA.
@@ -20,14 +24,15 @@ import static org.mockito.Mockito.*;
  * Time: 8:24 AM
  * To change this template use File | Settings | File Templates.
  */
+@RunWith(MockitoJUnitRunner.class)
 public class MasterRegisterWithMockitoTest {
     private Master master;
+    @Mock
     private MasterNodeInterface node;
 
     @org.junit.Before
     public void setUp() throws Exception {
         master = new Master();
-        node = mock(MasterNodeInterface.class);
     }
 
     @Test
