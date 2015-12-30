@@ -50,9 +50,9 @@ public class Client {
                 break;
             }
 
-            while (!command.contains(";") ) { // Multiline commands
+            while (!command.contains(";")) { // Multiline commands
                 System.out.print("  ...> ");
-                if(scanner.hasNext()){
+                if (scanner.hasNext()) {
                     command += " " + scanner.nextLine();
                 }
             }
@@ -76,7 +76,7 @@ public class Client {
             return "ERROR - " + e.getMessage();
         }
 
-        if(response.getError() != ErrorEnum.NO_ERROR){
+        if (response.getError() != ErrorEnum.NO_ERROR) {
             return "ERROR - " + response.getError();
         }
         return response.getResponse();

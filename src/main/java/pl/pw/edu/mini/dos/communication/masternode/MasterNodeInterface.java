@@ -16,6 +16,7 @@ public interface MasterNodeInterface extends Remote {
     /**
      * When a node registers in Master, Master tells it to create a list of tables in its db
      * if node doesn't have them.
+     *
      * @param executeCreateTablesRequest list of create tables statements
      * @return result
      */
@@ -30,4 +31,12 @@ public interface MasterNodeInterface extends Remote {
      */
     CheckStatusResponse checkStatus(CheckStatusRequest checkStatusRequest)
             throws RemoteException;
+
+    /**
+     * Send a request to kill the node.
+     *
+     * @param killNodeRequest -
+     * @return status
+     */
+    KillNodeResponse  killNode(KillNodeRequest killNodeRequest) throws RemoteException;
 }

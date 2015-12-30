@@ -18,6 +18,9 @@ import pl.pw.edu.mini.dos.node.ndb.SQLStatementVisitor;
 import pl.pw.edu.mini.dos.node.rmi.RMIClient;
 import pl.pw.edu.mini.dos.node.task.TaskManager;
 
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
 import java.io.Serializable;
 import java.net.URISyntaxException;
 import java.rmi.NoSuchObjectException;
@@ -43,6 +46,7 @@ public class Node extends UnicastRemoteObject
     private ExecutorService workQueue;
     private Map<Long, Future<GetSqlResultResponse>> runningTasks;
     private int dbPrefix;
+    private boolean stop = false;
 
     public Node() throws RemoteException {
         this("127.0.0.1", "1099", "127.0.0.1");
@@ -73,20 +77,32 @@ public class Node extends UnicastRemoteObject
     /**
      * @param args = {"localhost", "1099", "localhost"}
      */
-    public static void main(String[] args) throws URISyntaxException, RemoteException {
+    public static void main(String[] args) {
         Node node;
-        if (args.length == 3) {
-            node = new Node(args[0], args[1], args[2]);
-        } else {
-            node = new Node();
-        }
-        Scanner scanner = new Scanner(System.in);
-        System.out.println("*Enter 'q' to stop node.");
-        while (scanner.hasNext()) {
-            String text = scanner.next();
-            if (text.equals("q")) {
-                break;
+        try {
+            if (args.length == 3) {
+                node = new Node(args[0], args[1], args[2]);
+            } else {
+                node = new Node();
             }
+        } catch (RemoteException e) {
+            logger.error(e.getMessage());
+            return;
+        }
+
+        BufferedReader scanner = new BufferedReader(new InputStreamReader(System.in));
+        System.out.println("*Enter 'q' to stop node.");
+        try {
+            while (!node.isStop()) {
+                if (scanner.ready()) {
+                    String text = scanner.readLine();
+                    if (text.equals("q")) {
+                        break;
+                    }
+                }
+            }
+        } catch (IOException e) {
+            logger.error(e.getMessage());
         }
 
         node.stopNode();
@@ -94,7 +110,7 @@ public class Node extends UnicastRemoteObject
     }
 
     public void stopNode() {
-        logger.info("Stopping node...");
+        logger.debug("Stopping node...");
         workQueue.shutdown();
         while (!workQueue.isTerminated()) {
             try {
@@ -104,12 +120,15 @@ public class Node extends UnicastRemoteObject
             }
         }
         master = null;
-
         try {
             unexportObject(this, true);
         } catch (NoSuchObjectException e) {
             logger.error(e.getMessage());
         }
+    }
+
+    public boolean isStop() {
+        return stop;
     }
 
     @Override
@@ -147,6 +166,12 @@ public class Node extends UnicastRemoteObject
                 stats.getSystemLoad(),
                 stats.getDbSize(),
                 stats.getFreeMemory());
+    }
+
+    @Override
+    public KillNodeResponse killNode(KillNodeRequest killNodeRequest) throws RemoteException {
+        this.stop = true;
+        return new KillNodeResponse();
     }
 
     @Override

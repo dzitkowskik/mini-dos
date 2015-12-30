@@ -3,8 +3,10 @@ package pl.pw.edu.mini.dos.master.node;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import pl.pw.edu.mini.dos.communication.ErrorEnum;
+import pl.pw.edu.mini.dos.communication.masternode.KillNodeRequest;
 import pl.pw.edu.mini.dos.communication.masternode.MasterNodeInterface;
 
+import java.rmi.RemoteException;
 import java.util.*;
 
 /**
@@ -131,5 +133,38 @@ public class NodeManager {
      */
     public String select(Integer nodeID) {
         return registeredNodes.get(nodeID).toString() + "\n";
+    }
+
+    /**
+     * Kill all nodes
+     *
+     * @return result
+     */
+    public String kill() {
+        for (RegisteredNode node : registeredNodes.values()) {
+            try {
+                node.getInterface().killNode(new KillNodeRequest());
+            } catch (RemoteException e) {
+                return "Error when killing node " + node.getID() + ": " + e.getMessage() + "\n";
+            }
+        }
+        return "All nodes killed\n";
+    }
+
+
+    /**
+     * Kill given node
+     *
+     * @param nodeID node to kill
+     * @return result
+     */
+    public String kill(Integer nodeID) {
+        RegisteredNode node = registeredNodes.get(nodeID);
+        try {
+            node.getInterface().killNode(new KillNodeRequest());
+        } catch (RemoteException e) {
+            return "Error when killing node " + node.getID() + ": " + e.getMessage() + "\n";
+        }
+        return "Node " + node.getID() + " killed\n";
     }
 }

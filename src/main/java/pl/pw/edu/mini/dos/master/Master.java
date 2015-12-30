@@ -108,22 +108,32 @@ public class Master
      */
     private void parseCommand(String command) {
         logger.debug("Parse command: " + command);
-        Pattern selectTask = Pattern.compile("^select (\\*|\\d) from (tasks|nodes);?$");
+        Pattern selectTask = Pattern.compile("^(select|kill) (\\*|\\d) from (tasks|nodes);?$");
         Matcher matcher = selectTask.matcher(command);
         if (matcher.find()) {
-            if (matcher.group(2).equals("tasks")) {
-                // select tasks
-                if (matcher.group(1).equals("*")) {
-                    System.out.print(taskManager.select());
-                } else {
-                    System.out.print(taskManager.select(Long.parseLong(matcher.group(1))));
+            if (matcher.group(3).equals("tasks")) {
+                // Tasks
+                if(matcher.group(1).equals("select")){
+                    if (matcher.group(2).equals("*")) {
+                        System.out.print(taskManager.select());
+                    } else {
+                        System.out.print(taskManager.select(Long.parseLong(matcher.group(2))));
+                    }
                 }
             } else {
-                // select nodes
-                if (matcher.group(1).equals("*")) {
-                    System.out.print(nodeManager.select());
-                } else {
-                    System.out.print(nodeManager.select(Integer.parseInt(matcher.group(1))));
+                // Nodes
+                if(matcher.group(1).equals("select")){
+                    if (matcher.group(2).equals("*")) {
+                        System.out.print(nodeManager.select());
+                    } else {
+                        System.out.print(nodeManager.select(Integer.parseInt(matcher.group(2))));
+                    }
+                } else if (matcher.group(1).equals("kill")){
+                    if (matcher.group(2).equals("*")) {
+                        System.out.print(nodeManager.kill());
+                    } else {
+                        System.out.print(nodeManager.kill(Integer.parseInt(matcher.group(2))));
+                    }
                 }
             }
         }

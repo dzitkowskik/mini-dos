@@ -34,4 +34,10 @@ public class MasterNodeRegisterMock implements MasterNodeInterface {
         logger.info("checkStatus running...");
         return new CheckStatusResponse(0, 0, 0);
     }
+
+    @Override
+    public KillNodeResponse killNode(KillNodeRequest killNodeRequest) throws RemoteException {
+        logger.info("killNode running...");
+        return new KillNodeResponse();
+    }
 }
