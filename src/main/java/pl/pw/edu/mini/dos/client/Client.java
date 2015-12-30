@@ -44,19 +44,19 @@ public class Client {
         System.out.print("ddbms> ");
         while (scanner.hasNext()) {
             String command = scanner.nextLine();
-            while (!command.contains(";")) { // Multiline commands
-                System.out.print("  ...> ");
-                if(scanner.hasNext()){
-                    command += " " + scanner.nextLine();
-                }
-            }
-
-            logger.debug("Command: " + command);
 
             if (command.equals("q")) {
                 scanner.close();
                 break;
             }
+
+            while (!command.contains(";") ) { // Multiline commands
+                System.out.print("  ...> ");
+                if(scanner.hasNext()){
+                    command += " " + scanner.nextLine();
+                }
+            }
+            logger.debug("Command: " + command);
 
             String result = client.executeSQL(command);
             System.out.println("Result: " + result);
