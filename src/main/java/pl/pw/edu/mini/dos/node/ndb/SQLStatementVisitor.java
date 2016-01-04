@@ -170,6 +170,7 @@ public class SQLStatementVisitor implements StatementVisitor {
 
     @Override
     public void visit(Delete delete) {
+        String requestName = "delete from table";
         logger.info("Coordinator node: delete request");
         // Get table name
         String tableName = delete.getTable().getName();
@@ -197,52 +198,16 @@ public class SQLStatementVisitor implements StatementVisitor {
         TaskManager.getInstance().add(taskId, numSubTasks);
 
         // Delete data from nodes that have any data from specified table
-        // Send requests
-        for (NodeNodeInterface node : deleteMetadataResponse.getNodes()) {
-            try {
-                node.executeSql(new ExecuteSqlRequest(
-                        taskId, delete.toString(), thisNode));
-            } catch (RemoteException e) {
-                logger.error("Cannot delete data from table in another node: {}", e.getMessage());
-                TaskManager.getInstance().updateSubTask(
-                        taskId, ErrorEnum.REMOTE_EXCEPTION);
-            }
-        }
+        sendRequests(deleteMetadataResponse.getNodes(), delete.toString(), requestName);
 
         // Wait for completiton of subtasks
         TaskManager.getInstance().waitForCompletion(taskId);
 
         // Get responses
-        ErrorEnum error = ErrorEnum.NO_ERROR;
-        for (NodeNodeInterface node : deleteMetadataResponse.getNodes()) {
-            GetSqlResultResponse response = null;
-            try {
-                response = node.getSqlResult(new GetSqlResultRequest(taskId));
-            } catch (RemoteException e) {
-                logger.error("Cannot delete from table in another node: {}", e.getMessage());
-                error = ErrorEnum.REMOTE_EXCEPTION;
-            } catch (ExecutionException e) {
-                logger.error("Error at getting result: {}", e.getMessage());
-                error = ErrorEnum.REMOTE_EXCEPTION;
-            } catch (InterruptedException e) {
-                logger.error("Operation interrupted", e.getMessage());
-                error = ErrorEnum.ANOTHER_ERROR;
-            }
-            if (response != null && !response.getError().equals(ErrorEnum.NO_ERROR)) {
-                error = response.getError(); // Last error is stored
-            }
-        }
+        ErrorEnum error = getResponses(deleteMetadataResponse.getNodes(), requestName);
 
         // Check final result
-        if (!error.equals(ErrorEnum.NO_ERROR)) {
-            logger.error("Error at deleting data from " + tableName);
-            this.result = new ExecuteSQLOnNodeResponse(
-                    "Error at deleting data from " + tableName, error);
-            return;
-        }
-        logger.info("Coordinator node: data deleted from {}!", tableName);
-        this.result = new ExecuteSQLOnNodeResponse(
-                "Success in deleting data from " + tableName, error);
+        checkFinalResult(error, requestName, tableName);
 
         // Remove task
         TaskManager.getInstance().removeTask(taskId);
@@ -255,6 +220,7 @@ public class SQLStatementVisitor implements StatementVisitor {
 
     @Override
     public void visit(Insert insert) {
+        String requestName = "insert to table";
         logger.info("Coordinator node: insert request");
         // Get table name
         String tableName = insert.getTable().getName();
@@ -288,50 +254,17 @@ public class SQLStatementVisitor implements StatementVisitor {
         TaskManager.getInstance().add(taskId, numSubTasks);
 
         // Insert data to nodes pointed by master
-        // Send requests
-        for (NodeNodeInterface node : insertMetadataResponse.getNodes()) {
-            try {
-                node.executeSql(new ExecuteSqlRequest(
-                        taskId, insertStatement, thisNode));
-            } catch (RemoteException e) {
-                logger.error("Cannot insert table in another node: {}", e.getMessage());
-                TaskManager.getInstance().updateSubTask(
-                        taskId, ErrorEnum.REMOTE_EXCEPTION);
-            }
-        }
+        sendRequests(insertMetadataResponse.getNodes(), insertStatement, requestName);
+
         // Wait for completiton of subtasks
         TaskManager.getInstance().waitForCompletion(taskId);
+
         // Get responses
-        ErrorEnum error = ErrorEnum.NO_ERROR;
-        for (NodeNodeInterface node : insertMetadataResponse.getNodes()) {
-            GetSqlResultResponse response = null;
-            try {
-                response = node.getSqlResult(new GetSqlResultRequest(taskId));
-            } catch (RemoteException e) {
-                logger.error("Cannot insert table in another node: {}", e.getMessage());
-                error = ErrorEnum.REMOTE_EXCEPTION;
-            } catch (ExecutionException e) {
-                logger.error("Error at getting result: {}", e.getMessage());
-                error = ErrorEnum.REMOTE_EXCEPTION;
-            } catch (InterruptedException e) {
-                logger.error("Operation interrupted", e.getMessage());
-                error = ErrorEnum.ANOTHER_ERROR;
-            }
-            if (response != null && !response.getError().equals(ErrorEnum.NO_ERROR)) {
-                error = response.getError(); // Last error is stored
-            }
-        }
+        ErrorEnum error = getResponses(insertMetadataResponse.getNodes(), requestName);
 
         // Check final result
-        if (!error.equals(ErrorEnum.NO_ERROR)) {
-            logger.error("Error at inserting data into " + tableName);
-            this.result = new ExecuteSQLOnNodeResponse(
-                    "Error at inserting data into " + tableName, error);
-            return;
-        }
-        logger.info("Coordinator node: data inserted into {}!", tableName);
-        this.result = new ExecuteSQLOnNodeResponse(
-                "Success in inserting data into " + tableName, error);
+        checkFinalResult(error, requestName, tableName);
+
         // Remove task
         TaskManager.getInstance().removeTask(taskId);
     }
@@ -343,7 +276,14 @@ public class SQLStatementVisitor implements StatementVisitor {
 
     @Override
     public void visit(Drop drop) {
+        // Get table name
+        String tableName = drop.getName().getName();
 
+        // Get create statement and add rowID and version columss
+        String statement = drop.toString();
+
+        // Perform table statement
+        performTableStatement("drop table", tableName, statement);
     }
 
     @Override
@@ -353,14 +293,21 @@ public class SQLStatementVisitor implements StatementVisitor {
 
     @Override
     public void visit(CreateIndex createIndex) {
+        // Get table name
+        String tableName = createIndex.getTable().getName();
 
+        // Get create statement and add rowID and version columss
+        String statement = createIndex.toString();
+
+        // Perform table statement
+        performTableStatement("create index", tableName, statement);
     }
 
     @Override
     public void visit(CreateTable createTable) {
-        logger.info("Coordinator node: createTable request");
         // Get table name
         String tableName = createTable.getTable().getName();
+
         // Get create statement and add rowID and version columss
         String createStatement = createTable.toString();
         createStatement = createStatement.substring(0, createStatement.lastIndexOf(')'));
@@ -369,82 +316,8 @@ public class SQLStatementVisitor implements StatementVisitor {
         createStatement += ")WITHOUT ROWID;";
         logger.debug(createStatement + " --> " + tableName);
 
-        // Send metadata to master
-        CreateMetadataResponse createMetadataResponse;
-        try {
-            createMetadataResponse =
-                    master.createMetadata(new CreateMetadataRequest(
-                            tableName, createStatement));
-        } catch (RemoteException e) {
-            logger.error("Cannot insert metadata in master: {}", e.getMessage());
-            this.result = new ExecuteSQLOnNodeResponse("", ErrorEnum.REMOTE_EXCEPTION);
-            return;
-        }
-
-        if (!createMetadataResponse.getError().equals(ErrorEnum.NO_ERROR)) {
-            logger.error("Error at inserting metadata in master");
-            this.result = new ExecuteSQLOnNodeResponse("", createMetadataResponse.getError());
-            return;
-        }
-        logger.trace("Got metadata from master");
-
-        // Register task and subtasks
-        int numSubTasks = createMetadataResponse.getNodes().size();
-        TaskManager.getInstance().add(taskId, numSubTasks);
-        logger.trace("Task registered");
-
-        // Create table in nodes pointed by master
-        // Send requests
-        for (NodeNodeInterface node : createMetadataResponse.getNodes()) {
-            try {
-                node.executeSql(new ExecuteSqlRequest(
-                        taskId, createStatement, thisNode));
-            } catch (RemoteException e) {
-                logger.error("Cannot create table in another node: {}", e.getMessage());
-                TaskManager.getInstance().updateSubTask(
-                        taskId, ErrorEnum.REMOTE_EXCEPTION);
-            }
-        }
-        logger.trace("Requests sended");
-
-        // Wait for completiton of subtasks
-        TaskManager.getInstance().waitForCompletion(taskId);
-        logger.trace("Finished waiting for completition");
-
-        // Get responses
-        ErrorEnum error = ErrorEnum.NO_ERROR;
-        for (NodeNodeInterface node : createMetadataResponse.getNodes()) {
-            GetSqlResultResponse response = null;
-            try {
-                response = node.getSqlResult(new GetSqlResultRequest(taskId));
-            } catch (RemoteException e) {
-                logger.error("Cannot create table in another node: {}", e.getMessage());
-                error = ErrorEnum.REMOTE_EXCEPTION;
-            } catch (ExecutionException e) {
-                logger.error("Error at getting result: {}", e.getMessage());
-                error = ErrorEnum.REMOTE_EXCEPTION;
-            } catch (InterruptedException e) {
-                logger.error("Operation interrupted", e.getMessage());
-                error = ErrorEnum.ANOTHER_ERROR;
-            }
-            if (response != null && !response.getError().equals(ErrorEnum.NO_ERROR)) {
-                error = response.getError(); // Last error is stored
-            }
-        }
-        logger.trace("Got responses");
-
-        // Check final result
-        if (!error.equals(ErrorEnum.NO_ERROR)) {
-            logger.error("Error at creating table " + tableName);
-            this.result = new ExecuteSQLOnNodeResponse(
-                    "Error at creating table " + tableName, error);
-            return;
-        }
-        logger.info("Coordinator node: table {} created!", tableName);
-        this.result = new ExecuteSQLOnNodeResponse(
-                "Success in creating table " + tableName, error);
-        // Remove task
-        TaskManager.getInstance().removeTask(taskId);
+        // Perform table statement
+        performTableStatement("create table", tableName, createStatement);
     }
 
     @Override
@@ -454,7 +327,14 @@ public class SQLStatementVisitor implements StatementVisitor {
 
     @Override
     public void visit(Alter alter) {
+        // Get table name
+        String tableName = alter.getTable().getName();
 
+        // Get create statement and add rowID and version columss
+        String statement = alter.toString();
+
+        // Perform table statement
+        performTableStatement("alter table", tableName, statement);
     }
 
     @Override
@@ -470,5 +350,111 @@ public class SQLStatementVisitor implements StatementVisitor {
     @Override
     public void visit(SetStatement setStatement) {
 
+    }
+
+    private void sendRequests(
+            List<NodeNodeInterface> nodes,
+            String sql,
+            String requestName
+    ) {
+        for (NodeNodeInterface node : nodes) {
+            try {
+                node.executeSql(new ExecuteSqlRequest(
+                        taskId, sql, thisNode));
+            } catch (RemoteException e) {
+                logger.error("Cannot {} in another node: {}", requestName, e.getMessage());
+                TaskManager.getInstance().updateSubTask(
+                        taskId, ErrorEnum.REMOTE_EXCEPTION);
+            }
+        }
+        logger.trace("Requests sended");
+    }
+
+    private ErrorEnum getResponses(
+            List<NodeNodeInterface> nodes,
+            String requestName
+    ) {
+        ErrorEnum error = ErrorEnum.NO_ERROR;
+        for (NodeNodeInterface node : nodes) {
+            GetSqlResultResponse response = null;
+            try {
+                response = node.getSqlResult(new GetSqlResultRequest(taskId));
+            } catch (RemoteException e) {
+                logger.error("Cannot {} in another node: {}", requestName, e.getMessage());
+                error = ErrorEnum.REMOTE_EXCEPTION;
+            } catch (ExecutionException e) {
+                logger.error("Error at getting result: {}", e.getMessage());
+                error = ErrorEnum.REMOTE_EXCEPTION;
+            } catch (InterruptedException e) {
+                logger.error("Operation interrupted", e.getMessage());
+                error = ErrorEnum.ANOTHER_ERROR;
+            }
+            if (response != null && !response.getError().equals(ErrorEnum.NO_ERROR)) {
+                error = response.getError(); // Last error is stored
+            }
+        }
+        logger.trace("Got responses");
+        return error;
+    }
+
+    private void checkFinalResult(
+            ErrorEnum error,
+            String requestName,
+            String tableName
+    ) {
+        if (!error.equals(ErrorEnum.NO_ERROR)) {
+            String errString = String.format("Error at {} (table: {})", requestName, tableName);
+            logger.error(errString);
+            this.result = new ExecuteSQLOnNodeResponse(errString, error);
+            return;
+        }
+        logger.info("Coordinator node: {} request END", requestName);
+        this.result = new ExecuteSQLOnNodeResponse(String.format("{} SUCCESS", requestName), error);
+    }
+
+    private void performTableStatement(
+            String requestName,
+            String tableName,
+            String sql
+    ) {
+        logger.info("Coordinator node: {} request START", requestName);
+
+        TableMetadataResponse tableMetadataResponse;
+        try {
+            tableMetadataResponse =
+                    master.tableMetadata(new TableMetadataRequest(tableName, sql));
+        } catch (RemoteException e) {
+            logger.error("Cannot get metadata from master: {}", e.getMessage());
+            this.result = new ExecuteSQLOnNodeResponse("", ErrorEnum.REMOTE_EXCEPTION);
+            return;
+        }
+
+        if(!tableMetadataResponse.getError().equals(ErrorEnum.NO_ERROR)) {
+            logger.error("Error while getting metadata from master: {}", tableMetadataResponse.getError());
+            this.result = new ExecuteSQLOnNodeResponse("", tableMetadataResponse.getError());
+            return;
+        }
+        logger.trace("Got metadata from master");
+
+        // Register task and subtasks
+        int numSubTasks = tableMetadataResponse.getNodes().size();
+        TaskManager.getInstance().add(taskId, numSubTasks);
+        logger.trace("Task registered");
+
+        // Send requests
+        sendRequests(tableMetadataResponse.getNodes(), sql, requestName);
+
+        // Wait for completiton of subtasks
+        TaskManager.getInstance().waitForCompletion(taskId);
+        logger.trace("Finished waiting for completition");
+
+        // Get responses
+        ErrorEnum error = getResponses(tableMetadataResponse.getNodes(), requestName);
+
+        // Check final result
+        checkFinalResult(error, requestName, tableName);
+
+        // Remove task
+        TaskManager.getInstance().removeTask(taskId);
     }
 }

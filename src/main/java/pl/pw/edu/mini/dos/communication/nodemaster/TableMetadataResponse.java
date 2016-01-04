@@ -6,11 +6,11 @@ import pl.pw.edu.mini.dos.communication.nodenode.NodeNodeInterface;
 import java.io.Serializable;
 import java.util.List;
 
-public class CreateMetadataResponse implements Serializable {
+public class TableMetadataResponse implements Serializable {
     private List<NodeNodeInterface> nodes;
     private ErrorEnum error;
 
-    public CreateMetadataResponse(List<NodeNodeInterface> nodes, ErrorEnum error) {
+    public TableMetadataResponse(List<NodeNodeInterface> nodes, ErrorEnum error) {
         this.nodes = nodes;
         this.error = error;
     }

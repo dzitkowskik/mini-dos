@@ -227,13 +227,13 @@ public class Master
     }
 
     @Override
-    public CreateMetadataResponse createMetadata(CreateMetadataRequest createMetadataRequest)
+    public TableMetadataResponse tableMetadata(TableMetadataRequest tableMetadataRequest)
             throws RemoteException {
-        return new CreateMetadataResponse(
+        return new TableMetadataResponse(
                 nodeManager.<NodeNodeInterface>getNodesInterfaces(),
                 dbManager.insertTable(
-                        createMetadataRequest.getTable(),
-                        createMetadataRequest.getCreateStatement()));
+                        tableMetadataRequest.getTable(),
+                        tableMetadataRequest.getTableStatement()));
     }
 
     @Override

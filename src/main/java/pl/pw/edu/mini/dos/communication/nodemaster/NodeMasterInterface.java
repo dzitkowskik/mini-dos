@@ -53,11 +53,11 @@ public interface NodeMasterInterface extends Remote {
             throws RemoteException;
     /**
      * Request for metadata to manage tables.
-     * @param createMetadataRequest
+     * @param tableMetadataRequest
      * Information which metadata needs.
      * @return
      * Received metadata.
      */
-    CreateMetadataResponse createMetadata(CreateMetadataRequest createMetadataRequest)
+    TableMetadataResponse tableMetadata(TableMetadataRequest tableMetadataRequest)
             throws RemoteException;
 }
