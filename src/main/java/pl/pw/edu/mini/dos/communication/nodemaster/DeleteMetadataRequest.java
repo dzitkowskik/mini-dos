@@ -3,16 +3,10 @@ package pl.pw.edu.mini.dos.communication.nodemaster;
 import java.io.Serializable;
 
 public class DeleteMetadataRequest implements Serializable {
-    private int rowId;
     private String table;
 
-    public DeleteMetadataRequest(int rowId, String table) {
-        this.rowId = rowId;
+    public DeleteMetadataRequest(String table) {
         this.table = table;
-    }
-
-    public int getRowId() {
-        return rowId;
     }
 
     public String getTable() {

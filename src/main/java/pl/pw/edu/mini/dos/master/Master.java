@@ -210,7 +210,20 @@ public class Master
     @Override
     public DeleteMetadataResponse deleteMetadata(DeleteMetadataRequest deleteMetadataRequest)
             throws RemoteException {
-        return null;
+        // Get nodes that have data from specified table
+        List<String> tables = new ArrayList<String>();
+        tables.add(deleteMetadataRequest.getTable());
+        List<Integer> nodesIDs = dbManager.getNodesHaveTables(tables);
+        if (nodesIDs == null) {
+            return new DeleteMetadataResponse(null, ErrorEnum.TABLE_NOT_EXIST);
+        }
+        logger.info("Nodes which have the data: " + Helper.collectionToString(nodesIDs));
+        List<NodeNodeInterface> nodesInterfaces = new ArrayList<>(nodesIDs.size());
+        for (Integer nodeID : nodesIDs) {
+            nodesInterfaces.add(nodeManager.<NodeNodeInterface>getNodeInterface(nodeID));
+        }
+
+        return new DeleteMetadataResponse(nodesInterfaces, ErrorEnum.NO_ERROR);
     }
 
     @Override

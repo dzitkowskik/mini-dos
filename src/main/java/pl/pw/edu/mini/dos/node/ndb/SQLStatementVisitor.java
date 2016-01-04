@@ -170,7 +170,82 @@ public class SQLStatementVisitor implements StatementVisitor {
 
     @Override
     public void visit(Delete delete) {
+        logger.info("Coordinator node: delete request");
+        // Get table name
+        String tableName = delete.getTable().getName();
+        logger.debug("Delete data from table " + tableName);
 
+        // Get nodes that contain rows from this table
+        DeleteMetadataResponse deleteMetadataResponse;
+        try {
+            deleteMetadataResponse =
+                    master.deleteMetadata(new DeleteMetadataRequest(tableName));
+        } catch (RemoteException e) {
+            logger.error("Cannot get delete metadata from master: {}", e.getMessage());
+            this.result = new ExecuteSQLOnNodeResponse("", ErrorEnum.REMOTE_EXCEPTION);
+            return;
+        }
+
+        if(!deleteMetadataResponse.getError().equals(ErrorEnum.NO_ERROR)) {
+            logger.error("Error in getting delete metadata from master");
+            this.result = new ExecuteSQLOnNodeResponse("", deleteMetadataResponse.getError());
+            return;
+        }
+
+        // Register task and subtasks
+        int numSubTasks = deleteMetadataResponse.getNodes().size();
+        TaskManager.getInstance().add(taskId, numSubTasks);
+
+        // Delete data from nodes that have any data from specified table
+        // Send requests
+        for (NodeNodeInterface node : deleteMetadataResponse.getNodes()) {
+            try {
+                node.executeSql(new ExecuteSqlRequest(
+                        taskId, delete.toString(), thisNode));
+            } catch (RemoteException e) {
+                logger.error("Cannot delete data from table in another node: {}", e.getMessage());
+                TaskManager.getInstance().updateSubTask(
+                        taskId, ErrorEnum.REMOTE_EXCEPTION);
+            }
+        }
+
+        // Wait for completiton of subtasks
+        TaskManager.getInstance().waitForCompletion(taskId);
+
+        // Get responses
+        ErrorEnum error = ErrorEnum.NO_ERROR;
+        for (NodeNodeInterface node : deleteMetadataResponse.getNodes()) {
+            GetSqlResultResponse response = null;
+            try {
+                response = node.getSqlResult(new GetSqlResultRequest(taskId));
+            } catch (RemoteException e) {
+                logger.error("Cannot delete from table in another node: {}", e.getMessage());
+                error = ErrorEnum.REMOTE_EXCEPTION;
+            } catch (ExecutionException e) {
+                logger.error("Error at getting result: {}", e.getMessage());
+                error = ErrorEnum.REMOTE_EXCEPTION;
+            } catch (InterruptedException e) {
+                logger.error("Operation interrupted", e.getMessage());
+                error = ErrorEnum.ANOTHER_ERROR;
+            }
+            if (response != null && !response.getError().equals(ErrorEnum.NO_ERROR)) {
+                error = response.getError(); // Last error is stored
+            }
+        }
+
+        // Check final result
+        if (!error.equals(ErrorEnum.NO_ERROR)) {
+            logger.error("Error at deleting data from " + tableName);
+            this.result = new ExecuteSQLOnNodeResponse(
+                    "Error at deleting data from " + tableName, error);
+            return;
+        }
+        logger.info("Coordinator node: data deleted from {}!", tableName);
+        this.result = new ExecuteSQLOnNodeResponse(
+                "Success in deleting data from " + tableName, error);
+
+        // Remove task
+        TaskManager.getInstance().removeTask(taskId);
     }
 
     @Override
