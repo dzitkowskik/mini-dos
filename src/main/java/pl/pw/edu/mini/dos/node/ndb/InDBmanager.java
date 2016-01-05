@@ -75,7 +75,7 @@ public class InDBmanager {
         c++;
         createTable += columnsNames.get(c) + " " + columnsTypes.get(c); // version
         createTable += ")WITHOUT ROWID;";
-        logger.debug("Create table: " + createTable);
+        logger.debug("Create received table: " + createTable);
 
         //Create table
         List<String> createTableList = new ArrayList<>(1);
@@ -98,6 +98,7 @@ public class InDBmanager {
         }
 
         // Insert data
+        logger.debug("Importing data into " + tableName);
         Consumer[] functions = getFunctions(st, columnsTypes);
         try {
             for (Object[] row : data) {
@@ -114,6 +115,7 @@ public class InDBmanager {
             imdb.commit();
             imdb.close(st);
         }
+        logger.debug("Data imported into " + tableName);
         return true;
     }
 
@@ -199,15 +201,27 @@ public class InDBmanager {
         return functions;
     }
 
-    public boolean mergeVersionsOfTable(String table, List<String> versions) {
+    public boolean mergeVersionsOfTable(String table, List<String> versions, List<String> columnsNames) {
+        logger.debug("Merging diferent version into " + table + "_tmp");
         // Build create table
         String createStatement = "CREATE TABLE " + table + "_tmp AS";
-        createStatement += " SELECT * FROM " + versions.get(0);
+        createStatement += " SELECT ";
+        for (int i = 0; i < columnsNames.size() - 1; i++) {
+            createStatement += columnsNames.get(i) + ", ";
+        }
+        createStatement += columnsNames.get(columnsNames.size() - 1);
+        createStatement += " FROM " + versions.get(0);
         for (int i = 1; i < versions.size(); i++) {
             createStatement += " UNION";
-            createStatement += " SELECT * FROM " + versions.get(i);
+            createStatement += " SELECT ";
+            for (int j = 0; j < columnsNames.size() - 1; j++) {
+                createStatement += columnsNames.get(j) + ", ";
+            }
+            createStatement += columnsNames.get(columnsNames.size() - 1);
+            createStatement += " FROM " + versions.get(i);
         }
         createStatement += ";";
+        logger.debug(createStatement);
 
         // Create temportal table
         PreparedStatement st = null;
@@ -232,6 +246,7 @@ public class InDBmanager {
      * @return string with the result of the select
      */
     public String executeSelect(String select) {
+        logger.debug("Executing " + select);
         List<Object[]> data = new ArrayList<>();
         // Execute select
         PreparedStatement st = null;
@@ -240,10 +255,10 @@ public class InDBmanager {
             st = imdb.prepareStatement(select);
             rs = st.executeQuery();
             ResultSetMetaData meta = rs.getMetaData();
-            List<Integer> colIndex = new ArrayList<>(meta.getColumnCount()-2);
+            List<Integer> colIndex = new ArrayList<>(meta.getColumnCount());
             for (int i = 1; i <= meta.getColumnCount(); i++) {
                 String colName = meta.getColumnName(i);
-                if(!colName.equals("row_id") && !colName.equals("version")){
+                if (!colName.equals("row_id") && !colName.equals("version")) {
                     colIndex.add(i);
                 }
             }

@@ -25,9 +25,7 @@ import pl.pw.edu.mini.dos.master.task.TaskManager;
 import java.io.Serializable;
 import java.rmi.RemoteException;
 import java.rmi.server.UnicastRemoteObject;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Scanner;
+import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -113,7 +111,7 @@ public class Master
         if (matcher.find()) {
             if (matcher.group(3).equals("tasks")) {
                 // Tasks
-                if(matcher.group(1).equals("select")){
+                if (matcher.group(1).equals("select")) {
                     if (matcher.group(2).equals("*")) {
                         System.out.print(taskManager.select());
                     } else {
@@ -122,13 +120,13 @@ public class Master
                 }
             } else {
                 // Nodes
-                if(matcher.group(1).equals("select")){
+                if (matcher.group(1).equals("select")) {
                     if (matcher.group(2).equals("*")) {
                         System.out.print(nodeManager.select());
                     } else {
                         System.out.print(nodeManager.select(Integer.parseInt(matcher.group(2))));
                     }
-                } else if (matcher.group(1).equals("kill")){
+                } else if (matcher.group(1).equals("kill")) {
                     if (matcher.group(2).equals("*")) {
                         System.out.print(nodeManager.kill());
                     } else {
@@ -188,16 +186,20 @@ public class Master
             return new SelectMetadataResponse(null, null, ErrorEnum.ANOTHER_ERROR);
         }
         List<String> createTableStatements = dbManager.getCreateTableStatements(tables);
-        List<Integer> nodesIDs = dbManager.getNodesHaveTables(tables);
-        if (createTableStatements == null || nodesIDs == null) {
-            return new SelectMetadataResponse(null, null, ErrorEnum.TABLE_NOT_EXIST);
+        Map<String, List<NodeNodeInterface>> tableNodesInterfaces = new HashMap<>();
+        for (String table : tables) {
+            List<Integer> nodesIDs = dbManager.getNodesHaveTable(table);
+            if (createTableStatements == null || nodesIDs == null) {
+                return new SelectMetadataResponse(null, null, ErrorEnum.TABLE_NOT_EXIST);
+            }
+            logger.info("Nodes which have table " + table + ": " + Helper.collectionToString(nodesIDs));
+            List<NodeNodeInterface> nodesInterfaces = new ArrayList<>(nodesIDs.size());
+            for (Integer nodeID : nodesIDs) {
+                nodesInterfaces.add(nodeManager.<NodeNodeInterface>getNodeInterface(nodeID));
+            }
+            tableNodesInterfaces.put(table, nodesInterfaces);
         }
-        logger.info("Nodes which have the data: " + Helper.collectionToString(nodesIDs));
-        List<NodeNodeInterface> nodesInterfaces = new ArrayList<>(nodesIDs.size());
-        for (Integer nodeID : nodesIDs) {
-            nodesInterfaces.add(nodeManager.<NodeNodeInterface>getNodeInterface(nodeID));
-        }
-        return new SelectMetadataResponse(nodesInterfaces,
+        return new SelectMetadataResponse(tableNodesInterfaces,
                 createTableStatements, ErrorEnum.NO_ERROR);
     }
 
@@ -211,9 +213,7 @@ public class Master
     public DeleteMetadataResponse deleteMetadata(DeleteMetadataRequest deleteMetadataRequest)
             throws RemoteException {
         // Get nodes that have data from specified table
-        List<String> tables = new ArrayList<String>();
-        tables.add(deleteMetadataRequest.getTable());
-        List<Integer> nodesIDs = dbManager.getNodesHaveTables(tables);
+        List<Integer> nodesIDs = dbManager.getNodesHaveTable(deleteMetadataRequest.getTable());
         if (nodesIDs == null) {
             return new DeleteMetadataResponse(null, ErrorEnum.TABLE_NOT_EXIST);
         }

@@ -139,7 +139,7 @@ public class Node extends UnicastRemoteObject
             Statement stmt = CCJSqlParserUtil.parse(executeSQLOnNodeRequest.getSql());
             SQLStatementVisitor visitor = new SQLStatementVisitor(master, this, taskId);
             stmt.accept(visitor);
-            logger.info("Sending response for select: " + visitor.getResult().getResult());
+            logger.info("Sending result of query: " + visitor.getResult().getResult());
             return visitor.getResult();
         } catch (JSQLParserException e) {
             logger.error("Sql parsing error: {} - {}", e.getMessage(), e.getStackTrace());

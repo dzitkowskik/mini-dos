@@ -209,35 +209,29 @@ public class DBmanager {
     }
 
     /**
-     * Given a list of tables, it return the ids of the nodes
-     * which have data of these tables.
+     * Given a table, it return the ids of the nodes
+     * which have data of that table.
      *
-     * @param tables list with names of the tables
+     * @param table table name
      * @return list of nodesIds
      */
-    public List<Integer> getNodesHaveTables(List<String> tables) {
-        List<Integer> nodes = new ArrayList<>();
+    public List<Integer> getNodesHaveTable(String table) {
+        List<Integer> nodesIDs = new ArrayList<>();
         // Build select
         PreparedStatement st = null;
         String select = "" +
                 "SELECT DISTINCT node_id " +
                 "FROM tables " +
                 "NATURAL JOIN  rows " +
-                "WHERE table_name=? ";
-        for (int i = 1; i < tables.size(); i++) {
-            select += "OR table_name=? ";
-        }
-        select += ";";
+                "WHERE table_name=?;";
         // Execute select
         ResultSet rs = null;
         try {
             st = imdb.prepareStatement(select);
-            for (int i = 1; i <= tables.size(); i++) {
-                st.setString(i, tables.get(i - 1));
-            }
+            st.setString(1, table);
             rs = st.executeQuery();
             while (rs.next()) {
-                nodes.add(rs.getInt(1));
+                nodesIDs.add(rs.getInt(1));
             }
         } catch (SQLException e) {
             logger.error("Error at getting nodes: {} - {}",
@@ -247,7 +241,7 @@ public class DBmanager {
             imdb.close(rs);
             imdb.close(st);
         }
-        return nodes;
+        return nodesIDs;
     }
 
     public void close() {
