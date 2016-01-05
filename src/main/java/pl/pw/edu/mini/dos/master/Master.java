@@ -241,7 +241,7 @@ public class Master
         RegisteredNode node = nodeManager.selectCoordinatorNode();
         Long taskID = taskManager.newTask(node.getID());
         ExecuteSQLOnNodeResponse result = node.getInterface().executeSQLOnNode(
-                new ExecuteSQLOnNodeRequest(taskID, executeSQLRequest.getSql()));
+                new ExecuteSQLOnNodeRequest(taskID, executeSQLRequest.getSql().toUpperCase()));
         if (result.getError().equals(ErrorEnum.NO_ERROR)) {
             taskManager.setFinishedTask(taskID);
         } else {
