@@ -12,7 +12,7 @@ import java.io.InputStreamReader;
 import java.util.LinkedList;
 import java.util.List;
 
-import static junit.framework.Assert.assertEquals;
+import static org.junit.Assert.assertEquals;
 
 public class BashRunner {
     private static final Logger logger = LoggerFactory.getLogger(BashRunner.class);
