@@ -16,7 +16,7 @@ public class NodeManager {
     private static final Logger logger = LoggerFactory.getLogger(NodeManager.class);
     final Map<Integer, RegisteredNode> registeredNodes;
     private Integer nextNodeID;
-    private int replicationFactor;
+    protected int replicationFactor;
 
     public NodeManager(int replicationFactor) {
         this.registeredNodes = new HashMap<>();
@@ -99,9 +99,8 @@ public class NodeManager {
      * @return list of interfaces of nodes chosen
      */
     public synchronized List<RegisteredNode> selectNodesInsert() {
-        Random random = new Random(System.nanoTime());
-        List<RegisteredNode> nodes = new ArrayList<>(this.getNodes());
-        Collections.shuffle(nodes, random);
+        List<RegisteredNode> nodes = shuffle(new ArrayList<>(this.getNodes()));
+
         List<RegisteredNode> selectedNodes = new ArrayList<>(replicationFactor);
         Iterator<RegisteredNode> it = nodes.iterator();
         do {
@@ -114,6 +113,12 @@ public class NodeManager {
             return selectedNodes;
         }
         return null; // Not enough nodes
+    }
+
+    protected List<RegisteredNode> shuffle(List<RegisteredNode> nodes) {
+        Random random = new Random(System.nanoTime());
+        Collections.shuffle(nodes, random);
+        return nodes;
     }
 
     /**

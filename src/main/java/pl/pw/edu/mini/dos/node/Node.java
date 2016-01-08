@@ -22,14 +22,12 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.Serializable;
-import java.net.URISyntaxException;
 import java.rmi.NoSuchObjectException;
 import java.rmi.RemoteException;
 import java.rmi.server.UnicastRemoteObject;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Random;
-import java.util.Scanner;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -42,7 +40,7 @@ public class Node extends UnicastRemoteObject
     private static final Config config = Config.getConfig();
 
     NodeMasterInterface master;
-    private DBmanager dbManager;
+    DBmanager dbManager;
     private ExecutorService workQueue;
     private Map<Long, Future<GetSqlResultResponse>> runningTasks;
     private int dbPrefix;
