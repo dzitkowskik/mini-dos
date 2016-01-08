@@ -60,7 +60,13 @@ public class DockerRunner {
 
     public DockerThread runTestInDocker(Class _class, String methodName,
                                         String[] params, String machineName) {
+        return runTestInDocker(_class, methodName, params, machineName, false);
+    }
+
+    public DockerThread runTestInDocker(Class _class, String methodName,
+            String[] params, String machineName, boolean ifMaster) {
         getNextIp();
+        if (ifMaster) masterIp = nextIp;
 
         String runIpTest = "java"
                 + " -cp ./dos/target/classes/:./dos/target/test-classes/:"
@@ -115,7 +121,7 @@ public class DockerRunner {
         thread.start();
         threadList.add(thread);
 
-        TestsHelper.Sleep(0, 100);
+        TestsHelper.Sleep(0, 200);
         return thread;
     }
 
