@@ -14,7 +14,7 @@ import java.util.*;
  */
 public class NodeManager {
     private static final Logger logger = LoggerFactory.getLogger(NodeManager.class);
-    final Map<Integer, RegisteredNode> registeredNodes;
+    protected final Map<Integer, RegisteredNode> registeredNodes;
     private Integer nextNodeID;
     protected int replicationFactor;
 

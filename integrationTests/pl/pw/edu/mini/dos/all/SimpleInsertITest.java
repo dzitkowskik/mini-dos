@@ -13,10 +13,9 @@ import pl.pw.edu.mini.dos.TestsHelper;
 import pl.pw.edu.mini.dos.client.Client;
 import pl.pw.edu.mini.dos.master.Master;
 import pl.pw.edu.mini.dos.master.MasterDecapsulation;
-import pl.pw.edu.mini.dos.master.node.NodeManager;
 import pl.pw.edu.mini.dos.master.node.PingNodes;
-import pl.pw.edu.mini.dos.master.node.RegisteredNode;
 import pl.pw.edu.mini.dos.node.Node;
+import pl.pw.edu.mini.dos.testclass.TestNodeManager;
 
 import java.util.List;
 import java.util.Scanner;
@@ -39,6 +38,11 @@ public class SimpleInsertITest {
     int replicationFactor = 2;
     int nodesCount = 10;
     int dataCount = 3 * nodesCount;
+
+    int oneCmdTime = 2; // seconds
+    int nodeWaitingCount = 5;
+    int nodeWaitingTime = (nodesCount - replicationFactor)
+            * oneCmdTime / (nodeWaitingCount - 1);
 
     public void testBasicInsert_Master(String[] args) throws Exception {
         Master master = new Master(getMyIpFromParams(args),
@@ -77,31 +81,59 @@ public class SimpleInsertITest {
         }
         for (int i = 0; i < dataCount; i++) {
             client.executeSQL(testData.insertTableCommands.get(i));
+            Sleep(oneCmdTime);  // it's needed for prediction loadBalancer
         }
 
         client.stopClient();
+        logger.info("Client end");
     }
 
     public void testBasicInsert_Node(String[] args) throws Exception {
-        Node node = new Node(getMasterIpFromParams(args),
-                getMasterPortFromParams(args), getMyIpFromParams(args));
+        Node node = null;
+        try {
+            node = new Node(getMasterIpFromParams(args),
+                    getMasterPortFromParams(args), getMyIpFromParams(args));
 
-        TestData testData = TestData.loadConfigTestDbFile(getMyParams(args)[0]);
-        //int dataCount = testData.insertTableCommands.size();
+            TestData testData = TestData.loadConfigTestDbFile(getMyParams(args)[0]);
+            //int dataCount = testData.insertTableCommands.size();
 
-        // wait for any data (table not exist now)
-        TestsHelper.Sleep(7);
+            // wait for coming data
+            String tableName = testData.getTableNames()[0];
+            int oldSize = -1;
+            int newSize = getNodeDbRowsCount(node, tableName);
+            int count = 0;
 
-        // wait for specific number of row in table
-        String tableName = testData.getTableNames()[0];
-        while (getNodeDbRowsCount(node, tableName) < dataCount * replicationFactor / nodesCount) {
-            TestsHelper.Sleep(1);
+            while (count < nodeWaitingCount) {
+                TestsHelper.Sleep(nodeWaitingTime);
+
+                if (oldSize < newSize)
+                    count = 0;
+                else
+                    count++;
+
+                oldSize = newSize;
+                newSize = getNodeDbRowsCount(node, tableName);
+                logger.info("count=" + count + " oldSize=" + oldSize + " newSize=" + newSize);
+            }
+
+            // check correctness and integrity of data
+            int nodeId = getNodeIdFromIps(getMasterIpFromParams(args), getMyIpFromParams(args));
+            logger.info(String.valueOf(nodeId));
+            List<Object[]> dataFromNode = getDataFromNodeDb(node, tableName);
+            for (Object[] row : dataFromNode) {
+                logger.info(Helper.arrayToString(row));
+            }
+            List<Integer> indexes = getDataIndexesPerNode(nodeId, nodesCount, replicationFactor, dataCount);
+            logger.info(Helper.collectionToString(indexes));
+            checkDataCorrectness(dataFromNode, tableName, testData);
+            //checkDataIntegrity(indexes, dataFromNode);
+
+        } finally {
+            if (node != null)
+                node.stopNode();
         }
 
-        // check current data from database with data created by cmd from cmd file
-        checkDatabasesData(node, tableName, testData);
-
-        node.stopNode();
+        logger.info("Node end");
     }
 
     @Test
@@ -143,32 +175,6 @@ public class SimpleInsertITest {
     @After
     public void tearDown() throws Exception {
         DockerRunner.getInstance().stopThreads();
-    }
-
-    // --------------------------------------------------------------------------
-    // Classes, which was changed for tests
-    // --------------------------------------------------------------------------
-
-    class TestNodeManager extends NodeManager {
-        int j = 0;
-
-        public TestNodeManager(int replicationFactor) {
-            super(replicationFactor);
-        }
-
-        @Override
-        protected List<RegisteredNode> shuffle(List<RegisteredNode> nodes) {
-            j++;
-
-            logger.info(Helper.collectionToString(nodes));
-            for (int i = 0; i < j; i++) {
-                RegisteredNode tmp = nodes.remove(0);
-                nodes.add(tmp);
-            }
-            logger.info(Helper.collectionToString(nodes));
-            return nodes;
-        }
-
     }
 
 }

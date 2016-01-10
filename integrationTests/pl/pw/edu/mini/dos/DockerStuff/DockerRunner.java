@@ -92,7 +92,7 @@ public class DockerRunner {
         thread.start();
         threadList.add(thread);
 
-        TestsHelper.Sleep(0, 100);
+        TestsHelper.Sleep(0, 400);
         return thread;
     }
 
@@ -121,7 +121,7 @@ public class DockerRunner {
         thread.start();
         threadList.add(thread);
 
-        TestsHelper.Sleep(0, 200);
+        TestsHelper.Sleep(0, 400);
         return thread;
     }
 
@@ -148,7 +148,7 @@ public class DockerRunner {
         thread.start();
         threadList.add(thread);
 
-        TestsHelper.Sleep(0, 100);
+        TestsHelper.Sleep(0, 400);
         return thread;
     }
 

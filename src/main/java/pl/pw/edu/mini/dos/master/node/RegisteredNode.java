@@ -11,7 +11,7 @@ public class RegisteredNode {
     private static final Config config = Config.getConfig();
     private Integer nodeID;
     private MasterNodeInterface node;
-    private StatusNode statusNode;
+    StatusNode statusNode;
 
     public RegisteredNode(MasterNodeInterface node) {
         this.node = node;
