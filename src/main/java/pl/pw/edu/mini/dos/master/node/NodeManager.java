@@ -2,11 +2,14 @@ package pl.pw.edu.mini.dos.master.node;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import pl.pw.edu.mini.dos.Helper;
 import pl.pw.edu.mini.dos.communication.ErrorEnum;
 import pl.pw.edu.mini.dos.communication.masternode.KillNodeRequest;
 import pl.pw.edu.mini.dos.communication.masternode.MasterNodeInterface;
 
 import java.rmi.RemoteException;
+import java.rmi.server.RemoteServer;
+import java.rmi.server.ServerNotActiveException;
 import java.util.*;
 
 /**
@@ -47,7 +50,13 @@ public class NodeManager {
             newNode.setID(nodeId);
             registeredNodes.put(nodeId, newNode);
         }
-        logger.info("Node registered. nNodes: " + registeredNodes.size());
+        try {
+            logger.info("Node registered. nNodes: " + registeredNodes.size()
+                    + "  ip=" + RemoteServer.getClientHost()
+                    + "  id=" + (registeredNodes.size() - 1));
+        } catch (ServerNotActiveException e) {
+            logger.error(e.getMessage());
+        }
         return ErrorEnum.NO_ERROR;
     }
 

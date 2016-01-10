@@ -77,9 +77,11 @@ public class SimpleInsertITest {
 
         // send command to Master
         for (String cmd : testData.createTableCommands) {
+            logger.info("Send:" + cmd);
             client.executeSQL(cmd);
         }
         for (int i = 0; i < dataCount; i++) {
+            logger.info("Send:" + testData.insertTableCommands.get(i));
             client.executeSQL(testData.insertTableCommands.get(i));
             Sleep(oneCmdTime);  // it's needed for prediction loadBalancer
         }
@@ -96,6 +98,9 @@ public class SimpleInsertITest {
 
             TestData testData = TestData.loadConfigTestDbFile(getMyParams(args)[0]);
             //int dataCount = testData.insertTableCommands.size();
+
+            // now table not exists, so wait
+            Sleep(15);
 
             // wait for coming data
             String tableName = testData.getTableNames()[0];
@@ -126,7 +131,7 @@ public class SimpleInsertITest {
             List<Integer> indexes = getDataIndexesPerNode(nodeId, nodesCount, replicationFactor, dataCount);
             logger.info(Helper.collectionToString(indexes));
             checkDataCorrectness(dataFromNode, tableName, testData);
-            //checkDataIntegrity(indexes, dataFromNode);
+            checkDataIntegrity(indexes, dataFromNode);
 
         } finally {
             if (node != null)
@@ -143,13 +148,14 @@ public class SimpleInsertITest {
         // run Master, with testLowBalancer
         dockerRunner.runTestInDocker
                 (SimpleInsertITest.class, "testBasicInsert_Master", null, "Master", true);
-        TestsHelper.Sleep(5);
+        Sleep(4);
 
         // run Nodes
         DockerThread[] nodes = new DockerThread[nodesCount];
         for (int i = 0; i < nodes.length; i++) {
             nodes[i] = dockerRunner.runTestInDocker(SimpleInsertITest.class,
                     "testBasicInsert_Node", new String[]{configTestFilename1}, "Node #" + i);
+            Sleep(0, 500);
         }
 
         Sleep(1);

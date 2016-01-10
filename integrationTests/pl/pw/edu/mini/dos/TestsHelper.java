@@ -134,7 +134,11 @@ public class TestsHelper {
         Callable<GetSqlResultResponse> queryRunner = NodeDecapsulation.getDBmanager(node)
                 .newSQLJob(new ExecuteSqlRequest(taskId, rowsCountQuery, null));
         GetSqlResultResponse response = queryRunner.call();
-        return response.getData().getData();
+        if (response == null || response.getData() == null) {
+            return null;
+        } else {
+            return response.getData().getData();
+        }
     }
 
     public static List<Integer> getDataIndexesPerNode(int nodeId, int nodesCount, int replicationFactor,
