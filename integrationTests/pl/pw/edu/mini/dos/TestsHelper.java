@@ -24,6 +24,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 public class TestsHelper {
     private static final Logger logger = LoggerFactory.getLogger(TestsHelper.class);
@@ -173,6 +174,25 @@ public class TestsHelper {
         }
     }
 
+    public static void checkDataCorrectness(
+            String dataFromClient, String tableName, TestData testData, int dataCount) {
+        String[] rows = dataFromClient.split(System.lineSeparator());
+        rows = Arrays.copyOfRange(rows, 2, rows.length);
+        assertEquals(dataCount, rows.length);
+
+        // remove bracket - []
+        for (int i = 0; i < rows.length; i++) {
+            rows[i] = rows[i].substring(1, rows[i].length() - 1);
+        }
+
+        for (int i = 0; i < dataCount; i++) {
+            String rowFromClient = convertDataToCommand(rows[i].split(", "), tableName, true);
+            int index = testData.insertTableCommands.indexOf(rowFromClient);
+            assertTrue("Not found: " + rowFromClient, -1 < index); // exists
+            assertTrue(index < dataCount); // in test's subset
+        }
+    }
+
     // doesn't test which data should be, only correctness data
     public static void checkDataCorrectness(
             List<Object[]> dataFromNode, String tableName, TestData testData) {
@@ -208,14 +228,19 @@ public class TestsHelper {
 
     // temporary solution instead of running sql on local DB
     public static String convertDataToCommand(Object[] data, String tableName) {
+        return convertDataToCommand(data, tableName, false);
+    }
+
+    public static String convertDataToCommand(Object[] data, String tableName, boolean ifFromClient) {
         if (data == null) return null;
         if (data.length == 0) return "";
 
         StringBuilder command = new StringBuilder("INSERT INTO " + tableName + " VALUES (\"");
         command.append(data[0].toString());
 
-        // data.length - 2, because only client's data
-        for (int i = 1; i < data.length - 2; i++) {
+        // data form node: data.length - 2, because only client's data
+        int len = (ifFromClient ? data.length : data.length - 2);
+        for (int i = 1; i < len; i++) {
             command.append("\",\"");
             command.append(data[i]);
         }

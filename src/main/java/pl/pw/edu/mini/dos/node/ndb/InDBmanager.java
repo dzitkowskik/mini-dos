@@ -2,6 +2,7 @@ package pl.pw.edu.mini.dos.node.ndb;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import pl.pw.edu.mini.dos.Helper;
 
 import java.math.BigDecimal;
 import java.sql.*;
@@ -98,7 +99,9 @@ public class InDBmanager {
         }
 
         // Insert data
+        logger.info("columnsTypes=" + Helper.collectionToString(columnsTypes));
         Consumer[] functions = getFunctions(st, columnsTypes);
+        logger.info("functions=" + Helper.arrayToString(functions));
         try {
             for (Object[] row : data) {
                 for (int i = 0; i < row.length; i++) {
@@ -130,7 +133,7 @@ public class InDBmanager {
     private Consumer[] getFunctions(final PreparedStatement st, List<String> columnsTypes) {
         Consumer[] functions = new Consumer[columnsTypes.size()];
         for (int i = 0; i < columnsTypes.size(); i++) {
-            String type = columnsTypes.get(i);
+            String type = columnsTypes.get(i).trim();
             final int col = i + 1;
             switch (type) {
                 case "INTEGER":
@@ -194,6 +197,8 @@ public class InDBmanager {
                         }
                     };
                     break;
+                default:
+                    logger.error("No type found! - " + type);
             }
         }
         return functions;
@@ -240,10 +245,10 @@ public class InDBmanager {
             st = imdb.prepareStatement(select);
             rs = st.executeQuery();
             ResultSetMetaData meta = rs.getMetaData();
-            List<Integer> colIndex = new ArrayList<>(meta.getColumnCount()-2);
+            List<Integer> colIndex = new ArrayList<>(meta.getColumnCount() - 2);
             for (int i = 1; i <= meta.getColumnCount(); i++) {
                 String colName = meta.getColumnName(i);
-                if(!colName.equals("row_id") && !colName.equals("version")){
+                if (!colName.equals("row_id") && !colName.equals("version")) {
                     colIndex.add(i);
                 }
             }
