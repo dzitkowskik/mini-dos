@@ -30,13 +30,13 @@ public class PingNodes implements Runnable {
             try {
                 logger.debug("Pinging " + nodeManager.numNodes() + " nodes...");
                 ErrorEnum ok;
-                for (RegisteredNode node : nodeManager.getNodes()) {
+                for (RegisteredNode node : nodeManager.getAllNodes()) {
                     ok = node.checkStatus();
                     if (!ok.equals(ErrorEnum.NO_ERROR)) {
                         // Node down
                         if (nodeManager.isNodeDown(node)) {
                             int numRetry = nodeManager.getNumRetrys(node) + 1;
-                            logger.warn(node.getID() + " is down. (" + numRetry + " retry)" + ok.toString());
+                            logger.warn("Node " + node.getID() + " is down (" + numRetry + " retry): " + ok.toString());
                             if (numRetry > maxRetryAttempts) {
                                 logger.warn("Max retry attempts exceeded -> unregister node " + node.getID());
                                 // Limit exceeded -> unregister node and replicate its data
@@ -47,7 +47,7 @@ public class PingNodes implements Runnable {
                             }
                         } else {
                             // First retry -> try again
-                            logger.warn(node.getID() + " is down. (1 retry)" + ok.toString());
+                            logger.warn("Node " + node.getID() + " is down (1 retry): " + ok.toString());
                             nodeManager.setNodeDown(node, 1);
                         }
                     } else {
@@ -56,7 +56,7 @@ public class PingNodes implements Runnable {
                             // Node recovered
                             nodeManager.setNodeUp(node);
                             // If it was needed during down time -> need to reset data
-                            if(node.isNeedResetData()){
+                            if (node.isNeedResetData()) {
                                 master.resetDateNode(node);
                             }
                         }

@@ -54,6 +54,14 @@ public class NodeManager {
     }
 
     /**
+     * Return all UP and DOWN nodes.
+     */
+    public List<RegisteredNode> getAllNodes() {
+        List<RegisteredNode> nodes = new ArrayList<>(registeredNodes.values());
+        return nodes;
+    }
+
+    /**
      * Return all UP nodes.
      */
     public List<RegisteredNode> getNodes() {
@@ -160,6 +168,7 @@ public class NodeManager {
     }
 
     public void unregisterNode(RegisteredNode node) {
+        logger.debug("Unregistering node " + node.getID() + " from NodeManager.");
         downNodes.remove(node);
         registeredNodes.remove(node.getID());
     }

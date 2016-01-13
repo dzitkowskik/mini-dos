@@ -79,9 +79,9 @@ public class SQLStatementVisitor implements StatementVisitor {
         }
 
         // Create in-memory db
-        InDBmanager inDbManager = new InDBmanager();
+        ImDBmanager imDbManager = new ImDBmanager();
         // Create needed tables
-        inDbManager.createTables(selectMetadataResponse.getCreateTableStatements());
+        imDbManager.createTables(selectMetadataResponse.getCreateTableStatements());
 
         // For each table
         ErrorEnum error = ErrorEnum.NO_ERROR;
@@ -126,10 +126,7 @@ public class SQLStatementVisitor implements StatementVisitor {
                     // Import received table to in-memory db
                     String versionOftable = table + "_v" + i;
                     versionsOfTable.add(versionOftable);
-                    boolean ok = inDbManager.importTable(versionOftable,
-                            response.getData().getColumnsTypes(),
-                            response.getData().getColumnsNames(),
-                            response.getData().getData());
+                    boolean ok = imDbManager.importTable(versionOftable, response.getData());
                     if (!ok) {
                         logger.error("Error at importing table to imdb");
                         error = ErrorEnum.ANOTHER_ERROR;
@@ -142,7 +139,7 @@ public class SQLStatementVisitor implements StatementVisitor {
 
         // Create temportal table merging all versions of the table received
         for (String table : tablesNames) {
-            boolean ok = inDbManager.mergeVersionsOfTable(table,
+            boolean ok = imDbManager.mergeVersionsOfTable(table,
                     versionsOfTables.get(table), tablesColumnsNames.get(table));
             if (!ok) {
                 logger.error("Error at merging versions of table");
@@ -156,11 +153,10 @@ public class SQLStatementVisitor implements StatementVisitor {
             selectStatementTmp = selectStatementTmp.replaceAll(table, table + "_tmp");
         }
         logger.debug("Execute select from tmp tables:\n" + selectStatementTmp);
-        String result = inDbManager.executeSelect(selectStatementTmp);
+        String result = imDbManager.executeSelect(selectStatementTmp);
 
-        // TODO drop temporal tables
         // Close in-memory db
-        inDbManager.close();
+        imDbManager.close();
 
         // Check final result
         if (!error.equals(ErrorEnum.NO_ERROR)) {

@@ -24,6 +24,7 @@ public class DBmanager {
     private PreparedStatement nextRowIdSelect;
     private PreparedStatement incrementRowIdUpdate;
     private PreparedStatement newRowInsert;
+    private PreparedStatement selectTableNames;
     private PreparedStatement selectCreateTableStatements;
 
     public DBmanager() {
@@ -76,6 +77,8 @@ public class DBmanager {
         String newRowInsert = "" +
                 "INSERT INTO rows (row_id, table_name, node_id)" +
                 "VALUES (?,?,?);";
+        String selectTableNames = "" +
+                "SELECT table_name FROM tables;";
         String selectCreateTableStatements = "" +
                 "SELECT create_statement FROM tables;";
 
@@ -84,6 +87,7 @@ public class DBmanager {
             this.nextRowIdSelect = imdb.prepareStatement(nextRowIdSelect);
             this.incrementRowIdUpdate = imdb.prepareStatement(incrementRowIdUpdate);
             this.newRowInsert = imdb.prepareStatement(newRowInsert);
+            this.selectTableNames = imdb.prepareStatement(selectTableNames);
             this.selectCreateTableStatements = imdb.prepareStatement(selectCreateTableStatements);
         } catch (SQLException e) {
             logger.error("Error at creating prepared statements: {} - {}",
@@ -112,6 +116,28 @@ public class DBmanager {
             return ErrorEnum.REGISTRING_TABLE_ERROR;
         }
         return ErrorEnum.NO_ERROR;
+    }
+
+    /**
+     * Return a list of strings with all table names tables.
+     *
+     * @return create statements list
+     */
+    public List<String> getTableNames() {
+        List<String> tableNames = new ArrayList<>();
+        ResultSet rs = null;
+        try {
+            rs = selectTableNames.executeQuery();
+            while (rs.next()) {
+                tableNames.add(rs.getString(1));
+            }
+        } catch (SQLException e) {
+            logger.error("Error at getting table names: {} - {}",
+                    e.getMessage(), e.getStackTrace());
+        } finally {
+            imdb.close(rs);
+        }
+        return tableNames;
     }
 
     /**
@@ -290,6 +316,7 @@ public class DBmanager {
     }
 
     public void removeRecordsOfNode(RegisteredNode node){
+        logger.debug("Removing records of node " + node.getID() + " from ImDB of Master.");
         PreparedStatement st = null;
         String delete = "" +
                 "DELETE FROM rows " +
@@ -314,6 +341,7 @@ public class DBmanager {
         imdb.close(nextRowIdSelect);
         imdb.close(incrementRowIdUpdate);
         imdb.close(newRowInsert);
+        imdb.close(selectTableNames);
         imdb.close(selectCreateTableStatements);
         imdb.close();
     }
