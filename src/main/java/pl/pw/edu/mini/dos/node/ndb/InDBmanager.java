@@ -7,9 +7,10 @@ import pl.pw.edu.mini.dos.Helper;
 import java.math.BigDecimal;
 import java.sql.*;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.util.function.Consumer;
+
+import static pl.pw.edu.mini.dos.Helper.buildString;
 
 /**
  * Manages the in-memory SQLite database of node.
@@ -268,10 +269,6 @@ public class InDBmanager {
         }
 
         // Build string
-        String str = "\nData (" + data.size() + " rows):";
-        for (Object[] o : data) {
-            str += "\n" + Arrays.toString(o);
-        }
-        return str;
+        return buildString(data);
     }
 }
