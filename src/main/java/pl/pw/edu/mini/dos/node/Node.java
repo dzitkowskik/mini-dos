@@ -14,6 +14,7 @@ import pl.pw.edu.mini.dos.communication.nodemaster.NodeMasterInterface;
 import pl.pw.edu.mini.dos.communication.nodemaster.RegisterRequest;
 import pl.pw.edu.mini.dos.communication.nodenode.*;
 import pl.pw.edu.mini.dos.node.ndb.DBmanager;
+import pl.pw.edu.mini.dos.node.ndb.InDBmanager;
 import pl.pw.edu.mini.dos.node.ndb.SQLStatementVisitor;
 import pl.pw.edu.mini.dos.node.rmi.RMIClient;
 import pl.pw.edu.mini.dos.node.task.TaskManager;
@@ -26,10 +27,7 @@ import java.net.URISyntaxException;
 import java.rmi.NoSuchObjectException;
 import java.rmi.RemoteException;
 import java.rmi.server.UnicastRemoteObject;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Random;
-import java.util.Scanner;
+import java.util.*;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -172,6 +170,87 @@ public class Node extends UnicastRemoteObject
     public KillNodeResponse killNode(KillNodeRequest killNodeRequest) throws RemoteException {
         this.stop = true;
         return new KillNodeResponse();
+    }
+
+    @Override
+    public ReplicateDataResponse replicateData(ReplicateDataRequest replicateDataRequest)
+            throws RemoteException {
+        // Get the data
+        List<String> tablesNames = new ArrayList<>(replicateDataRequest.getTablesRows().keySet());
+
+        // Create in-memory db
+        InDBmanager inDbManager = new InDBmanager();
+        // Create needed tables
+        inDbManager.createTables(replicateDataRequest.getCreateTableStatements());
+
+        // For each table
+        ErrorEnum error = ErrorEnum.NO_ERROR;
+        Map<String, List<String>> versionsOfTables = new HashMap<>(tablesNames.size());
+        Map<String, List<String>> tablesColumnsNames = new HashMap<>(tablesNames.size());
+        for (String table : tablesNames) {
+            // Send requests to get the needed data
+            String selectAll = "SELECT * FROM " + table + ";";
+            logger.debug("Sending SELECT * to " +
+                    replicateDataRequest.getTableNodes().get(table).size() + " nodes");
+            for (NodeNodeInterface node : replicateDataRequest.getTableNodes().get(table)) {
+                try {
+                    node.executeSql(new ExecuteSqlRequest(
+                            replicateDataRequest.getTaskId(), selectAll, this));
+                } catch (RemoteException e) {
+                    logger.error("Cannot get data from another node: " + e.getMessage());
+                    error = ErrorEnum.REMOTE_EXCEPTION;
+                }
+            }
+            // Get responses and proccess data
+            List<String> versionsOfTable = new ArrayList<>(replicateDataRequest.getTableNodes().size());
+            for (int i = 0; i < replicateDataRequest.getTableNodes().get(table).size(); i++) {
+                logger.debug("Getting response from node " + i);
+                NodeNodeInterface node = replicateDataRequest.getTableNodes().get(table).get(i);
+                GetSqlResultResponse response = null;
+                try {
+                    response = node.getSqlResult(new GetSqlResultRequest(replicateDataRequest.getTaskId()));
+                } catch (RemoteException e) {
+                    logger.error("Cannot get data from another node: {}", e.getMessage());
+                    error = ErrorEnum.REMOTE_EXCEPTION;
+                } catch (ExecutionException e) {
+                    logger.error("Error at getting result: {}", e.getMessage());
+                    error = ErrorEnum.REMOTE_EXCEPTION;
+                } catch (InterruptedException e) {
+                    logger.error("Operation interrupted", e.getMessage());
+                    error = ErrorEnum.ANOTHER_ERROR;
+                }
+                if (response == null || !response.getError().equals(ErrorEnum.NO_ERROR)) {
+                    // Last error is stored
+                    error = response == null ? ErrorEnum.ANOTHER_ERROR : response.getError();
+                } else {
+                    // Import received table to in-memory db
+                    String versionOftable = table + "_v" + i;
+                    versionsOfTable.add(versionOftable);
+                    boolean ok = inDbManager.importTable(versionOftable,
+                            response.getData().getColumnsTypes(),
+                            response.getData().getColumnsNames(),
+                            response.getData().getData());
+                    if (!ok) {
+                        logger.error("Error at importing table to imdb");
+                        error = ErrorEnum.ANOTHER_ERROR;
+                    }
+                }
+                tablesColumnsNames.put(table, response.getData().getColumnsNames());
+            }
+            versionsOfTables.put(table, versionsOfTable);
+        }
+
+        // Create temportal table merging all versions of the table received
+        for (String table : tablesNames) {
+            boolean ok = inDbManager.mergeVersionsOfTable(table,
+                    versionsOfTables.get(table), tablesColumnsNames.get(table));
+            if (!ok) {
+                logger.error("Error at merging versions of table");
+                error = ErrorEnum.ANOTHER_ERROR;
+            }
+        }
+
+        return null;
     }
 
     @Override

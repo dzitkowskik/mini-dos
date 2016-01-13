@@ -49,6 +49,7 @@ public class SQLStatementVisitor implements StatementVisitor {
         return this.result;
     }
 
+    @SuppressWarnings("ConstantConditions")
     @Override
     public void visit(Select select) {
         logger.info("Coordinator node: select request");

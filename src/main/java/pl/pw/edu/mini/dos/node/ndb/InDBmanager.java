@@ -2,6 +2,7 @@ package pl.pw.edu.mini.dos.node.ndb;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import pl.pw.edu.mini.dos.communication.nodenode.SerializableResultSet;
 
 import java.math.BigDecimal;
 import java.sql.*;
@@ -62,6 +63,7 @@ public class InDBmanager {
      * @param data         data to insert
      * @return true if no errors
      */
+    @SuppressWarnings("unchecked")
     public boolean importTable(
             String tableName, List<String> columnsTypes,
             List<String> columnsNames, List<Object[]> data) {
@@ -246,7 +248,32 @@ public class InDBmanager {
      * @return string with the result of the select
      */
     public String executeSelect(String select) {
+        SerializableResultSet resultSet = executeSelectRaw(select);
+        boolean hasRowIDVersion =
+                resultSet.getColumnsNames().get(resultSet.getColumnCount() - 1).equals("version") &&
+                        resultSet.getColumnsNames().get(resultSet.getColumnCount() - 1).equals("row_id");
+        // Build string
+        String result = "\nData (" + resultSet.getData().size() + " rows):";
+        for (Object[] o : resultSet.getData()) {
+            if (hasRowIDVersion) {
+                o = Arrays.copyOfRange(o, 0, resultSet.getColumnCount() - 3);
+            }
+            result += "\n" + Arrays.toString(o);
+        }
+        return result;
+    }
+
+    /**
+     * Return a SerializableResultSet with the result of execute given select.
+     * It doesn't removes the columns rowID and version.
+     *
+     * @param select select statement
+     * @return SerializableResultSet with the result of the select
+     */
+    public SerializableResultSet executeSelectRaw(String select) {
         logger.debug("Executing " + select);
+        List<String> columnsTypes = new ArrayList<>();
+        List<String> columnsNames = new ArrayList<>();
         List<Object[]> data = new ArrayList<>();
         // Execute select
         PreparedStatement st = null;
@@ -255,18 +282,15 @@ public class InDBmanager {
             st = imdb.prepareStatement(select);
             rs = st.executeQuery();
             ResultSetMetaData meta = rs.getMetaData();
-            List<Integer> colIndex = new ArrayList<>(meta.getColumnCount());
             for (int i = 1; i <= meta.getColumnCount(); i++) {
-                String colName = meta.getColumnName(i);
-                if (!colName.equals("row_id") && !colName.equals("version")) {
-                    colIndex.add(i);
-                }
+                columnsTypes.add(meta.getColumnTypeName(i));
+                columnsNames.add(meta.getColumnName(i));
             }
             // Save data
             while (rs.next()) {
-                Object[] row = new Object[colIndex.size()];
-                for (int i = 0; i < colIndex.size(); i++) {
-                    row[i] = rs.getObject(colIndex.get(i));
+                Object[] row = new Object[columnsNames.size()];
+                for (int i = 1; i <= columnsNames.size(); i++) {
+                    row[i] = rs.getObject(i);
                 }
                 data.add(row);
             }
@@ -276,12 +300,6 @@ public class InDBmanager {
             imdb.close(rs);
             imdb.close(st);
         }
-
-        // Build string
-        String str = "\nData (" + data.size() + " rows):";
-        for (Object[] o : data) {
-            str += "\n" + Arrays.toString(o);
-        }
-        return str;
+        return new SerializableResultSet(columnsTypes, columnsNames, data);
     }
 }

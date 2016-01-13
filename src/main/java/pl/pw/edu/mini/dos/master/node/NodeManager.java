@@ -15,11 +15,13 @@ import java.util.*;
 public class NodeManager {
     private static final Logger logger = LoggerFactory.getLogger(NodeManager.class);
     final Map<Integer, RegisteredNode> registeredNodes;
+    private Map<RegisteredNode, Integer> downNodes;
     private Integer nextNodeID;
     private int replicationFactor;
 
     public NodeManager(int replicationFactor) {
         this.registeredNodes = new HashMap<>();
+        this.downNodes = new HashMap<>();
         this.nextNodeID = 0;
         this.replicationFactor = replicationFactor;
     }
@@ -51,24 +53,49 @@ public class NodeManager {
         return ErrorEnum.NO_ERROR;
     }
 
+    /**
+     * Return all UP nodes.
+     */
     public List<RegisteredNode> getNodes() {
-        return new ArrayList<>(registeredNodes.values());
+        List<RegisteredNode> nodes = new ArrayList<>();
+        for (RegisteredNode node : registeredNodes.values()) {
+            if (!downNodes.containsKey(node)) {
+                nodes.add(node);
+            } else {
+                // Node has been used during it was down -> need to reset data
+                node.setNeedResetData(true);
+            }
+        }
+        return nodes;
     }
 
-    public <T> List<T> getNodesInterfaces() {
-        List<T> interfaces = new ArrayList<>(registeredNodes.size());
+    /**
+     * Return a list with interfaces of all UP nodes.
+     */
+    public List<MasterNodeInterface> getNodesInterfaces() {
+        List<MasterNodeInterface> interfaces = new ArrayList<>(registeredNodes.size());
         for (RegisteredNode node : registeredNodes.values()) {
-            interfaces.add((T) node.getInterface());
+            if (!downNodes.containsKey(node)) {
+                interfaces.add(node.getInterface());
+            } else {
+                // Node has been used during it was down -> need to reset data
+                node.setNeedResetData(true);
+            }
         }
         return interfaces;
     }
 
-    public <T> T getNodeInterface(Integer nodeID) {
-        return (T) registeredNodes.get(nodeID).getInterface();
-    }
-
-    public Map<Integer, RegisteredNode> getNodesMap() {
-        return registeredNodes;
+    /**
+     * Return node interface if is UP. If it's down return null.
+     */
+    public MasterNodeInterface getNodeInterface(Integer nodeID) {
+        RegisteredNode node = registeredNodes.get(nodeID);
+        if (downNodes.containsKey(node)) {
+            // Node has been used during it was down -> need to reset data
+            node.setNeedResetData(true);
+            return null;
+        }
+        return node.getInterface();
     }
 
     public int numNodes() {
@@ -114,6 +141,27 @@ public class NodeManager {
             return selectedNodes;
         }
         return null; // Not enough nodes
+    }
+
+    public boolean isNodeDown(RegisteredNode node) {
+        return downNodes.containsKey(node);
+    }
+
+    public void setNodeDown(RegisteredNode node, int numRetrys) {
+        downNodes.put(node, numRetrys);
+    }
+
+    public void setNodeUp(RegisteredNode node) {
+        downNodes.remove(node);
+    }
+
+    public int getNumRetrys(RegisteredNode node) {
+        return downNodes.get(node);
+    }
+
+    public void unregisterNode(RegisteredNode node) {
+        downNodes.remove(node);
+        registeredNodes.remove(node.getID());
     }
 
     /**

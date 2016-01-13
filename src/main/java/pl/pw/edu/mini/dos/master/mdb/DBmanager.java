@@ -2,14 +2,18 @@ package pl.pw.edu.mini.dos.master.mdb;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import pl.pw.edu.mini.dos.Helper;
 import pl.pw.edu.mini.dos.communication.ErrorEnum;
+import pl.pw.edu.mini.dos.master.node.RegisteredNode;
 
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 public class DBmanager {
     private static final Logger logger = LoggerFactory.getLogger(DBmanager.class);
@@ -231,7 +235,7 @@ public class DBmanager {
             st.setString(1, table);
             rs = st.executeQuery();
             while (rs.next()) {
-                nodesIDs.add(rs.getInt(1));
+                nodesIDs.add(rs.getInt("node_id"));
             }
         } catch (SQLException e) {
             logger.error("Error at getting nodes: {} - {}",
@@ -242,6 +246,67 @@ public class DBmanager {
             imdb.close(st);
         }
         return nodesIDs;
+    }
+
+    /**
+     * Return a map with the tables, and the rows of data of this tables that a node.
+     *
+     * @param node node
+     * @return Map: Table -> List of rows
+     */
+    public Map<String, List<Long>> getDataNodeHas(RegisteredNode node){
+        logger.debug("Geting tables and rows that node has");
+        Map<String,List<Long>> tables = new HashMap<>();
+        // Build select
+        PreparedStatement st = null;
+        String select = "" +
+                "SELECT table_name, row_id " +
+                "FROM rows " +
+                "WHERE node_id=? " +
+                "ORDER BY table_name ASC;";
+        // Execute select
+        ResultSet rs = null;
+        try {
+            st = imdb.prepareStatement(select);
+            st.setLong(1, node.getID());
+            rs = st.executeQuery();
+            while (rs.next()) {
+                String table = rs.getString("table_name");
+                if(!tables.containsKey(table)){
+                    tables.put(table, new ArrayList<>());
+                }
+                tables.get(table).add(rs.getLong("row_id"));
+            }
+        } catch (SQLException e) {
+            logger.error("Error at tables and rows from node: {} - {}",
+                    e.getMessage(), e.getStackTrace());
+            return null;
+        } finally {
+            imdb.close(rs);
+            imdb.close(st);
+        }
+        logger.debug(Helper.mapToString(tables));
+        return tables;
+    }
+
+    public void removeRecordsOfNode(RegisteredNode node){
+        PreparedStatement st = null;
+        String delete = "" +
+                "DELETE FROM rows " +
+                "WHERE node_id=?;";
+        // Execute select
+        try {
+            st = imdb.prepareStatement(delete);
+            st.setLong(1, node.getID());
+            st.executeUpdate();
+            imdb.commit();
+        } catch (SQLException e) {
+            logger.error("Error at deleting records from node: {} - {}",
+                    e.getMessage(), e.getStackTrace());
+            imdb.rollback();
+        } finally {
+            imdb.close(st);
+        }
     }
 
     public void close() {

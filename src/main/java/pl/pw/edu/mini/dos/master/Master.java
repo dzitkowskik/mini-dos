@@ -9,10 +9,7 @@ import pl.pw.edu.mini.dos.communication.Services;
 import pl.pw.edu.mini.dos.communication.clientmaster.ClientMasterInterface;
 import pl.pw.edu.mini.dos.communication.clientmaster.ExecuteSQLRequest;
 import pl.pw.edu.mini.dos.communication.clientmaster.ExecuteSQLResponse;
-import pl.pw.edu.mini.dos.communication.masternode.ExecuteCreateTablesRequest;
-import pl.pw.edu.mini.dos.communication.masternode.ExecuteCreateTablesResponse;
-import pl.pw.edu.mini.dos.communication.masternode.ExecuteSQLOnNodeRequest;
-import pl.pw.edu.mini.dos.communication.masternode.ExecuteSQLOnNodeResponse;
+import pl.pw.edu.mini.dos.communication.masternode.*;
 import pl.pw.edu.mini.dos.communication.nodemaster.*;
 import pl.pw.edu.mini.dos.communication.nodenode.NodeNodeInterface;
 import pl.pw.edu.mini.dos.master.mdb.DBmanager;
@@ -63,7 +60,7 @@ public class Master
 
         // Ping nodes periodically
         long spanTime = Long.parseLong(config.getProperty("spanPingingTime"));
-        pingThread = new Thread(new PingNodes(nodeManager, spanTime));
+        pingThread = new Thread(new PingNodes(this, nodeManager, spanTime));
         pingThread.start();
     }
 
@@ -195,7 +192,10 @@ public class Master
             logger.info("Nodes which have table " + table + ": " + Helper.collectionToString(nodesIDs));
             List<NodeNodeInterface> nodesInterfaces = new ArrayList<>(nodesIDs.size());
             for (Integer nodeID : nodesIDs) {
-                nodesInterfaces.add(nodeManager.<NodeNodeInterface>getNodeInterface(nodeID));
+                NodeNodeInterface nodeInterface = (NodeNodeInterface) nodeManager.getNodeInterface(nodeID);
+                if (nodeInterface != null) {
+                    nodesInterfaces.add(nodeInterface);
+                }
             }
             tableNodesInterfaces.put(table, nodesInterfaces);
         }
@@ -220,17 +220,23 @@ public class Master
         logger.info("Nodes which have the data: " + Helper.collectionToString(nodesIDs));
         List<NodeNodeInterface> nodesInterfaces = new ArrayList<>(nodesIDs.size());
         for (Integer nodeID : nodesIDs) {
-            nodesInterfaces.add(nodeManager.<NodeNodeInterface>getNodeInterface(nodeID));
+            NodeNodeInterface nodeInterface = (NodeNodeInterface) nodeManager.getNodeInterface(nodeID);
+            if (nodeInterface != null) {
+                nodesInterfaces.add(nodeInterface);
+            }
         }
 
         return new DeleteMetadataResponse(nodesInterfaces, ErrorEnum.NO_ERROR);
     }
 
+    @SuppressWarnings("unchecked")
     @Override
     public TableMetadataResponse tableMetadata(TableMetadataRequest tableMetadataRequest)
             throws RemoteException {
+        List<NodeNodeInterface> nodesInterfaces =
+                (List<NodeNodeInterface>) (List<?>) nodeManager.getNodesInterfaces();
         return new TableMetadataResponse(
-                nodeManager.<NodeNodeInterface>getNodesInterfaces(),
+                nodesInterfaces,
                 dbManager.insertTable(
                         tableMetadataRequest.getTable(),
                         tableMetadataRequest.getTableStatement()));
@@ -249,5 +255,58 @@ public class Master
         }
         logger.info("Send response to client:" + result.getResult());
         return new ExecuteSQLResponse(result);
+    }
+
+    /**
+     * This method is called when the max number of retry ping attempts to a node is exceeded.
+     * The data that this node had is replicated to mantein the replication factor and the
+     * node is unregister from master.
+     *
+     * @param node node
+     */
+    public void unregisterNode(RegisteredNode node) {
+        // Get tables with data that node had
+        Map<String, List<Long>> tablesRows = dbManager.getDataNodeHas(node);
+        // Unregister node in master
+        nodeManager.unregisterNode(node);
+        dbManager.removeRecordsOfNode(node);
+        // Send task to replicate data
+        Long taskID = taskManager.newTask(node.getID());
+        // Get nodes which have the data
+        Map<String, List<NodeNodeInterface>> tableNodesInterfaces = new HashMap<>();
+        for (String table : tablesRows.keySet()) {
+            List<Integer> nodesIDs = dbManager.getNodesHaveTable(table);
+            logger.debug("Nodes which have table " + table + ": " + Helper.collectionToString(nodesIDs));
+            List<NodeNodeInterface> nodesInterfaces = new ArrayList<>(nodesIDs.size());
+            for (Integer nodeID : nodesIDs) {
+                NodeNodeInterface nodeInterface = (NodeNodeInterface) nodeManager.getNodeInterface(nodeID);
+                if (nodeInterface != null) {
+                    nodesInterfaces.add(nodeInterface);
+                }
+            }
+            tableNodesInterfaces.put(table, nodesInterfaces);
+        }
+        ReplicateDataResponse response = null;
+        try {
+            response = nodeManager.selectNodesInsert().get(0).getInterface().replicateData(
+                    new ReplicateDataRequest(taskID, tableNodesInterfaces, tablesRows,
+                            dbManager.getCreateTableStatements(new ArrayList<>(tablesRows.keySet()))));
+        } catch (RemoteException e) {
+            logger.error("Cannot replicate data: {}", e.getMessage());
+        }
+        if (response.getError().equals(ErrorEnum.NO_ERROR)) {
+            logger.info("Data from node " + node.getID() + " was replicated successfully.");
+        } else {
+            logger.error("Error at replicating data: " + response.getError());
+        }
+    }
+
+    /**
+     * Reset (delete) all the data of a node.
+     *
+     * @param node node
+     */
+    public void resetDateNode(RegisteredNode node) {
+        //TODO
     }
 }
