@@ -4,6 +4,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import pl.pw.edu.mini.dos.DockerStuff.BashRunner;
 import pl.pw.edu.mini.dos.DockerStuff.DockerRunner;
+import pl.pw.edu.mini.dos.all.TestDbManager;
+import pl.pw.edu.mini.dos.client.Client;
 import pl.pw.edu.mini.dos.communication.nodenode.ExecuteSqlRequest;
 import pl.pw.edu.mini.dos.communication.nodenode.GetSqlResultResponse;
 import pl.pw.edu.mini.dos.communication.nodenode.SerializableResultSet;
@@ -15,6 +17,7 @@ import pl.pw.edu.mini.dos.node.NodeDecapsulation;
 import pl.pw.edu.mini.dos.testclass.TestNodeManager;
 
 import java.io.IOException;
+import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -25,6 +28,7 @@ import java.util.regex.Pattern;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
+import static pl.pw.edu.mini.dos.Helper.buildString;
 
 public class TestsHelper {
     private static final Logger logger = LoggerFactory.getLogger(TestsHelper.class);
@@ -191,6 +195,31 @@ public class TestsHelper {
             assertTrue("Not found: " + rowFromClient, -1 < index); // exists
             assertTrue(index < dataCount); // in test's subset
         }
+    }
+
+    public static String[] checkQuery(
+            Client client, TestDbManager testDb, String sql) throws SQLException {
+        logger.info("Checking query: " + sql);
+        SerializableResultSet rs = testDb.executeQuery(sql + " ORDER BY 1, 2");
+        String resultExpected = buildString(rs.getData());
+
+        logger.info("Send: " + sql);
+        String result = client.executeSQL(sql + " ORDER BY 1, 2");
+
+        logger.info("Get:" + result);
+        logger.info("Expected:" + resultExpected);
+        assertEquals("sql= " + sql, resultExpected, result);
+
+        return new String[] {resultExpected, result};
+    }
+
+    public static void runQuery(
+            Client client, TestDbManager testDb, String sql) throws SQLException {
+        logger.info("Checking query: " + sql);
+        testDb.executeUpdate(sql);
+
+        logger.info("Send:" + sql);
+        client.executeSQL(sql);
     }
 
     // doesn't test which data should be, only correctness data

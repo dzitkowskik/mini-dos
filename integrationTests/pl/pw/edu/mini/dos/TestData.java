@@ -10,6 +10,7 @@ import java.io.IOException;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Random;
 
 import static org.junit.Assert.assertNotNull;
 
@@ -23,6 +24,8 @@ import static org.junit.Assert.assertNotNull;
 public class TestData {
     public List<String> createTableCommands, insertTableCommands;
     private static final Logger logger = LoggerFactory.getLogger(TestData.class);
+    private int seed = 123;
+    private Random rand = new Random(seed);
 
     public TestData(List<String> commands) {
         createTableCommands = new ArrayList<>();
@@ -58,6 +61,34 @@ public class TestData {
         return Helper.collectionToString(getAllCommands(), "\n\t");
     }
 
+    public String getRandomValueFromColumn(int columnIndex) {
+        int rowId = rand.nextInt(insertTableCommands.size());
+        return insertTableCommands.get(rowId).split("\"")[columnIndex * 2 + 1];
+    }
+
+    public String getRandomValueFromColumn(int columnIndex, int dataCount) {
+        int rowId = rand.nextInt(dataCount);
+        logger.info("Random rowId= " + rowId);
+        return insertTableCommands.get(rowId).split("\"")[columnIndex * 2 + 1];
+    }
+
+    public String[] getColumnsNames(String tableName) {
+        String[] colNames = null;
+
+        for (String createTableCommand : createTableCommands) {
+            if (createTableCommand.indexOf(tableName) < 15) {
+                String[] tmp = createTableCommand.split("`");
+                colNames = new String[(tmp.length - 2) / 2];
+                for (int i = 0; i < colNames.length; i++) {
+                    colNames[i] = tmp[2 * i + 1];
+                }
+                break;
+            }
+        }
+
+        return colNames;
+    }
+
 
     public static TestData loadConfigTestDbFile(String filename) {
         List<String> commands = new ArrayList<>();
@@ -82,4 +113,5 @@ public class TestData {
         logger.info(Helper.collectionToString(commands));
         return new TestData(commands);
     }
+
 }
