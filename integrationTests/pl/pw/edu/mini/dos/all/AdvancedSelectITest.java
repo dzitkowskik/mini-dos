@@ -8,12 +8,9 @@ import pl.pw.edu.mini.dos.DockerStuff.DockerRunner;
 import pl.pw.edu.mini.dos.DockerStuff.DockerThread;
 import pl.pw.edu.mini.dos.TestData;
 import pl.pw.edu.mini.dos.client.Client;
-import pl.pw.edu.mini.dos.master.Master;
-import pl.pw.edu.mini.dos.node.Node;
 
 import java.sql.SQLException;
 import java.util.Random;
-import java.util.Scanner;
 
 import static org.junit.Assert.assertEquals;
 import static pl.pw.edu.mini.dos.TestsHelper.*;
@@ -35,17 +32,6 @@ public class AdvancedSelectITest {
     int replicationFactor = 2;
     int nodesCount = 10;
     int dataCount = 10 * nodesCount;
-
-    public void testAdvancedSelect_Master(String[] args) throws Exception {
-        Master master = new Master(getMyIpFromParams(args),
-                Integer.valueOf(getMasterPortFromParams(args)));
-
-        // just wait
-        Scanner scanner = new Scanner(System.in);
-        scanner.hasNext();
-
-        master.stopMaster();
-    }
 
     public void testAdvancedSelect_Client(String[] args) throws Exception {
         Client client = new Client(getMasterIpFromParams(args),
@@ -122,6 +108,8 @@ public class AdvancedSelectITest {
         logger.info("============================= Where tests end =============================");
     }
 
+    // I had problem with group by, because databases have different way to group data
+    //   - I got different data in different order etc
     /*private void checkGroupBy(Client client, TestDbManager testDb, TestData testData,
                               String sql, String tableName) throws SQLException {
         String[] colNames = testData.getColumnsNames(tableName);
@@ -130,24 +118,6 @@ public class AdvancedSelectITest {
             checkQuery(client, testDb, sqlBase + col);
         }
     }*/
-
-
-    public void testAdvancedSelect_Node(String[] args) throws Exception {
-        Node node = null;
-        try {
-            node = new Node(getMasterIpFromParams(args),
-                    getMasterPortFromParams(args), getMyIpFromParams(args));
-
-            // wait
-            Scanner scanner = new Scanner(System.in);
-            scanner.hasNext();
-        } finally {
-            if (node != null)
-                node.stopNode();
-        }
-
-        logger.info("Node end");
-    }
 
     public void testAdvancedSelectSetUp() throws Exception {
         DockerRunner dockerRunner = DockerRunner.getInstance();
