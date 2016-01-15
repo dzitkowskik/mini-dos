@@ -27,16 +27,11 @@ public class AdvancedSelectITest {
 
     String configTestFilename1 = "testDbConfig.txt";
 
-    // settings
-    int whereCommandCount = 300;
-    int replicationFactor = 2;
-    int nodesCount = 10;
-    int dataCount = 10 * nodesCount;
-
     public void testAdvancedSelect_Client(String[] args) throws Exception {
         Client client = new Client(getMasterIpFromParams(args),
                 getMasterPortFromParams(args), getMyIpFromParams(args));
 
+        Settings settings = Settings.getSettingsFromParams(getMyParams(args));
         // load command
         TestData testData = TestData.loadConfigTestDbFile(configTestFilename1);
         TestDbManager testDb = new TestDbManager();
@@ -47,7 +42,7 @@ public class AdvancedSelectITest {
         for (String cmd : testData.createTableCommands) {
             runQuery(client, testDb, cmd);
         }
-        for (int i = 0; i < dataCount; i++) {
+        for (int i = 0; i < settings.dataCount; i++) {
             runQuery(client, testDb, testData.insertTableCommands.get(i));
         }
 
@@ -56,18 +51,18 @@ public class AdvancedSelectITest {
         String result = client.executeSQL(sqlGetAll);
         logger.info(result);
 
-        checkDataCorrectness(result, testData.getTableNames()[0], testData, dataCount);
+        checkDataCorrectness(result, testData.getTableNames()[0], testData, settings.dataCount);
         checkQuery(client, testDb, sqlGetAll);
 
         // test select with where randomly
-        checkWhere(client, testDb, testData, true);
+        checkWhere(client, testDb, testData, true, settings);
 
         client.stopClient();
         logger.info("Client end");
     }
 
     private void checkWhere(Client client, TestDbManager testDb, TestData testData,
-                            boolean testGroupBy)
+                            boolean testGroupBy, Settings settings)
             throws SQLException {
         logger.info("============================== Where tests ==============================");
 
@@ -76,7 +71,7 @@ public class AdvancedSelectITest {
         String sql = "";
         int tableCount = testData.getTableNames().length;
 
-        for (int i = 0; i < whereCommandCount; i++) {
+        for (int i = 0; i < settings.whereCommandCount; i++) {
 
             // get data
             String tableName = testData.getTableNames()[rand.nextInt(tableCount)];
@@ -87,13 +82,13 @@ public class AdvancedSelectITest {
             // build query
             int colIndex = rand.nextInt(colNames.length);
             sql += String.format(" %s = \"%s\"", colNames[colIndex],
-                    testData.getRandomValueFromColumn(colIndex, dataCount));
+                    testData.getRandomValueFromColumn(colIndex, settings.dataCount));
 
             for (int w = 0; w < whereCount; w++) {
                 colIndex = rand.nextInt(colNames.length);
                 sql += (rand.nextBoolean() ? " AND" : " OR");
                 sql += String.format(" %s = \"%s\"", colNames[colIndex],
-                        testData.getRandomValueFromColumn(colIndex, dataCount));
+                        testData.getRandomValueFromColumn(colIndex, settings.dataCount));
             }
 
             // execute query
@@ -119,7 +114,7 @@ public class AdvancedSelectITest {
         }
     }*/
 
-    public void testAdvancedSelectSetUp() throws Exception {
+    public void testAdvancedSelectSetUp(Settings settings) throws Exception {
         DockerRunner dockerRunner = DockerRunner.getInstance();
 
         // run Master
@@ -127,7 +122,7 @@ public class AdvancedSelectITest {
         Sleep(5);
 
         // run Nodes
-        DockerThread[] nodes = new DockerThread[nodesCount];
+        DockerThread[] nodes = new DockerThread[settings.nodesCount];
         for (int i = 0; i < nodes.length; i++) {
             nodes[i] = dockerRunner.runNodeInDocker("Node #" + i);
             Sleep(0, 500);
@@ -136,7 +131,7 @@ public class AdvancedSelectITest {
         Sleep(1);
         // run test on Client side
         DockerThread clientThread = dockerRunner.runTestInDocker
-                (AdvancedSelectITest.class, "testAdvancedSelect_Client", null, "Client");
+                (AdvancedSelectITest.class, "testAdvancedSelect_Client", settings.toArrayString(), "Client");
 
         // wait for Client and Nodes end
         clientThread.join();
@@ -150,37 +145,68 @@ public class AdvancedSelectITest {
 
     @Test
     public void testAdvancedSelectV1() throws Exception {
-        whereCommandCount = 10;
-        replicationFactor = 2;
-        nodesCount = 4;
-        dataCount = 2 * nodesCount;
+        Settings settings = new Settings();
+        settings.whereCommandCount = 10;
+        settings.replicationFactor = 2;
+        settings.nodesCount = 4;
+        settings.dataCount = 2 * settings.nodesCount;
 
-        testAdvancedSelectSetUp();
+        testAdvancedSelectSetUp(settings);
     }
 
     @Test
     public void testAdvancedSelectV2() throws Exception {
-        whereCommandCount = 0;
-        replicationFactor = 5;
-        nodesCount = 10;
-        dataCount = 100 * nodesCount;
+        Settings settings = new Settings();
+        settings.whereCommandCount = 0;
+        settings.replicationFactor = 5;
+        settings.nodesCount = 10;
+        settings.dataCount = 100 * settings.nodesCount;
 
-        testAdvancedSelectSetUp();
+        testAdvancedSelectSetUp(settings);
     }
 
     @Test
     public void testAdvancedSelectV3() throws Exception {
-        whereCommandCount = 100;
-        replicationFactor = 2;
-        nodesCount = 10;
-        dataCount = 10 * nodesCount;
+        Settings settings = new Settings();
+        settings.whereCommandCount = 100;
+        settings.replicationFactor = 2;
+        settings.nodesCount = 10;
+        settings.dataCount = 10 * settings.nodesCount;
 
-        testAdvancedSelectSetUp();
+        testAdvancedSelectSetUp(settings);
     }
 
     @After
     public void tearDown() throws Exception {
         DockerRunner.getInstance().stopThreads();
+    }
+
+
+    static class Settings {
+        public int whereCommandCount = 300;
+        public int replicationFactor = 2;
+        public int nodesCount = 10;
+        public int dataCount = 10 * nodesCount;
+
+        public static Settings getSettingsFromParams(String[] myParams) {
+            Settings settings = new Settings();
+
+            settings.replicationFactor = Integer.parseInt(myParams[0]);
+            settings.nodesCount = Integer.parseInt(myParams[1]);
+            settings.dataCount = Integer.parseInt(myParams[2]);
+            settings.whereCommandCount = Integer.parseInt(myParams[3]);
+
+            return settings;
+        }
+
+        public String[] toArrayString() {
+            return new String[] {
+                    String.valueOf(replicationFactor),
+                    String.valueOf(nodesCount),
+                    String.valueOf(dataCount),
+                    String.valueOf(whereCommandCount)
+            };
+        }
     }
 
 }
