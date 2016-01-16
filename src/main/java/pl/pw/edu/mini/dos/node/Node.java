@@ -286,6 +286,7 @@ public class Node extends UnicastRemoteObject
     @Override
     public ExecuteSqlResponse executeSql(ExecuteSqlRequest request) throws RemoteException {
         logger.info("Got sql to execute: {}", request.getSql());
+
         // Create and shedule sqlite job to execute
         runningTasks.put(request.getTaskId(),
                 workQueue.submit(dbManager.newSQLJob(request)));
@@ -297,6 +298,7 @@ public class Node extends UnicastRemoteObject
             throws RemoteException, ExecutionException, InterruptedException {
         // Get runing task
         Future<GetSqlResultResponse> task = runningTasks.get(request.getTaskId());
+
         // Get result
         GetSqlResultResponse response = task.get();
         runningTasks.remove(request.getTaskId());

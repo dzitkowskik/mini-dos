@@ -1,5 +1,13 @@
 package pl.pw.edu.mini.dos.node.ndb;
 
+import net.sf.jsqlparser.expression.BinaryExpression;
+import net.sf.jsqlparser.expression.Expression;
+import net.sf.jsqlparser.expression.ExpressionVisitor;
+import net.sf.jsqlparser.expression.LongValue;
+import net.sf.jsqlparser.expression.operators.conditional.AndExpression;
+import net.sf.jsqlparser.expression.operators.relational.GreaterThan;
+import net.sf.jsqlparser.schema.Column;
+import net.sf.jsqlparser.schema.Table;
 import net.sf.jsqlparser.statement.SetStatement;
 import net.sf.jsqlparser.statement.StatementVisitor;
 import net.sf.jsqlparser.statement.Statements;
@@ -30,6 +38,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutionException;
+import java.util.stream.Collectors;
 
 public class SQLStatementVisitor implements StatementVisitor {
     private static final Logger logger = LoggerFactory.getLogger(SQLStatementVisitor.class);
@@ -80,6 +89,7 @@ public class SQLStatementVisitor implements StatementVisitor {
 
         // Create in-memory db
         ImDBmanager imDbManager = new ImDBmanager();
+
         // Create needed tables
         imDbManager.createTables(selectMetadataResponse.getCreateTableStatements());
 
@@ -107,6 +117,7 @@ public class SQLStatementVisitor implements StatementVisitor {
                 logger.debug("Getting response from node " + i);
                 NodeNodeInterface node = selectMetadataResponse.getTableNodes().get(table).get(i);
                 GetSqlResultResponse response = null;
+                //noinspection Duplicates
                 try {
                     response = node.getSqlResult(new GetSqlResultRequest(taskId));
                 } catch (RemoteException e) {
@@ -170,7 +181,6 @@ public class SQLStatementVisitor implements StatementVisitor {
         this.result = new ExecuteSQLOnNodeResponse(result, error);
     }
 
-
     @Override
     public void visit(Delete delete) {
         String requestName = "delete from table";
@@ -218,7 +228,64 @@ public class SQLStatementVisitor implements StatementVisitor {
 
     @Override
     public void visit(Update update) {
+        String requestName = "update in table";
+        logger.info("Coordinator node: update request");
 
+        // Get table names
+        List<String> tableNames = update.getTables().stream().map(Table::getName).collect(Collectors.toList());
+
+        logger.debug("Update data in tables " + tableNames);
+
+        // Get nodes that contain rows from this table
+        UpdateMetadataResponse updateMetadataResponse;
+
+        // Add taskId > version to where clause
+        Expression newVersion = new LongValue(taskId);
+        Column versionColumn = new Column(null, "version");
+        GreaterThan gt = new GreaterThan();
+        gt.setLeftExpression(newVersion);
+        gt.setRightExpression(versionColumn);
+        update.setWhere(update.getWhere().toString().isEmpty() ? gt : new AndExpression(update.getWhere(), gt));
+
+        // Add version = taskId to set clause
+        update.getExpressions().add(newVersion);
+        update.getColumns().add(versionColumn);
+
+        logger.debug("Performing update: {}", update.toString());
+
+        try {
+            updateMetadataResponse =
+                    master.updateMetadata(new UpdateMetadataRequest(tableNames));
+        } catch (RemoteException e) {
+            logger.error("Cannot get update metadata from master: {}", e.getMessage());
+            this.result = new ExecuteSQLOnNodeResponse("", ErrorEnum.REMOTE_EXCEPTION);
+            return;
+        }
+
+        if (!updateMetadataResponse.getError().equals(ErrorEnum.NO_ERROR)) {
+            logger.error("Error in getting update metadata from master");
+            this.result = new ExecuteSQLOnNodeResponse("", updateMetadataResponse.getError());
+            return;
+        }
+
+        // Register task and subtasks
+        int numSubTasks = updateMetadataResponse.getNodes().size();
+        TaskManager.getInstance().add(taskId, numSubTasks);
+
+        // Update data in nodes that have any data from specified table
+        sendRequests(updateMetadataResponse.getNodes(), update.toString(), requestName);
+
+        // Wait for completiton of subtasks
+        TaskManager.getInstance().waitForCompletion(taskId);
+
+        // Get responses
+        ErrorEnum error = getResponses(updateMetadataResponse.getNodes(), requestName);
+
+        // Check final result
+        checkFinalResult(error, requestName, tableNames.toString());
+
+        // Remove task
+        TaskManager.getInstance().removeTask(taskId);
     }
 
     @Override
@@ -380,6 +447,7 @@ public class SQLStatementVisitor implements StatementVisitor {
         ErrorEnum error = ErrorEnum.NO_ERROR;
         for (NodeNodeInterface node : nodes) {
             GetSqlResultResponse response = null;
+            //noinspection Duplicates
             try {
                 response = node.getSqlResult(new GetSqlResultRequest(taskId));
             } catch (RemoteException e) {

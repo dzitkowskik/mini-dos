@@ -206,7 +206,26 @@ public class Master
     @Override
     public UpdateMetadataResponse updateMetadata(UpdateMetadataRequest updateMetadataRequest)
             throws RemoteException {
-        return null;
+        // Get nodes that have data from specified tables
+        Set<Integer> nodesIDs = new HashSet<>();
+        for(String table : updateMetadataRequest.getTables()) {
+            nodesIDs.addAll(dbManager.getNodesHaveTable(table));
+        }
+
+        if (nodesIDs.isEmpty()) {
+            return new UpdateMetadataResponse(null, ErrorEnum.TABLE_NOT_EXIST);
+        }
+
+        logger.info("Nodes which have the data: " + Helper.collectionToString(nodesIDs));
+        List<NodeNodeInterface> nodesInterfaces = new ArrayList<>(nodesIDs.size());
+        for (Integer nodeID : nodesIDs) {
+            NodeNodeInterface nodeInterface = (NodeNodeInterface) nodeManager.getNodeInterface(nodeID);
+            if (nodeInterface != null) {
+                nodesInterfaces.add(nodeInterface);
+            }
+        }
+
+        return new UpdateMetadataResponse(nodesInterfaces, ErrorEnum.NO_ERROR);
     }
 
     @Override

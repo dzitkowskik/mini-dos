@@ -1,21 +1,16 @@
 package pl.pw.edu.mini.dos.communication.nodemaster;
 
 import java.io.Serializable;
+import java.util.List;
 
 public class UpdateMetadataRequest implements Serializable {
-    private int rowId;
-    private String table;
+    private List<String> tables;
 
-    public UpdateMetadataRequest(int rowId, String table) {
-        this.rowId = rowId;
-        this.table = table;
+    public UpdateMetadataRequest(List<String> tables) {
+        this.tables = tables;
     }
 
-    public int getRowId() {
-        return rowId;
-    }
-
-    public String getTable() {
-        return table;
+    public List<String> getTables() {
+        return tables;
     }
 }
