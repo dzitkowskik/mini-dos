@@ -9,10 +9,11 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.text.SimpleDateFormat;
 import java.util.LinkedList;
 import java.util.List;
 
-import static junit.framework.Assert.assertEquals;
+import static org.junit.Assert.assertEquals;
 
 public class BashRunner {
     private static final Logger logger = LoggerFactory.getLogger(BashRunner.class);
@@ -24,6 +25,7 @@ public class BashRunner {
         String prefix;
         boolean isPrint;
         public List<String> out;
+        SimpleDateFormat time_formatter = new SimpleDateFormat("HH:mm:ss.SSS");
 
         private static final Logger logger = LoggerFactory.getLogger(StreamGobbler.class);
 
@@ -36,6 +38,12 @@ public class BashRunner {
             this.out = new LinkedList<>();
         }
 
+        String format(String prefix, String line) {
+            return String.format("%s, %s: %s",
+                    time_formatter.format(System.currentTimeMillis()),
+                    prefix, line);
+        }
+
         public void run()
         {
             try
@@ -43,15 +51,12 @@ public class BashRunner {
                 InputStreamReader isr = new InputStreamReader(is);
                 BufferedReader br = new BufferedReader(isr);
                 String line;
-                if (!prefix.equals("")) {
-                    prefix += ": ";
-                }
                 if (isPrint) {
                     while ( (line = br.readLine()) != null)
-                        System.out.println(prefix + line);
+                        System.out.println(format(prefix, line));
                 } else {
                     while ( (line = br.readLine()) != null)
-                        out.add(prefix + line);
+                        out.add(format(prefix, line));
                 }
             } catch (IOException ioe)
             {

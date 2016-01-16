@@ -52,7 +52,7 @@ public class SQLReadJob implements Callable<GetSqlResultResponse> {
             }
         }
         logger.info("SQLite read job finished");
-        logger.debug(rs.toString());
+        logger.debug(rs == null ? "rs=null" : rs.toString());
         return new GetSqlResultResponse(result, rs, errorCode);
     }
 
@@ -89,8 +89,12 @@ public class SQLReadJob implements Callable<GetSqlResultResponse> {
                 data.add(row);
             }
         } finally {
-            rs.close();
-            st.close();
+            if (rs != null) {
+                rs.close();
+            }
+            if (st != null) {
+                st.close();
+            }
         }
         return new SerializableResultSet(columnsTypes, columnsNames, data);
     }

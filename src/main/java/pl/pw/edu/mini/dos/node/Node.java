@@ -39,7 +39,7 @@ public class Node extends UnicastRemoteObject
     private static final Config config = Config.getConfig();
 
     NodeMasterInterface master;
-    private DBmanager dbManager;
+    DBmanager dbManager;
     private ExecutorService workQueue;
     private Map<Long, Future<GetSqlResultResponse>> runningTasks;
     private int dbPrefix;

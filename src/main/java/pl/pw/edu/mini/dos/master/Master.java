@@ -31,10 +31,10 @@ public class Master
         implements NodeMasterInterface, ClientMasterInterface, Serializable {
 
     private static final Logger logger = LoggerFactory.getLogger(Master.class);
-    private static final Config config = Config.getConfig();
+    static final Config config = Config.getConfig();
     private RMIServer server;
 
-    private Thread pingThread;
+    Thread pingThread;
     NodeManager nodeManager;
     private TaskManager taskManager;
     private DBmanager dbManager;
