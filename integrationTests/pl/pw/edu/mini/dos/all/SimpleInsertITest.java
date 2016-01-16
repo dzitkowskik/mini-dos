@@ -55,7 +55,7 @@ public class SimpleInsertITest {
 
         // refresh PingThread
         long spanTime = Long.parseLong(Config.getConfig().getProperty("spanPingingTime"));
-        Thread pingThread = new Thread(new PingNodes(nodeManager, spanTime));
+        Thread pingThread = new Thread(new PingNodes(master, nodeManager, spanTime));
         pingThread.start();
         MasterDecapsulation.setPingThread(master, pingThread);
 
