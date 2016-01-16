@@ -57,8 +57,7 @@ public class NodeManager {
      * Return all UP and DOWN nodes.
      */
     public List<RegisteredNode> getAllNodes() {
-        List<RegisteredNode> nodes = new ArrayList<>(registeredNodes.values());
-        return nodes;
+        return new ArrayList<>(registeredNodes.values());
     }
 
     /**
@@ -70,8 +69,8 @@ public class NodeManager {
             if (!downNodes.containsKey(node)) {
                 nodes.add(node);
             } else {
-                // Node has been used during it was down -> need to reset data
-                node.setNeedResetData(true);
+                // Node has been used during it was down -> need to update tables
+                node.setNeedToUpdate(true);
             }
         }
         return nodes;
@@ -86,8 +85,8 @@ public class NodeManager {
             if (!downNodes.containsKey(node)) {
                 interfaces.add(node.getInterface());
             } else {
-                // Node has been used during it was down -> need to reset data
-                node.setNeedResetData(true);
+                // Node has been used during it was down -> need to update tables
+                node.setNeedToUpdate(true);
             }
         }
         return interfaces;
@@ -100,7 +99,7 @@ public class NodeManager {
         RegisteredNode node = registeredNodes.get(nodeID);
         if (downNodes.containsKey(node)) {
             // Node has been used during it was down -> need to reset data
-            node.setNeedResetData(true);
+            node.setNeedToUpdate(true);
             return null;
         }
         return node.getInterface();

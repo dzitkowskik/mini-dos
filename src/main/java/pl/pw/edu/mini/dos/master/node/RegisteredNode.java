@@ -12,12 +12,12 @@ public class RegisteredNode {
     private Integer nodeID;
     private MasterNodeInterface node;
     private StatusNode statusNode;
-    private boolean needResetData;
+    private boolean needToUpdate;
 
     public RegisteredNode(MasterNodeInterface node) {
         this.node = node;
         this.statusNode = new StatusNode();
-        this.needResetData = false;
+        this.needToUpdate = false;
     }
 
     public Integer getID() {
@@ -36,12 +36,12 @@ public class RegisteredNode {
         return node;
     }
 
-    public void setNeedResetData(boolean needResetData) {
-        this.needResetData = needResetData;
+    public void setNeedToUpdate(boolean needToUpdate) {
+        this.needToUpdate = needToUpdate;
     }
 
-    public boolean isNeedResetData() {
-        return needResetData;
+    public boolean isNeedToUpdate() {
+        return needToUpdate;
     }
 
     /**
