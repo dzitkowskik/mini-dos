@@ -276,11 +276,9 @@ public class Node extends UnicastRemoteObject
     }
 
     @Override
-    public ResetDataResponse resetData(ResetDataRequest resetDataRequest) throws RemoteException {
-        boolean ok;
-        ok = dbManager.dropTables(resetDataRequest.getTables());
-        ok &= dbManager.createTables(resetDataRequest.getCreateTableStatements());
-        return new ResetDataResponse(ok ? ErrorEnum.NO_ERROR : ErrorEnum.ANOTHER_ERROR);
+    public UpdateTablesResponse updateTables(UpdateTablesRequest updateTablesRequest) throws RemoteException {
+        boolean ok = dbManager.createTables(updateTablesRequest.getCreateTableStatements());
+        return new UpdateTablesResponse(ok ? ErrorEnum.NO_ERROR : ErrorEnum.ANOTHER_ERROR);
     }
 
     @Override

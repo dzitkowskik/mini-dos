@@ -108,9 +108,7 @@ public class DBmanager {
         Consumer[] functions = DBhelper.getSetDataFunctions(st, rs.getColumnsTypes());
         try {
             for (Object[] row : rs.getData()) {
-                logger.trace("Inserting row...");
                 for (int i = 0; i < row.length; i++) {
-                    logger.trace("Inserting column " + (i + 1));
                     functions[i].accept(row[i]); // st.setXXX(col,val);
                 }
                 try {

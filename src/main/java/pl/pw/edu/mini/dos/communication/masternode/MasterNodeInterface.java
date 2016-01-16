@@ -50,11 +50,11 @@ public interface MasterNodeInterface extends Remote {
     ReplicateDataResponse replicateData(ReplicateDataRequest replicateDataRequest) throws RemoteException;
 
     /**
-     * Send a request to a node to delete all the data it has.
+     * Send a request to a node to update all the tables it has.
      *
-     * @param resetDataRequest -
+     * @param updateTablesRequest -
      * @throws RemoteException
      * @ status
      */
-    ResetDataResponse resetData(ResetDataRequest resetDataRequest) throws RemoteException;
+    UpdateTablesResponse updateTables(UpdateTablesRequest updateTablesRequest) throws RemoteException;
 }

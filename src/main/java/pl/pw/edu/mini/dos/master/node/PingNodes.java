@@ -57,7 +57,7 @@ public class PingNodes implements Runnable {
                             nodeManager.setNodeUp(node);
                             // If it was needed during down time -> need to reset data
                             if (node.isNeedResetData()) {
-                                master.resetDateNode(node);
+                                master.updateTablesNode(node);
                             }
                         }
                     }

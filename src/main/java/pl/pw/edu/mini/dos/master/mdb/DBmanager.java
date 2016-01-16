@@ -75,7 +75,7 @@ public class DBmanager {
         String incrementRowIdUpdate = "" +
                 "UPDATE tables SET next_row_id = next_row_id + 1 WHERE table_name=?;";
         String newRowInsert = "" +
-                "INSERT INTO rows (row_id, table_name, node_id)" +
+                "INSERT OR REPLACE INTO rows (row_id, table_name, node_id)" +
                 "VALUES (?,?,?);";
         String selectTableNames = "" +
                 "SELECT table_name FROM tables;";
@@ -219,6 +219,22 @@ public class DBmanager {
             // Update next rowId
             incrementRowIdUpdate.setString(1, tableName);
             incrementRowIdUpdate.executeUpdate();
+            imdb.commit();
+        } catch (SQLException e) {
+            logger.error("Error at registering row: {} - {}",
+                    e.getMessage(), e.getStackTrace());
+            imdb.rollback();
+            return null;
+        } finally {
+            imdb.close(rs);
+        }
+        // Insert row
+        insertRow(rowId, tableName, nodeIds);
+        return rowId;
+    }
+
+    public void insertRow(Long rowId, String tableName, List<Integer> nodeIds) {
+        try {
             // Insert row
             for (Integer nodeId : nodeIds) {
                 newRowInsert.setLong(1, rowId);
@@ -231,11 +247,7 @@ public class DBmanager {
             logger.error("Error at registering row: {} - {}",
                     e.getMessage(), e.getStackTrace());
             imdb.rollback();
-            return null;
-        } finally {
-            imdb.close(rs);
         }
-        return rowId;
     }
 
     /**

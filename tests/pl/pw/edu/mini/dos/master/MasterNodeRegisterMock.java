@@ -49,8 +49,8 @@ public class MasterNodeRegisterMock implements MasterNodeInterface {
     }
 
     @Override
-    public ResetDataResponse resetData(ResetDataRequest resetDataRequest) throws RemoteException {
-        logger.info("resetData running...");
-        return new ResetDataResponse(ErrorEnum.NO_ERROR);
+    public UpdateTablesResponse updateTables(UpdateTablesRequest updateTablesRequest) throws RemoteException {
+        logger.info("updateTables running...");
+        return new UpdateTablesResponse(ErrorEnum.NO_ERROR);
     }
 }

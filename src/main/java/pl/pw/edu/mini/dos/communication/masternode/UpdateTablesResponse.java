@@ -4,10 +4,10 @@ import pl.pw.edu.mini.dos.communication.ErrorEnum;
 
 import java.io.Serializable;
 
-public class ResetDataResponse implements Serializable {
+public class UpdateTablesResponse implements Serializable {
     private ErrorEnum error;
 
-    public ResetDataResponse(ErrorEnum error) {
+    public UpdateTablesResponse(ErrorEnum error) {
         this.error = error;
     }
 
