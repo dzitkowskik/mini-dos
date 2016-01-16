@@ -40,4 +40,17 @@ public class MasterNodeRegisterMock implements MasterNodeInterface {
         logger.info("killNode running...");
         return new KillNodeResponse();
     }
+
+    @Override
+    public ReplicateDataResponse replicateData(ReplicateDataRequest replicateDataRequest)
+            throws RemoteException {
+        logger.info("replicateData running...");
+        return new ReplicateDataResponse(ErrorEnum.NO_ERROR);
+    }
+
+    @Override
+    public UpdateTablesResponse updateTables(UpdateTablesRequest updateTablesRequest) throws RemoteException {
+        logger.info("updateTables running...");
+        return new UpdateTablesResponse(ErrorEnum.NO_ERROR);
+    }
 }

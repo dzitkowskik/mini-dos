@@ -12,10 +12,12 @@ public class RegisteredNode {
     private Integer nodeID;
     private MasterNodeInterface node;
     StatusNode statusNode;
+    private boolean needToUpdate;
 
     public RegisteredNode(MasterNodeInterface node) {
         this.node = node;
         this.statusNode = new StatusNode();
+        this.needToUpdate = false;
     }
 
     public Integer getID() {
@@ -32,6 +34,14 @@ public class RegisteredNode {
 
     public MasterNodeInterface getInterface() {
         return node;
+    }
+
+    public void setNeedToUpdate(boolean needToUpdate) {
+        this.needToUpdate = needToUpdate;
+    }
+
+    public boolean isNeedToUpdate() {
+        return needToUpdate;
     }
 
     /**
@@ -64,6 +74,23 @@ public class RegisteredNode {
             executor.shutdownNow();
         }
         return ErrorEnum.NO_ERROR;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) {
+            return true;
+        }
+        if (o == null || getClass() != o.getClass()) {
+            return false;
+        }
+        RegisteredNode node = (RegisteredNode) o;
+        return nodeID.equals(node.nodeID);
+    }
+
+    @Override
+    public int hashCode() {
+        return nodeID.hashCode();
     }
 
     @Override

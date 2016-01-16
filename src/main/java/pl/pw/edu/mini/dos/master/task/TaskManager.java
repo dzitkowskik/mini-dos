@@ -1,5 +1,7 @@
 package pl.pw.edu.mini.dos.master.task;
 
+import pl.pw.edu.mini.dos.master.node.RegisteredNode;
+
 import java.util.HashMap;
 import java.util.Map;
 

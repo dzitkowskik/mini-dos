@@ -28,6 +28,10 @@ public class SerializableResultSet implements Serializable {
         return data;
     }
 
+    public int getColumnCount() {
+        return columnsNames.size();
+    }
+
     @Override
     public String toString() {
         String str = "";

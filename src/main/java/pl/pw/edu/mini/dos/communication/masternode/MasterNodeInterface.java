@@ -38,5 +38,23 @@ public interface MasterNodeInterface extends Remote {
      * @param killNodeRequest -
      * @return status
      */
-    KillNodeResponse  killNode(KillNodeRequest killNodeRequest) throws RemoteException;
+    KillNodeResponse killNode(KillNodeRequest killNodeRequest) throws RemoteException;
+
+    /**
+     * Send a request to replicate the given rows of tables in a given node.
+     *
+     * @param replicateDataRequest -
+     * @return status
+     * @throws RemoteException
+     */
+    ReplicateDataResponse replicateData(ReplicateDataRequest replicateDataRequest) throws RemoteException;
+
+    /**
+     * Send a request to a node to update all the tables it has.
+     *
+     * @param updateTablesRequest -
+     * @throws RemoteException
+     * @ status
+     */
+    UpdateTablesResponse updateTables(UpdateTablesRequest updateTablesRequest) throws RemoteException;
 }

@@ -14,6 +14,7 @@ import pl.pw.edu.mini.dos.communication.nodemaster.NodeMasterInterface;
 import pl.pw.edu.mini.dos.communication.nodemaster.RegisterRequest;
 import pl.pw.edu.mini.dos.communication.nodenode.*;
 import pl.pw.edu.mini.dos.node.ndb.DBmanager;
+import pl.pw.edu.mini.dos.node.ndb.ImDBmanager;
 import pl.pw.edu.mini.dos.node.ndb.SQLStatementVisitor;
 import pl.pw.edu.mini.dos.node.rmi.RMIClient;
 import pl.pw.edu.mini.dos.node.task.TaskManager;
@@ -40,7 +41,7 @@ public class Node extends UnicastRemoteObject
     private static final Config config = Config.getConfig();
 
     NodeMasterInterface master;
-    DBmanager dbManager;
+    private DBmanager dbManager;
     private ExecutorService workQueue;
     private Map<Long, Future<GetSqlResultResponse>> runningTasks;
     private int dbPrefix;
@@ -137,7 +138,7 @@ public class Node extends UnicastRemoteObject
             Statement stmt = CCJSqlParserUtil.parse(executeSQLOnNodeRequest.getSql());
             SQLStatementVisitor visitor = new SQLStatementVisitor(master, this, taskId);
             stmt.accept(visitor);
-            logger.info("Sending response for select: " + visitor.getResult().getResult());
+            logger.info("Sending result of query: " + visitor.getResult().getResult());
             return visitor.getResult();
         } catch (JSQLParserException e) {
             logger.error("Sql parsing error: {} - {}", e.getMessage(), e.getStackTrace());
@@ -172,9 +173,120 @@ public class Node extends UnicastRemoteObject
         return new KillNodeResponse();
     }
 
+    @SuppressWarnings("ConstantConditions")
+    @Override
+    public ReplicateDataResponse replicateData(ReplicateDataRequest replicateDataRequest)
+            throws RemoteException {
+        logger.info("Replicate data request");
+        // Get the data
+        List<String> tablesNames = new ArrayList<>(replicateDataRequest.getTablesRows().keySet());
+
+        // Create in-memory db
+        ImDBmanager imDbManager = new ImDBmanager();
+        // Create needed tables
+        imDbManager.createTables(replicateDataRequest.getCreateTableStatements());
+
+        // For each table
+        Map<String, List<String>> versionsOfTables = new HashMap<>(tablesNames.size());
+        Map<String, List<String>> tablesColumnsNames = new HashMap<>(tablesNames.size());
+        for (String table : tablesNames) {
+            // Send requests to get the needed data
+            String selectAll = "SELECT * FROM " + table + ";";
+            logger.debug("Sending SELECT * to " +
+                    replicateDataRequest.getTableNodes().get(table).size() + " nodes");
+            for (NodeNodeInterface node : replicateDataRequest.getTableNodes().get(table)) {
+                try {
+                    node.executeSql(new ExecuteSqlRequest(
+                            replicateDataRequest.getTaskId(), selectAll, this));
+                } catch (RemoteException e) {
+                    logger.error("Cannot get data from another node: " + e.getMessage());
+                    return new ReplicateDataResponse(ErrorEnum.REMOTE_EXCEPTION);
+                }
+            }
+            // Get responses and proccess data
+            List<String> versionsOfTable = new ArrayList<>(replicateDataRequest.getTableNodes().size());
+            for (int i = 0; i < replicateDataRequest.getTableNodes().get(table).size(); i++) {
+                logger.debug("Getting response from node " + i);
+                NodeNodeInterface node = replicateDataRequest.getTableNodes().get(table).get(i);
+                GetSqlResultResponse response;
+                try {
+                    response = node.getSqlResult(new GetSqlResultRequest(replicateDataRequest.getTaskId()));
+                } catch (RemoteException e) {
+                    logger.error("Cannot get data from another node: {}", e.getMessage());
+                    return new ReplicateDataResponse(ErrorEnum.REMOTE_EXCEPTION);
+                } catch (ExecutionException e) {
+                    logger.error("Error at getting result: {}", e.getMessage());
+                    return new ReplicateDataResponse(ErrorEnum.REMOTE_EXCEPTION);
+                } catch (InterruptedException e) {
+                    logger.error("Operation interrupted", e.getMessage());
+                    return new ReplicateDataResponse(ErrorEnum.ANOTHER_ERROR);
+                }
+                if (response == null || !response.getError().equals(ErrorEnum.NO_ERROR)) {
+                    return new ReplicateDataResponse(response == null ?
+                            ErrorEnum.ANOTHER_ERROR : response.getError());
+                } else {
+                    // Import received table to in-memory db
+                    String versionOftable = table + "_v" + i;
+                    versionsOfTable.add(versionOftable);
+                    boolean ok = imDbManager.importTable(versionOftable, response.getData());
+                    if (!ok) {
+                        logger.error("Error at importing table to imdb");
+                        return new ReplicateDataResponse(ErrorEnum.ANOTHER_ERROR);
+                    }
+                }
+                tablesColumnsNames.put(table, response.getData().getColumnsNames());
+            }
+            versionsOfTables.put(table, versionsOfTable);
+        }
+
+        // Create temportal table merging all versions of the table received
+        for (String table : tablesNames) {
+            boolean ok = imDbManager.mergeVersionsOfTable(table,
+                    versionsOfTables.get(table), tablesColumnsNames.get(table));
+            if (!ok) {
+                logger.error("Error at merging versions of table");
+                return new ReplicateDataResponse(ErrorEnum.ANOTHER_ERROR);
+            }
+        }
+
+        // Run selects in temporal tables and insert the received data in the node
+        for (String table : tablesNames) {
+            List<Long> rows = replicateDataRequest.getTablesRows().get(table);
+            String select = "" +
+                    "SELECT * " +
+                    "FROM " + table + "_tmp " +
+                    "WHERE row_id IN (" + rows.get(0);
+            for (int i = 1; i < rows.size(); i++) {
+                select += ", " + rows.get(i);
+            }
+            select += ");";
+            // Select data
+            logger.debug("Collenting data that node had from table " + table);
+            SerializableResultSet rs = imDbManager.executeSelectRaw(select);
+            // Insert data
+            logger.debug("Inserting data that node had from table " + table + " in new node");
+            boolean ok = dbManager.insertResultSet(table, rs);
+            if (!ok) {
+                return new ReplicateDataResponse(ErrorEnum.SQL_EXECUTION_ERROR);
+            }
+        }
+
+        // Close in-memory db
+        imDbManager.close();
+
+        return new ReplicateDataResponse(ErrorEnum.NO_ERROR);
+    }
+
+    @Override
+    public UpdateTablesResponse updateTables(UpdateTablesRequest updateTablesRequest) throws RemoteException {
+        boolean ok = dbManager.createTables(updateTablesRequest.getCreateTableStatements());
+        return new UpdateTablesResponse(ok ? ErrorEnum.NO_ERROR : ErrorEnum.ANOTHER_ERROR);
+    }
+
     @Override
     public ExecuteSqlResponse executeSql(ExecuteSqlRequest request) throws RemoteException {
         logger.info("Got sql to execute: {}", request.getSql());
+
         // Create and shedule sqlite job to execute
         runningTasks.put(request.getTaskId(),
                 workQueue.submit(dbManager.newSQLJob(request)));
@@ -186,6 +298,7 @@ public class Node extends UnicastRemoteObject
             throws RemoteException, ExecutionException, InterruptedException {
         // Get runing task
         Future<GetSqlResultResponse> task = runningTasks.get(request.getTaskId());
+
         // Get result
         GetSqlResultResponse response = task.get();
         runningTasks.remove(request.getTaskId());

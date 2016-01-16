@@ -1,5 +1,11 @@
 package pl.pw.edu.mini.dos.node.ndb;
 
+import net.sf.jsqlparser.expression.Expression;
+import net.sf.jsqlparser.expression.LongValue;
+import net.sf.jsqlparser.expression.operators.conditional.AndExpression;
+import net.sf.jsqlparser.expression.operators.relational.GreaterThan;
+import net.sf.jsqlparser.schema.Column;
+import net.sf.jsqlparser.schema.Table;
 import net.sf.jsqlparser.statement.SetStatement;
 import net.sf.jsqlparser.statement.StatementVisitor;
 import net.sf.jsqlparser.statement.Statements;
@@ -30,6 +36,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutionException;
+import java.util.stream.Collectors;
 
 public class SQLStatementVisitor implements StatementVisitor {
     private static final Logger logger = LoggerFactory.getLogger(SQLStatementVisitor.class);
@@ -49,6 +56,7 @@ public class SQLStatementVisitor implements StatementVisitor {
         return this.result;
     }
 
+    @SuppressWarnings("ConstantConditions")
     @Override
     public void visit(Select select) {
         logger.info("Coordinator node: select request");
@@ -78,30 +86,36 @@ public class SQLStatementVisitor implements StatementVisitor {
         }
 
         // Create in-memory db
-        InDBmanager inDbManager = new InDBmanager();
+        ImDBmanager imDbManager = new ImDBmanager();
+
         // Create needed tables
-        inDbManager.createTables(selectMetadataResponse.getCreateTableStatements());
+        imDbManager.createTables(selectMetadataResponse.getCreateTableStatements());
 
         // For each table
         ErrorEnum error = ErrorEnum.NO_ERROR;
         Map<String, List<String>> versionsOfTables = new HashMap<>(tablesNames.size());
+        Map<String, List<String>> tablesColumnsNames = new HashMap<>(tablesNames.size());
         for (String table : tablesNames) {
             // Send requests to get the needed data
             String selectAll = "SELECT * FROM " + table + ";";
-            for (NodeNodeInterface node : selectMetadataResponse.getNodes()) {
+            logger.debug("Sending SELECT * to " +
+                    selectMetadataResponse.getTableNodes().get(table).size() + " nodes");
+            for (NodeNodeInterface node : selectMetadataResponse.getTableNodes().get(table)) {
                 try {
                     node.executeSql(new ExecuteSqlRequest(
                             taskId, selectAll, thisNode));
                 } catch (RemoteException e) {
-                    logger.error("Cannot get data from another node: {}", e.getMessage());
+                    logger.error("Cannot get data from another node: " + e.getMessage());
                     error = ErrorEnum.REMOTE_EXCEPTION;
                 }
             }
             // Get responses and proccess data
-            List<String> versionsOfTable = new ArrayList<>(selectMetadataResponse.getNodes().size());
-            for (int i = 0; i < selectMetadataResponse.getNodes().size(); i++) {
-                NodeNodeInterface node = selectMetadataResponse.getNodes().get(i);
+            List<String> versionsOfTable = new ArrayList<>(selectMetadataResponse.getTableNodes().size());
+            for (int i = 0; i < selectMetadataResponse.getTableNodes().get(table).size(); i++) {
+                logger.debug("Getting response from node " + i);
+                NodeNodeInterface node = selectMetadataResponse.getTableNodes().get(table).get(i);
                 GetSqlResultResponse response = null;
+                //noinspection Duplicates
                 try {
                     response = node.getSqlResult(new GetSqlResultRequest(taskId));
                 } catch (RemoteException e) {
@@ -119,24 +133,23 @@ public class SQLStatementVisitor implements StatementVisitor {
                     error = response == null ? ErrorEnum.ANOTHER_ERROR : response.getError();
                 } else {
                     // Import received table to in-memory db
-                    String versionOftable = table + i;
+                    String versionOftable = table + "_v" + i;
                     versionsOfTable.add(versionOftable);
-                    boolean ok = inDbManager.importTable(versionOftable,
-                            response.getData().getColumnsTypes(),
-                            response.getData().getColumnsNames(),
-                            response.getData().getData());
+                    boolean ok = imDbManager.importTable(versionOftable, response.getData());
                     if (!ok) {
                         logger.error("Error at importing table to imdb");
                         error = ErrorEnum.ANOTHER_ERROR;
                     }
                 }
+                tablesColumnsNames.put(table, response.getData().getColumnsNames());
             }
             versionsOfTables.put(table, versionsOfTable);
         }
 
         // Create temportal table merging all versions of the table received
         for (String table : tablesNames) {
-            boolean ok = inDbManager.mergeVersionsOfTable(table, versionsOfTables.get(table));
+            boolean ok = imDbManager.mergeVersionsOfTable(table,
+                    versionsOfTables.get(table), tablesColumnsNames.get(table));
             if (!ok) {
                 logger.error("Error at merging versions of table");
                 error = ErrorEnum.ANOTHER_ERROR;
@@ -144,16 +157,11 @@ public class SQLStatementVisitor implements StatementVisitor {
         }
 
         // Run select in temporal table
-        String selectStatementTmp = selectStatement;
-        for (String table : tablesNames) {
-            selectStatementTmp = selectStatementTmp.replaceAll(table, table + "_tmp");
-        }
-        logger.debug("Execute select from tmp tables:\n" + selectStatementTmp);
-        String result = inDbManager.executeSelect(selectStatementTmp);
+        logger.debug("Execute select from in-memory tables:\n" + selectStatement);
+        String result = imDbManager.executeSelect(selectStatement);
 
-        // TODO drop temporal tables
         // Close in-memory db
-        inDbManager.close();
+        imDbManager.close();
 
         // Check final result
         if (!error.equals(ErrorEnum.NO_ERROR)) {
@@ -166,7 +174,6 @@ public class SQLStatementVisitor implements StatementVisitor {
         logger.info("Coordinator node: select proccessed!");
         this.result = new ExecuteSQLOnNodeResponse(result, error);
     }
-
 
     @Override
     public void visit(Delete delete) {
@@ -187,7 +194,7 @@ public class SQLStatementVisitor implements StatementVisitor {
             return;
         }
 
-        if(!deleteMetadataResponse.getError().equals(ErrorEnum.NO_ERROR)) {
+        if (!deleteMetadataResponse.getError().equals(ErrorEnum.NO_ERROR)) {
             logger.error("Error in getting delete metadata from master");
             this.result = new ExecuteSQLOnNodeResponse("", deleteMetadataResponse.getError());
             return;
@@ -215,7 +222,64 @@ public class SQLStatementVisitor implements StatementVisitor {
 
     @Override
     public void visit(Update update) {
+        String requestName = "update in table";
+        logger.info("Coordinator node: update request");
 
+        // Get table names
+        List<String> tableNames = update.getTables().stream().map(Table::getName).collect(Collectors.toList());
+
+        logger.debug("Update data in tables " + tableNames);
+
+        // Get nodes that contain rows from this table
+        UpdateMetadataResponse updateMetadataResponse;
+
+        // Add taskId > version to where clause
+        Expression newVersion = new LongValue(taskId);
+        Column versionColumn = new Column(null, "version");
+        GreaterThan gt = new GreaterThan();
+        gt.setLeftExpression(newVersion);
+        gt.setRightExpression(versionColumn);
+        update.setWhere(update.getWhere().toString().isEmpty() ? gt : new AndExpression(update.getWhere(), gt));
+
+        // Add version = taskId to set clause
+        update.getExpressions().add(newVersion);
+        update.getColumns().add(versionColumn);
+
+        logger.debug("Performing update: {}", update.toString());
+
+        try {
+            updateMetadataResponse =
+                    master.updateMetadata(new UpdateMetadataRequest(tableNames));
+        } catch (RemoteException e) {
+            logger.error("Cannot get update metadata from master: {}", e.getMessage());
+            this.result = new ExecuteSQLOnNodeResponse("", ErrorEnum.REMOTE_EXCEPTION);
+            return;
+        }
+
+        if (!updateMetadataResponse.getError().equals(ErrorEnum.NO_ERROR)) {
+            logger.error("Error in getting update metadata from master");
+            this.result = new ExecuteSQLOnNodeResponse("", updateMetadataResponse.getError());
+            return;
+        }
+
+        // Register task and subtasks
+        int numSubTasks = updateMetadataResponse.getNodes().size();
+        TaskManager.getInstance().add(taskId, numSubTasks);
+
+        // Update data in nodes that have any data from specified table
+        sendRequests(updateMetadataResponse.getNodes(), update.toString(), requestName);
+
+        // Wait for completiton of subtasks
+        TaskManager.getInstance().waitForCompletion(taskId);
+
+        // Get responses
+        ErrorEnum error = getResponses(updateMetadataResponse.getNodes(), requestName);
+
+        // Check final result
+        checkFinalResult(error, requestName, tableNames.toString());
+
+        // Remove task
+        TaskManager.getInstance().removeTask(taskId);
     }
 
     @Override
@@ -377,6 +441,7 @@ public class SQLStatementVisitor implements StatementVisitor {
         ErrorEnum error = ErrorEnum.NO_ERROR;
         for (NodeNodeInterface node : nodes) {
             GetSqlResultResponse response = null;
+            //noinspection Duplicates
             try {
                 response = node.getSqlResult(new GetSqlResultRequest(taskId));
             } catch (RemoteException e) {
@@ -403,13 +468,13 @@ public class SQLStatementVisitor implements StatementVisitor {
             String tableName
     ) {
         if (!error.equals(ErrorEnum.NO_ERROR)) {
-            String errString = String.format("Error at {} (table: {})", requestName, tableName);
+            String errString = "Error at " + requestName + " (table: " + tableName + ")";
             logger.error(errString);
             this.result = new ExecuteSQLOnNodeResponse(errString, error);
             return;
         }
         logger.info("Coordinator node: {} request END", requestName);
-        this.result = new ExecuteSQLOnNodeResponse(String.format("{} SUCCESS", requestName), error);
+        this.result = new ExecuteSQLOnNodeResponse(requestName + " SUCCESS", error);
     }
 
     private void performTableStatement(
@@ -429,7 +494,7 @@ public class SQLStatementVisitor implements StatementVisitor {
             return;
         }
 
-        if(!tableMetadataResponse.getError().equals(ErrorEnum.NO_ERROR)) {
+        if (!tableMetadataResponse.getError().equals(ErrorEnum.NO_ERROR)) {
             logger.error("Error while getting metadata from master: {}", tableMetadataResponse.getError());
             this.result = new ExecuteSQLOnNodeResponse("", tableMetadataResponse.getError());
             return;

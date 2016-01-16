@@ -2,14 +2,18 @@ package pl.pw.edu.mini.dos.master.mdb;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import pl.pw.edu.mini.dos.Helper;
 import pl.pw.edu.mini.dos.communication.ErrorEnum;
+import pl.pw.edu.mini.dos.master.node.RegisteredNode;
 
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 public class DBmanager {
     private static final Logger logger = LoggerFactory.getLogger(DBmanager.class);
@@ -20,6 +24,7 @@ public class DBmanager {
     private PreparedStatement nextRowIdSelect;
     private PreparedStatement incrementRowIdUpdate;
     private PreparedStatement newRowInsert;
+    private PreparedStatement selectTableNames;
     private PreparedStatement selectCreateTableStatements;
 
     public DBmanager() {
@@ -70,8 +75,10 @@ public class DBmanager {
         String incrementRowIdUpdate = "" +
                 "UPDATE tables SET next_row_id = next_row_id + 1 WHERE table_name=?;";
         String newRowInsert = "" +
-                "INSERT INTO rows (row_id, table_name, node_id)" +
+                "INSERT OR REPLACE INTO rows (row_id, table_name, node_id)" +
                 "VALUES (?,?,?);";
+        String selectTableNames = "" +
+                "SELECT table_name FROM tables;";
         String selectCreateTableStatements = "" +
                 "SELECT create_statement FROM tables;";
 
@@ -80,6 +87,7 @@ public class DBmanager {
             this.nextRowIdSelect = imdb.prepareStatement(nextRowIdSelect);
             this.incrementRowIdUpdate = imdb.prepareStatement(incrementRowIdUpdate);
             this.newRowInsert = imdb.prepareStatement(newRowInsert);
+            this.selectTableNames = imdb.prepareStatement(selectTableNames);
             this.selectCreateTableStatements = imdb.prepareStatement(selectCreateTableStatements);
         } catch (SQLException e) {
             logger.error("Error at creating prepared statements: {} - {}",
@@ -108,6 +116,28 @@ public class DBmanager {
             return ErrorEnum.REGISTRING_TABLE_ERROR;
         }
         return ErrorEnum.NO_ERROR;
+    }
+
+    /**
+     * Return a list of strings with all table names tables.
+     *
+     * @return create statements list
+     */
+    public List<String> getTableNames() {
+        List<String> tableNames = new ArrayList<>();
+        ResultSet rs = null;
+        try {
+            rs = selectTableNames.executeQuery();
+            while (rs.next()) {
+                tableNames.add(rs.getString(1));
+            }
+        } catch (SQLException e) {
+            logger.error("Error at getting table names: {} - {}",
+                    e.getMessage(), e.getStackTrace());
+        } finally {
+            imdb.close(rs);
+        }
+        return tableNames;
     }
 
     /**
@@ -189,6 +219,22 @@ public class DBmanager {
             // Update next rowId
             incrementRowIdUpdate.setString(1, tableName);
             incrementRowIdUpdate.executeUpdate();
+            imdb.commit();
+        } catch (SQLException e) {
+            logger.error("Error at registering row: {} - {}",
+                    e.getMessage(), e.getStackTrace());
+            imdb.rollback();
+            return null;
+        } finally {
+            imdb.close(rs);
+        }
+        // Insert row
+        insertRow(rowId, tableName, nodeIds);
+        return rowId;
+    }
+
+    public void insertRow(Long rowId, String tableName, List<Integer> nodeIds) {
+        try {
             // Insert row
             for (Integer nodeId : nodeIds) {
                 newRowInsert.setLong(1, rowId);
@@ -201,43 +247,33 @@ public class DBmanager {
             logger.error("Error at registering row: {} - {}",
                     e.getMessage(), e.getStackTrace());
             imdb.rollback();
-            return null;
-        } finally {
-            imdb.close(rs);
         }
-        return rowId;
     }
 
     /**
-     * Given a list of tables, it return the ids of the nodes
-     * which have data of these tables.
+     * Given a table, it return the ids of the nodes
+     * which have data of that table.
      *
-     * @param tables list with names of the tables
+     * @param table table name
      * @return list of nodesIds
      */
-    public List<Integer> getNodesHaveTables(List<String> tables) {
-        List<Integer> nodes = new ArrayList<>();
+    public List<Integer> getNodesHaveTable(String table) {
+        List<Integer> nodesIDs = new ArrayList<>();
         // Build select
         PreparedStatement st = null;
         String select = "" +
                 "SELECT DISTINCT node_id " +
                 "FROM tables " +
                 "NATURAL JOIN  rows " +
-                "WHERE table_name=? ";
-        for (int i = 1; i < tables.size(); i++) {
-            select += "OR table_name=? ";
-        }
-        select += ";";
+                "WHERE table_name=?;";
         // Execute select
         ResultSet rs = null;
         try {
             st = imdb.prepareStatement(select);
-            for (int i = 1; i <= tables.size(); i++) {
-                st.setString(i, tables.get(i - 1));
-            }
+            st.setString(1, table);
             rs = st.executeQuery();
             while (rs.next()) {
-                nodes.add(rs.getInt(1));
+                nodesIDs.add(rs.getInt("node_id"));
             }
         } catch (SQLException e) {
             logger.error("Error at getting nodes: {} - {}",
@@ -247,7 +283,69 @@ public class DBmanager {
             imdb.close(rs);
             imdb.close(st);
         }
-        return nodes;
+        return nodesIDs;
+    }
+
+    /**
+     * Return a map with the tables, and the rows of data of this tables that a node.
+     *
+     * @param node node
+     * @return Map: Table -> List of rows
+     */
+    public Map<String, List<Long>> getDataNodeHas(RegisteredNode node){
+        logger.debug("Geting tables and rows that node has");
+        Map<String,List<Long>> tables = new HashMap<>();
+        // Build select
+        PreparedStatement st = null;
+        String select = "" +
+                "SELECT table_name, row_id " +
+                "FROM rows " +
+                "WHERE node_id=? " +
+                "ORDER BY table_name ASC;";
+        // Execute select
+        ResultSet rs = null;
+        try {
+            st = imdb.prepareStatement(select);
+            st.setLong(1, node.getID());
+            rs = st.executeQuery();
+            while (rs.next()) {
+                String table = rs.getString("table_name");
+                if(!tables.containsKey(table)){
+                    tables.put(table, new ArrayList<>());
+                }
+                tables.get(table).add(rs.getLong("row_id"));
+            }
+        } catch (SQLException e) {
+            logger.error("Error at tables and rows from node: {} - {}",
+                    e.getMessage(), e.getStackTrace());
+            return null;
+        } finally {
+            imdb.close(rs);
+            imdb.close(st);
+        }
+        logger.debug(Helper.mapToString(tables));
+        return tables;
+    }
+
+    public void removeRecordsOfNode(RegisteredNode node){
+        logger.debug("Removing records of node " + node.getID() + " from ImDB of Master.");
+        PreparedStatement st = null;
+        String delete = "" +
+                "DELETE FROM rows " +
+                "WHERE node_id=?;";
+        // Execute select
+        try {
+            st = imdb.prepareStatement(delete);
+            st.setLong(1, node.getID());
+            st.executeUpdate();
+            imdb.commit();
+        } catch (SQLException e) {
+            logger.error("Error at deleting records from node: {} - {}",
+                    e.getMessage(), e.getStackTrace());
+            imdb.rollback();
+        } finally {
+            imdb.close(st);
+        }
     }
 
     public void close() {
@@ -255,6 +353,7 @@ public class DBmanager {
         imdb.close(nextRowIdSelect);
         imdb.close(incrementRowIdUpdate);
         imdb.close(newRowInsert);
+        imdb.close(selectTableNames);
         imdb.close(selectCreateTableStatements);
         imdb.close();
     }
