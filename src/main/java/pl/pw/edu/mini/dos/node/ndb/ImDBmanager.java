@@ -121,7 +121,7 @@ public class ImDBmanager {
     }
 
     public boolean mergeVersionsOfTable(String table, List<String> versions, List<String> columnsNames) {
-        logger.debug("Merging diferent version into " + table + "_tmp");
+        logger.debug("Merging diferent version into " + table);
         // Build create table
         String createStatement = "CREATE TABLE " + table + "_tmp AS";
         createStatement += " SELECT ";
@@ -148,8 +148,29 @@ public class ImDBmanager {
             st = imdb.prepareStatement(createStatement);
             st.executeUpdate();
         } catch (SQLException e) {
-            imdb.rollback();
             logger.error(e.getMessage());
+            imdb.rollback();
+            return false;
+        } finally {
+            imdb.close(st);
+        }
+
+        // Merge rows with more than one version (take the latest one)
+        String insertStatement = "INSERT INTO " + table + " ";
+        insertStatement += "SELECT * FROM " + table + "_tmp t1 ";
+        insertStatement += "WHERE t1.version = (";
+        insertStatement += "SELECT max(version) ";
+        insertStatement += "FROM " + table + "_tmp t2 ";
+        insertStatement += "WHERE t1.row_id = t2.row_id);";
+        logger.debug(insertStatement);
+
+        // Create temportal table
+        try {
+            st = imdb.prepareStatement(insertStatement);
+            st.executeUpdate();
+        } catch (SQLException e) {
+            logger.error(e.getMessage());
+            imdb.rollback();
             return false;
         } finally {
             imdb.close(st);

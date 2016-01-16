@@ -1,8 +1,6 @@
 package pl.pw.edu.mini.dos.node.ndb;
 
-import net.sf.jsqlparser.expression.BinaryExpression;
 import net.sf.jsqlparser.expression.Expression;
-import net.sf.jsqlparser.expression.ExpressionVisitor;
 import net.sf.jsqlparser.expression.LongValue;
 import net.sf.jsqlparser.expression.operators.conditional.AndExpression;
 import net.sf.jsqlparser.expression.operators.relational.GreaterThan;
@@ -159,12 +157,8 @@ public class SQLStatementVisitor implements StatementVisitor {
         }
 
         // Run select in temporal table
-        String selectStatementTmp = selectStatement;
-        for (String table : tablesNames) {
-            selectStatementTmp = selectStatementTmp.replaceAll(table, table + "_tmp");
-        }
-        logger.debug("Execute select from tmp tables:\n" + selectStatementTmp);
-        String result = imDbManager.executeSelect(selectStatementTmp);
+        logger.debug("Execute select from in-memory tables:\n" + selectStatement);
+        String result = imDbManager.executeSelect(selectStatement);
 
         // Close in-memory db
         imDbManager.close();
