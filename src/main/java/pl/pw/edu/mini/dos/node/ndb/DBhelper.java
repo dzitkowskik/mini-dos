@@ -31,7 +31,7 @@ public class DBhelper {
         logger.debug("Get get functions for colums: " + Helper.collectionToString(columnsTypes));
         Consumer[] functions = new Consumer[columnsTypes.size()];
         for (int i = 0; i < columnsTypes.size(); i++) {
-            String type = columnsTypes.get(i);
+            String type = columnsTypes.get(i).trim();
             final int col = i + 1;
             switch (type) {
                 case "INTEGER":
