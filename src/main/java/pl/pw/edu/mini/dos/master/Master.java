@@ -208,7 +208,7 @@ public class Master
             throws RemoteException {
         // Get nodes that have data from specified tables
         Set<Integer> nodesIDs = new HashSet<>();
-        for(String table : updateMetadataRequest.getTables()) {
+        for (String table : updateMetadataRequest.getTables()) {
             nodesIDs.addAll(dbManager.getNodesHaveTable(table));
         }
 
@@ -292,12 +292,54 @@ public class Master
         nodeManager.unregisterNode(node);
         dbManager.removeRecordsOfNode(node);
         // Send task to replicate data
+        replicateDataToNode(tablesRows, nodeManager.selectNodesInsert().get(0));
+        // Unregister node in master
+    }
+
+    /**
+     * Reset all the data of a node. The data of the node invalidated and
+     * it is updated with that data from other nodes.
+     *
+     * @param node node
+     */
+    @SuppressWarnings("ConstantConditions")
+    public void resetDateNode(RegisteredNode node) {
+        logger.info("Reset data of node " + node.getID());
+        // Get tables with data that node had
+        Map<String, List<Long>> tablesRows = dbManager.getDataNodeHas(node);
+        // Send request to delete data and recreate all tables
+        List<String> tables = dbManager.getTableNames();
+        List<String> createTables = dbManager.getCreateTableStatements();
+        ResetDataResponse response = null;
+        try {
+            response = node.getInterface().resetData(new ResetDataRequest(tables, createTables));
+        } catch (RemoteException e) {
+            logger.error("Cannot reset data: {}", e.getMessage());
+        }
+        if (response.getError().equals(ErrorEnum.NO_ERROR)) {
+            logger.info("Data from node " + node.getID() + " was reset successfully.");
+        } else {
+            logger.error("Error at reset data: " + response.getError());
+        }
+        // Send task to replicate data
+        replicateDataToNode(tablesRows, node);
+    }
+
+    /**
+     * Replicate given data to a new node.
+     *
+     * @param data    map table -> rowsIDs
+     * @param newNode node where to replicate the data
+     * @return true if no errors
+     */
+    private boolean replicateDataToNode(Map<String, List<Long>> data, RegisteredNode newNode) {
         logger.debug("Replicate data that node had");
-        Long taskID = taskManager.newTask(node.getID());
+        // Start replicate data task
+        Long taskID = taskManager.newTask(newNode.getID());
         // Get nodes which have the data
-        logger.debug("Tables: " + Helper.collectionToString(tablesRows.keySet()));
+        logger.debug("Tables: " + Helper.collectionToString(data.keySet()));
         Map<String, List<NodeNodeInterface>> tableNodesInterfaces = new HashMap<>();
-        for (String table : tablesRows.keySet()) {
+        for (String table : data.keySet()) {
             List<Integer> nodesIDs = dbManager.getNodesHaveTable(table);
             logger.debug("Nodes which have table " + table + ": " + Helper.collectionToString(nodesIDs));
             List<NodeNodeInterface> nodesInterfaces = new ArrayList<>(nodesIDs.size());
@@ -309,44 +351,21 @@ public class Master
             }
             tableNodesInterfaces.put(table, nodesInterfaces);
         }
-        ReplicateDataResponse response = null;
-        RegisteredNode newNode = nodeManager.selectNodesInsert().get(0);
+        ReplicateDataResponse response;
         logger.debug("Replicate data in " + newNode.getID());
         try {
             response = newNode.getInterface().replicateData(
-                    new ReplicateDataRequest(taskID, tableNodesInterfaces, tablesRows,
-                            dbManager.getCreateTableStatements(new ArrayList<>(tablesRows.keySet()))));
+                    new ReplicateDataRequest(taskID, tableNodesInterfaces, data,
+                            dbManager.getCreateTableStatements(new ArrayList<>(data.keySet()))));
         } catch (RemoteException e) {
             logger.error("Cannot replicate data: {}", e.getMessage());
+            return false;
         }
-        if (response.getError().equals(ErrorEnum.NO_ERROR)) {
-            logger.info("Data from node " + node.getID() + " was replicated successfully.");
-        } else {
+        if (!response.getError().equals(ErrorEnum.NO_ERROR)) {
             logger.error("Error at replicating data: " + response.getError());
         }
-    }
-
-    /**
-     * Reset (delete) all the data of a node.
-     *
-     * @param node node
-     */
-    @SuppressWarnings("ConstantConditions")
-    public void resetDateNode(RegisteredNode node) {
-        logger.info("Reset data of node " + node.getID());
-        // Get all table names
-        List<String> tables = dbManager.getTableNames();
-        List<String> createTables = dbManager.getCreateTableStatements();
-        ResetDataResponse response = null;
-        try {
-            response = node.getInterface().resetData(new ResetDataRequest(tables, createTables));
-        } catch (RemoteException e) {
-            logger.error("Cannot replicate data: {}", e.getMessage());
-        }
-        if (response.getError().equals(ErrorEnum.NO_ERROR)) {
-            logger.info("Data from node " + node.getID() + " was reset successfully.");
-        } else {
-            logger.error("Error at reset data: " + response.getError());
-        }
+        // Register
+        logger.info("Data was replicated successfully.");
+        return true;
     }
 }
