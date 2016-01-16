@@ -15,13 +15,13 @@ public class PingNodes implements Runnable {
     private Master master;
     private NodeManager nodeManager;
     private long spanTime;
-    private int maxRetryAttempts;
+    private int maxPingRetryAttempts;
 
     public PingNodes(Master master, NodeManager nodeManager, long spanTime) {
         this.master = master;
         this.nodeManager = nodeManager;
         this.spanTime = spanTime;
-        this.maxRetryAttempts = Integer.parseInt(config.getProperty("maxRetryAttempts"));
+        this.maxPingRetryAttempts = Integer.parseInt(config.getProperty("maxPingRetryAttempts"));
     }
 
     @Override
@@ -36,8 +36,9 @@ public class PingNodes implements Runnable {
                         // Node down
                         if (nodeManager.isNodeDown(node)) {
                             int numRetry = nodeManager.getNumRetrys(node) + 1;
-                            logger.warn("Node " + node.getID() + " is down (" + numRetry + " retry): " + ok.toString());
-                            if (numRetry > maxRetryAttempts) {
+                            logger.warn("Node " + node.getID() + " is down (" + numRetry + " retry): "
+                                    + ok.toString());
+                            if (numRetry > maxPingRetryAttempts) {
                                 logger.warn("Max retry attempts exceeded -> unregister node " + node.getID());
                                 // Limit exceeded -> unregister node and replicate its data
                                 master.unregisterNode(node);

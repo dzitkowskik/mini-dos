@@ -38,6 +38,8 @@ public class Master
     NodeManager nodeManager;
     private TaskManager taskManager;
     private DBmanager dbManager;
+    private int maxTaskRetryAttempts;
+
 
     public Master() throws RemoteException {
         this("127.0.0.1", 1099);
@@ -62,6 +64,9 @@ public class Master
         long spanTime = Long.parseLong(config.getProperty("spanPingingTime"));
         pingThread = new Thread(new PingNodes(this, nodeManager, spanTime));
         pingThread.start();
+
+        // Set max task retry attemps
+        maxTaskRetryAttempts = Integer.parseInt(config.getProperty("maxTaskRetryAttempts"));
     }
 
     /**
@@ -263,15 +268,44 @@ public class Master
 
     @Override
     public ExecuteSQLResponse executeSQL(ExecuteSQLRequest executeSQLRequest) throws RemoteException {
-        RegisteredNode node = nodeManager.selectCoordinatorNode();
-        Long taskID = taskManager.newTask(node.getID());
-        ExecuteSQLOnNodeResponse result = node.getInterface().executeSQLOnNode(
-                new ExecuteSQLOnNodeRequest(taskID, executeSQLRequest.getSql().toUpperCase()));
-        if (result.getError().equals(ErrorEnum.NO_ERROR)) {
-            taskManager.setFinishedTask(taskID);
-        } else {
-            taskManager.setAbortedTask(taskID);
-        }
+        boolean finish = false;
+        int numRetry = 1;
+        ExecuteSQLOnNodeResponse result = null;
+        do {
+            RegisteredNode node = nodeManager.selectCoordinatorNode();
+            Long taskID = taskManager.newTask(node.getID());
+            logger.info("New task " + taskID + ". Coordinator node: " + node.getID());
+            try {
+                result = node.getInterface().executeSQLOnNode(
+                        new ExecuteSQLOnNodeRequest(taskID, executeSQLRequest.getSql().toUpperCase()));
+            } catch (RemoteException e) {
+                logger.error("Cannot execute sql in node");
+                continue;
+            }
+            switch (result.getError()) {
+                case NO_ERROR:
+                    logger.info("Task finised");
+                    taskManager.setFinishedTask(taskID);
+                    finish = true;
+                    break;
+                case SQL_EXECUTION_ERROR:
+                case SQL_PARSING_ERROR:
+                case TABLE_NOT_EXIST:
+                    logger.error("Task aborted: user error");
+                    taskManager.setAbortedTask(taskID);
+                    finish = true;
+                    break;
+                default:
+                    taskManager.setAbortedTask(taskID);
+                    if (numRetry < maxTaskRetryAttempts) {
+                        ++numRetry;
+                        logger.error("Task aborted. Trying " + numRetry + " attempt...");
+                    } else {
+                        logger.error("Task aborted. Max retry attempts exceeded.");
+                        finish = true;
+                    }
+            }
+        } while (!finish);
         logger.info("Send response to client:" + result.getResult());
         return new ExecuteSQLResponse(result);
     }
@@ -362,8 +396,8 @@ public class Master
         // Insert row metadata (RowId, TableId, NodesIds)
         List<Integer> nodesIds = new ArrayList<>();
         nodesIds.add(newNode.getID());
-        for(String table : data.keySet()){
-            for(Long rowId : data.get(table)){
+        for (String table : data.keySet()) {
+            for (Long rowId : data.get(table)) {
                 dbManager.insertRow(rowId, table, nodesIds);
             }
         }
