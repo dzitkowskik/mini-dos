@@ -45,7 +45,6 @@ public interface MasterNodeInterface extends Remote {
      *
      * @param replicateDataRequest -
      * @return status
-     * @throws RemoteException
      */
     ReplicateDataResponse replicateData(ReplicateDataRequest replicateDataRequest) throws RemoteException;
 
@@ -53,8 +52,15 @@ public interface MasterNodeInterface extends Remote {
      * Send a request to a node to update all the tables it has.
      *
      * @param updateTablesRequest -
-     * @throws RemoteException
-     * @ status
+     * @return status
      */
     UpdateTablesResponse updateTables(UpdateTablesRequest updateTablesRequest) throws RemoteException;
+
+    /**
+     * Send a request to a node to update master interface.
+     *
+     * @param updateMasterRequest -
+     * @return status
+     */
+    UpdateMasterResponse updateMaster(UpdateMasterRequest updateMasterRequest) throws RemoteException;
 }

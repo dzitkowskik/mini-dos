@@ -5,9 +5,10 @@ import pl.pw.edu.mini.dos.communication.ErrorEnum;
 import pl.pw.edu.mini.dos.communication.masternode.CheckStatusResponse;
 import pl.pw.edu.mini.dos.communication.masternode.MasterNodeInterface;
 
+import java.io.Serializable;
 import java.util.concurrent.*;
 
-public class RegisteredNode {
+public class RegisteredNode implements Serializable {
     private static final Config config = Config.getConfig();
     private Integer nodeID;
     private MasterNodeInterface node;

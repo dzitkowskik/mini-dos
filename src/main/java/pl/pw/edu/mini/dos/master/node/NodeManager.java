@@ -2,11 +2,12 @@ package pl.pw.edu.mini.dos.master.node;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import pl.pw.edu.mini.dos.Helper;
 import pl.pw.edu.mini.dos.communication.ErrorEnum;
 import pl.pw.edu.mini.dos.communication.masternode.KillNodeRequest;
 import pl.pw.edu.mini.dos.communication.masternode.MasterNodeInterface;
+import pl.pw.edu.mini.dos.master.backup.NodeManagerBackup;
 
+import java.io.*;
 import java.rmi.RemoteException;
 import java.rmi.server.RemoteServer;
 import java.rmi.server.ServerNotActiveException;
@@ -17,7 +18,7 @@ import java.util.*;
  */
 public class NodeManager {
     private static final Logger logger = LoggerFactory.getLogger(NodeManager.class);
-    protected final Map<Integer, RegisteredNode> registeredNodes;
+    protected Map<Integer, RegisteredNode> registeredNodes;
     private Map<RegisteredNode, Integer> downNodes;
     private Integer nextNodeID;
     protected int replicationFactor;
@@ -35,7 +36,7 @@ public class NodeManager {
      * @param nodeInterface rmi interface of the node
      * @return ErrorEnum
      */
-    public ErrorEnum newNode(MasterNodeInterface nodeInterface) {
+    public synchronized ErrorEnum newNode(MasterNodeInterface nodeInterface) {
         // Create node
         RegisteredNode newNode = new RegisteredNode(nodeInterface);
 
@@ -47,11 +48,9 @@ public class NodeManager {
 
         // Register node
         Integer nodeId;
-        synchronized (registeredNodes) {
-            nodeId = nextNodeID++;
-            newNode.setID(nodeId);
-            registeredNodes.put(nodeId, newNode);
-        }
+        nodeId = nextNodeID++;
+        newNode.setID(nodeId);
+        registeredNodes.put(nodeId, newNode);
         try {
             logger.info("Node registered. nNodes: " + registeredNodes.size()
                     + "  ip=" + RemoteServer.getClientHost()
@@ -230,11 +229,55 @@ public class NodeManager {
      */
     public String kill(Integer nodeID) {
         RegisteredNode node = registeredNodes.get(nodeID);
+        if(node == null){
+            return "Node not exist";
+        }
         try {
             node.getInterface().killNode(new KillNodeRequest());
         } catch (RemoteException e) {
             return "Error when killing node " + node.getID() + ": " + e.getMessage() + "\n";
         }
         return "Node " + node.getID() + " killed\n";
+    }
+
+    public void createBackup() {
+        synchronized (this) {
+            NodeManagerBackup backup = new NodeManagerBackup(registeredNodes, downNodes, nextNodeID);
+            try {
+                File file = new File("backup_nodes.db");
+                FileOutputStream fos = new FileOutputStream(file);
+                ObjectOutputStream oos = new ObjectOutputStream(fos);
+                oos.writeObject(backup);
+                oos.flush();
+                oos.close();
+                fos.close();
+            } catch (IOException e) {
+                logger.error("Unable to backup registered nodes:" + e.getMessage());
+                return;
+            }
+            logger.info("Registered nodes backup created!");
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    public void restoreBackup() {
+        synchronized (this) {
+            NodeManagerBackup backup;
+            try {
+                File file = new File("backup_nodes.db");
+                FileInputStream fis = new FileInputStream(file);
+                ObjectInputStream ois = new ObjectInputStream(fis);
+                backup = (NodeManagerBackup) ois.readObject();
+                ois.close();
+                fis.close();
+            } catch (IOException | ClassNotFoundException e) {
+                logger.error("Unable to backup registered nodes. " + e.getMessage());
+                return;
+            }
+            registeredNodes = backup.getRegisteredNodes();
+            downNodes = backup.getDownNodes();
+            nextNodeID = backup.getNextNodeID();
+            logger.info("Registered nodes backup restored!");
+        }
     }
 }

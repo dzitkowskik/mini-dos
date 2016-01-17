@@ -282,6 +282,12 @@ public class Node extends UnicastRemoteObject
     }
 
     @Override
+    public UpdateMasterResponse updateMaster(UpdateMasterRequest updateMasterRequest) throws RemoteException {
+        this.master = updateMasterRequest.getMasterInterface();
+        return new UpdateMasterResponse(ErrorEnum.NO_ERROR);
+    }
+
+    @Override
     public ExecuteSqlResponse executeSql(ExecuteSqlRequest request) throws RemoteException {
         logger.info("Got sql to execute: {}", request.getSql());
 

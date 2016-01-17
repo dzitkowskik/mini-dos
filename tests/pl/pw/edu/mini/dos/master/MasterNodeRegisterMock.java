@@ -53,4 +53,10 @@ public class MasterNodeRegisterMock implements MasterNodeInterface {
         logger.info("updateTables running...");
         return new UpdateTablesResponse(ErrorEnum.NO_ERROR);
     }
+
+    @Override
+    public UpdateMasterResponse updateMaster(UpdateMasterRequest updateMasterRequest) throws RemoteException {
+        logger.info("updateMaster running...");
+        return new UpdateMasterResponse(ErrorEnum.NO_ERROR);
+    }
 }

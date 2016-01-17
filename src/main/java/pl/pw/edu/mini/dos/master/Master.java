@@ -81,14 +81,34 @@ public class Master
         }
 
         Scanner scanner = new Scanner(System.in);
-        System.out.println("*Enter 'q' to stop master or 'd' to show the data of nodes:");
+        System.out.println("+===============================+");
+        System.out.println("|          M A S T E R          |");
+        System.out.println("+===============================+");
+        System.out.println("| Menu:                         |");
+        System.out.println("|    'q' -> Stop master         |");
+        System.out.println("|    'b' -> Create backup       |");
+        System.out.println("|    'r' -> Restore backup      |");
+        System.out.println("+===============================+");
+        System.out.print("ddbms> ");
+
+        whileLabel:
         while (scanner.hasNext()) {
             String text = scanner.nextLine().toLowerCase();
-            if (text.equals("q")) {
-                scanner.close();
-                break;
+            switch (text) {
+                case "q":
+                    scanner.close();
+                    break whileLabel;
+                case "b":
+                    master.createMasterBackup();
+                    break;
+                case "r":
+                    master.restoreMasterBackup();
+                    break;
+                default:
+                    master.parseCommand(text);
+                    break;
             }
-            master.parseCommand(text);
+            System.out.print("ddbms> ");
         }
 
         master.stopMaster();
@@ -115,28 +135,54 @@ public class Master
                 // Tasks
                 if (matcher.group(1).equals("select")) {
                     if (matcher.group(2).equals("*")) {
-                        System.out.print(taskManager.select());
+                        String result = taskManager.select();
+                        System.out.println(result.equals("") ? "0 tasks" : result);
                     } else {
-                        System.out.print(taskManager.select(Long.parseLong(matcher.group(2))));
+                        String result = taskManager.select(Long.parseLong(matcher.group(2)));
+                        System.out.println(result.equals("") ? "0 tasks" : result);
                     }
                 }
             } else {
                 // Nodes
                 if (matcher.group(1).equals("select")) {
                     if (matcher.group(2).equals("*")) {
-                        System.out.print(nodeManager.select());
+                        String result = nodeManager.select();
+                        System.out.println(result.equals("") ? "0 nodes" : result);
                     } else {
-                        System.out.print(nodeManager.select(Integer.parseInt(matcher.group(2))));
+                        String result = nodeManager.select(Integer.parseInt(matcher.group(2)));
+                        System.out.println(result.equals("") ? "0 nodes" : result);
                     }
                 } else if (matcher.group(1).equals("kill")) {
                     if (matcher.group(2).equals("*")) {
-                        System.out.print(nodeManager.kill());
+                        System.out.println(nodeManager.kill());
                     } else {
-                        System.out.print(nodeManager.kill(Integer.parseInt(matcher.group(2))));
+                        System.out.println(nodeManager.kill(Integer.parseInt(matcher.group(2))));
                     }
                 }
             }
         }
+    }
+
+    public void createMasterBackup() {
+        dbManager.createBackup();
+        taskManager.createBackup();
+        nodeManager.createBackup();
+        System.out.println("Backup created!");
+    }
+
+    public void restoreMasterBackup() {
+        dbManager.restoreBackup();
+        taskManager.restoreBackup();
+        nodeManager.restoreBackup();
+        for(MasterNodeInterface node : nodeManager.getNodesInterfaces()){
+            try {
+                node.updateMaster(new UpdateMasterRequest(this));
+            } catch (RemoteException e) {
+                logger.error("Error at updating master interface in nodes");
+                return;
+            }
+        }
+        System.out.println("Backup restored!");
     }
 
     @Override
@@ -326,7 +372,10 @@ public class Master
         nodeManager.unregisterNode(node);
         dbManager.removeRecordsOfNode(node);
         // Send task to replicate data
-        replicateDataToNode(tablesRows, nodeManager.selectNodesInsert().get(0));
+        List<RegisteredNode> newNode = nodeManager.selectNodesInsert();
+        if(newNode != null && newNode.size() > 0){
+            replicateDataToNode(tablesRows, newNode.get(0));
+        }
     }
 
     /**

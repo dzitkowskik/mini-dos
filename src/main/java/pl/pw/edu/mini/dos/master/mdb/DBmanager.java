@@ -292,9 +292,9 @@ public class DBmanager {
      * @param node node
      * @return Map: Table -> List of rows
      */
-    public Map<String, List<Long>> getDataNodeHas(RegisteredNode node){
+    public Map<String, List<Long>> getDataNodeHas(RegisteredNode node) {
         logger.debug("Geting tables and rows that node has");
-        Map<String,List<Long>> tables = new HashMap<>();
+        Map<String, List<Long>> tables = new HashMap<>();
         // Build select
         PreparedStatement st = null;
         String select = "" +
@@ -310,7 +310,7 @@ public class DBmanager {
             rs = st.executeQuery();
             while (rs.next()) {
                 String table = rs.getString("table_name");
-                if(!tables.containsKey(table)){
+                if (!tables.containsKey(table)) {
                     tables.put(table, new ArrayList<>());
                 }
                 tables.get(table).add(rs.getLong("row_id"));
@@ -327,7 +327,7 @@ public class DBmanager {
         return tables;
     }
 
-    public void removeRecordsOfNode(RegisteredNode node){
+    public void removeRecordsOfNode(RegisteredNode node) {
         logger.debug("Removing records of node " + node.getID() + " from ImDB of Master.");
         PreparedStatement st = null;
         String delete = "" +
@@ -346,6 +346,14 @@ public class DBmanager {
         } finally {
             imdb.close(st);
         }
+    }
+
+    public void createBackup() {
+        imdb.createBackup("backup_imdb.db");
+    }
+
+    public void restoreBackup() {
+        imdb.restoreBackup("backup_imdb.db");
     }
 
     public void close() {

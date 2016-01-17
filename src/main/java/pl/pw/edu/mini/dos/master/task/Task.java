@@ -1,6 +1,8 @@
 package pl.pw.edu.mini.dos.master.task;
 
-public class Task {
+import java.io.Serializable;
+
+public class Task implements Serializable {
     private Long idTask;
     private TaskStatus status;
     private Integer node;
@@ -13,14 +15,6 @@ public class Task {
 
     public Long getIdTask() {
         return idTask;
-    }
-
-    public void setIdTask(Long idTask) {
-        this.idTask = idTask;
-    }
-
-    public TaskStatus getStatus() {
-        return status;
     }
 
     public void setStatus(TaskStatus status) {
