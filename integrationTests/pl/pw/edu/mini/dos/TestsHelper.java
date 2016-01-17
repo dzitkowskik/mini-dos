@@ -201,11 +201,13 @@ public class TestsHelper {
     public static String[] checkQuery(
             Client client, TestDbManager testDb, String sql) throws SQLException {
         logger.trace("Checking query: " + sql);
-        SerializableResultSet rs = testDb.executeQuery(sql + " ORDER BY 1, 2");
+        String orderBy = "";
+        if (!sql.contains("ALTER")) orderBy = " ORDER BY 1, 2";
+        SerializableResultSet rs = testDb.executeQuery(sql + orderBy);
         String resultExpected = buildString(rs.getData());
 
         logger.trace("Send: " + sql);
-        String result = client.executeSQL(sql + " ORDER BY 1, 2");
+        String result = client.executeSQL(sql + orderBy);
         result = removeLastTwoColumns(result);
 
         logger.trace("Get:" + result);
