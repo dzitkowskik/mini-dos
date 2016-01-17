@@ -72,26 +72,26 @@ public class SimpleSelectITest {
 
         // load command
         TestData testData = TestData.loadConfigTestDbFile(configTestFilename1);
-        logger.info("cmd=" + testData);
-        logger.info("cmd.len=" + testData.insertTableCommands.size());
+        logger.trace("cmd=" + testData);
+        logger.trace("cmd.len=" + testData.insertTableCommands.size());
 
         // send command to Master
         for (String cmd : testData.createTableCommands) {
-            logger.info("Send:" + cmd);
+            logger.trace("Send:" + cmd);
             client.executeSQL(cmd);
         }
         for (int i = 0; i < dataCount; i++) {
-            logger.info("Send:" + testData.insertTableCommands.get(i));
+            logger.trace("Send:" + testData.insertTableCommands.get(i));
             client.executeSQL(testData.insertTableCommands.get(i));
         }
 
         String result = client.executeSQL("SELECT * FROM " + testData.getTableNames()[0]);
-        logger.info(result);
+        logger.trace(result);
 
         checkDataCorrectness(result, testData.getTableNames()[0], testData, dataCount);
 
         client.stopClient();
-        logger.info("Client end");
+        logger.trace("Client end");
     }
 
     public void testBasicSelect_Node(String[] args) throws Exception {
@@ -122,18 +122,18 @@ public class SimpleSelectITest {
 
                 oldSize = newSize;
                 newSize = getNodeDbRowsCount(node, tableName);
-                logger.info("count=" + count + " oldSize=" + oldSize + " newSize=" + newSize);
+                logger.trace("count=" + count + " oldSize=" + oldSize + " newSize=" + newSize);
             }
 
             // check correctness and integrity of data
             int nodeId = getNodeIdFromIps(getMasterIpFromParams(args), getMyIpFromParams(args));
-            logger.info(String.valueOf(nodeId));
+            logger.trace(String.valueOf(nodeId));
             List<Object[]> dataFromNode = getDataFromNodeDb(node, tableName);
             for (Object[] row : dataFromNode) {
-                logger.info(Helper.arrayToString(row));
+                logger.trace(Helper.arrayToString(row));
             }
             List<Integer> indexes = getDataIndexesPerNode(nodeId, nodesCount, replicationFactor, dataCount);
-            logger.info(Helper.collectionToString(indexes));
+            logger.trace(Helper.collectionToString(indexes));
             checkDataCorrectness(dataFromNode, tableName, testData);
 
         } finally {
@@ -141,7 +141,7 @@ public class SimpleSelectITest {
                 node.stopNode();
         }
 
-        logger.info("Node end");
+        logger.trace("Node end");
     }
 
     @Test

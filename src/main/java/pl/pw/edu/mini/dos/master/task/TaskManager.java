@@ -76,7 +76,7 @@ public class TaskManager {
                 logger.error("Unable to backup tasks:" + e.getMessage());
                 return;
             }
-            logger.info("Tasks backup created!");
+            logger.trace("Tasks backup created!");
         }
     }
 
@@ -97,7 +97,7 @@ public class TaskManager {
             }
             tasks = backup.getTasks();
             nextID = backup.getNextID();
-            logger.info("Tasks backup restored!");
+            logger.trace("Tasks backup restored!");
         }
     }
 }

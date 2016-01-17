@@ -52,7 +52,7 @@ public class NodeManager {
         newNode.setID(nodeId);
         registeredNodes.put(nodeId, newNode);
         try {
-            logger.info("Node registered. nNodes: " + registeredNodes.size()
+            logger.trace("Node registered. nNodes: " + registeredNodes.size()
                     + "  ip=" + RemoteServer.getClientHost()
                     + "  id=" + (registeredNodes.size() - 1));
         } catch (ServerNotActiveException e) {
@@ -255,7 +255,7 @@ public class NodeManager {
                 logger.error("Unable to backup registered nodes:" + e.getMessage());
                 return;
             }
-            logger.info("Registered nodes backup created!");
+            logger.trace("Registered nodes backup created!");
         }
     }
 
@@ -277,7 +277,7 @@ public class NodeManager {
             registeredNodes = backup.getRegisteredNodes();
             downNodes = backup.getDownNodes();
             nextNodeID = backup.getNextNodeID();
-            logger.info("Registered nodes backup restored!");
+            logger.trace("Registered nodes backup restored!");
         }
     }
 }

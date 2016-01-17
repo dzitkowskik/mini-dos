@@ -103,7 +103,7 @@ public class Node extends UnicastRemoteObject
         }
 
         node.stopNode();
-        logger.info("Node stopped!");
+        logger.trace("Node stopped!");
     }
 
     public void stopNode() {
@@ -136,7 +136,7 @@ public class Node extends UnicastRemoteObject
             Statement stmt = CCJSqlParserUtil.parse(executeSQLOnNodeRequest.getSql());
             SQLStatementVisitor visitor = new SQLStatementVisitor(master, this, taskId);
             stmt.accept(visitor);
-            logger.info("Sending result of query: " + visitor.getResult().getResult());
+            logger.trace("Sending result of query: " + visitor.getResult().getResult());
             return visitor.getResult();
         } catch (JSQLParserException e) {
             logger.error("Sql parsing error: {} - {}", e.getMessage(), e.getStackTrace());
@@ -175,7 +175,7 @@ public class Node extends UnicastRemoteObject
     @Override
     public ReplicateDataResponse replicateData(ReplicateDataRequest replicateDataRequest)
             throws RemoteException {
-        logger.info("Replicate data request");
+        logger.trace("Replicate data request");
         // Get the data
         List<String> tablesNames = new ArrayList<>(replicateDataRequest.getTablesRows().keySet());
 
@@ -289,7 +289,7 @@ public class Node extends UnicastRemoteObject
 
     @Override
     public ExecuteSqlResponse executeSql(ExecuteSqlRequest request) throws RemoteException {
-        logger.info("Got sql to execute: {}", request.getSql());
+        logger.trace("Got sql to execute: {}", request.getSql());
 
         // Create and shedule sqlite job to execute
         runningTasks.put(request.getTaskId(),
@@ -317,10 +317,10 @@ public class Node extends UnicastRemoteObject
         boolean error = TaskManager.getInstance().waitForCompletion(request.getTaskId());
         // Decide if order to commit or rollback
         if (error) {
-            logger.info("Coordinator: order to rollback");
+            logger.trace("Coordinator: order to rollback");
             return new AskToCommitResponse(false);
         } else {
-            logger.info("Coordinator: order to commit");
+            logger.trace("Coordinator: order to commit");
             return new AskToCommitResponse(true);
         }
     }

@@ -21,7 +21,7 @@ public class SingleTestRunner {
 
     public static void main(String... args) {
         String[] classAndMethod = args[0].split("#");
-        logger.info("Running " + classAndMethod[0] + "." + classAndMethod[1] + "("
+        logger.trace("Running " + classAndMethod[0] + "." + classAndMethod[1] + "("
                 + Helper.arrayToString(Arrays.copyOfRange(args, 1, args.length)) + ")...");
         try {
             Class c = Class.forName(classAndMethod[0]);

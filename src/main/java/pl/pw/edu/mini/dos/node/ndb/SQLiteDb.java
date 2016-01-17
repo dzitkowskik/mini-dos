@@ -86,7 +86,7 @@ public class SQLiteDb {
     public void close(Connection conn) {
         try {
             conn.close();
-            logger.info("Sqlite connection closed");
+            logger.trace("Sqlite connection closed");
         } catch (SQLException e) {
             logger.error("Error while closing sqlite connection: {}", e.getMessage());
         }

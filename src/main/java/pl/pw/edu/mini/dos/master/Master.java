@@ -58,7 +58,7 @@ public class Master
         // RMI server
         server = new RMIServer(host, port);
         server.startService(Services.MASTER, this);
-        logger.info("Master listening at (" + host + ":" + port + ")");
+        logger.trace("Master listening at (" + host + ":" + port + ")");
 
         // Ping nodes periodically
         long spanTime = Long.parseLong(config.getProperty("spanPingingTime"));
@@ -112,7 +112,7 @@ public class Master
         }
 
         master.stopMaster();
-        logger.info("Master stopped!");
+        logger.trace("Master stopped!");
     }
 
     public void stopMaster() {
@@ -229,7 +229,7 @@ public class Master
             throws RemoteException {
         // Get create tables and node that have the data
         List<String> tables = selectMetadataRequest.getTables();
-        logger.info("Get metadata select request for tables: " + Helper.collectionToString(tables));
+        logger.trace("Get metadata select request for tables: " + Helper.collectionToString(tables));
         if (tables == null || tables.size() == 0) {
             return new SelectMetadataResponse(null, null, ErrorEnum.ANOTHER_ERROR);
         }
@@ -240,7 +240,7 @@ public class Master
             if (createTableStatements == null || nodesIDs == null) {
                 return new SelectMetadataResponse(null, null, ErrorEnum.TABLE_NOT_EXIST);
             }
-            logger.info("Nodes which have table " + table + ": " + Helper.collectionToString(nodesIDs));
+            logger.trace("Nodes which have table " + table + ": " + Helper.collectionToString(nodesIDs));
             List<NodeNodeInterface> nodesInterfaces = new ArrayList<>(nodesIDs.size());
             for (Integer nodeID : nodesIDs) {
                 NodeNodeInterface nodeInterface = (NodeNodeInterface) nodeManager.getNodeInterface(nodeID);
@@ -267,7 +267,7 @@ public class Master
             return new UpdateMetadataResponse(null, ErrorEnum.TABLE_NOT_EXIST);
         }
 
-        logger.info("Nodes which have the data: " + Helper.collectionToString(nodesIDs));
+        logger.trace("Nodes which have the data: " + Helper.collectionToString(nodesIDs));
         List<NodeNodeInterface> nodesInterfaces = new ArrayList<>(nodesIDs.size());
         for (Integer nodeID : nodesIDs) {
             NodeNodeInterface nodeInterface = (NodeNodeInterface) nodeManager.getNodeInterface(nodeID);
@@ -287,7 +287,7 @@ public class Master
         if (nodesIDs == null) {
             return new DeleteMetadataResponse(null, ErrorEnum.TABLE_NOT_EXIST);
         }
-        logger.info("Nodes which have the data: " + Helper.collectionToString(nodesIDs));
+        logger.trace("Nodes which have the data: " + Helper.collectionToString(nodesIDs));
         List<NodeNodeInterface> nodesInterfaces = new ArrayList<>(nodesIDs.size());
         for (Integer nodeID : nodesIDs) {
             NodeNodeInterface nodeInterface = (NodeNodeInterface) nodeManager.getNodeInterface(nodeID);
@@ -320,7 +320,7 @@ public class Master
         do {
             RegisteredNode node = nodeManager.selectCoordinatorNode();
             Long taskID = taskManager.newTask(node.getID());
-            logger.info("New task " + taskID + ". Coordinator node: " + node.getID());
+            logger.trace("New task " + taskID + ". Coordinator node: " + node.getID());
             try {
                 result = node.getInterface().executeSQLOnNode(
                         new ExecuteSQLOnNodeRequest(taskID, executeSQLRequest.getSql()));
@@ -330,7 +330,7 @@ public class Master
             }
             switch (result.getError()) {
                 case NO_ERROR:
-                    logger.info("Task finised");
+                    logger.trace("Task finised");
                     taskManager.setFinishedTask(taskID);
                     finish = true;
                     break;
@@ -352,7 +352,7 @@ public class Master
                     }
             }
         } while (!finish);
-        logger.info("Send response to client:" + result.getResult());
+        logger.trace("Send response to client:" + result.getResult());
         return new ExecuteSQLResponse(result);
     }
 
@@ -365,7 +365,7 @@ public class Master
      */
     @SuppressWarnings("ConstantConditions")
     public void unregisterNode(RegisteredNode node) {
-        logger.info("Unregistering node " + node.getID());
+        logger.trace("Unregistering node " + node.getID());
         // Get tables and rowsIDs that node had
         Map<String, List<Long>> tablesRows = dbManager.getDataNodeHas(node);
         // Unregister node in master
@@ -386,7 +386,7 @@ public class Master
      */
     @SuppressWarnings("ConstantConditions")
     public void updateTablesNode(RegisteredNode node) {
-        logger.info("Update tables of node " + node.getID());
+        logger.trace("Update tables of node " + node.getID());
         // Send request to update the tables of node
         List<String> createTables = dbManager.getCreateTableStatements();
         UpdateTablesResponse response = null;
@@ -396,7 +396,7 @@ public class Master
             logger.error("Cannot update tables: {}", e.getMessage());
         }
         if (response.getError().equals(ErrorEnum.NO_ERROR)) {
-            logger.info("Tables from node " + node.getID() + " was updated successfully.");
+            logger.trace("Tables from node " + node.getID() + " was updated successfully.");
         } else {
             logger.error("Error at updating tables: " + response.getError());
         }
@@ -450,7 +450,7 @@ public class Master
                 dbManager.insertRow(rowId, table, nodesIds);
             }
         }
-        logger.info("Data was replicated successfully.");
+        logger.trace("Data was replicated successfully.");
         return true;
     }
 }

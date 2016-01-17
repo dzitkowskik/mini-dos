@@ -32,7 +32,7 @@ public class ClientMasterSimpleITest {
      * @throws Exception
      */
     public void testBasicCommunication_Client(String[] args) throws Exception {
-        logger.info("Client started");
+        logger.trace("Client started");
 
         // DockerRunner give network configuration as command line params on default
         // Here we just read it and use to start Client
@@ -44,7 +44,7 @@ public class ClientMasterSimpleITest {
 
         // so we communicated, that's it, finish
         client.stopClient();
-        logger.info("Client stopped.");
+        logger.trace("Client stopped.");
     }
 
     /**

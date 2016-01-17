@@ -59,7 +59,7 @@ public class SQLStatementVisitor implements StatementVisitor {
     @SuppressWarnings("ConstantConditions")
     @Override
     public void visit(Select select) {
-        logger.info("Coordinator node: select request");
+        logger.trace("Coordinator node: select request");
         String selectStatement = select.toString();
         logger.debug(selectStatement);
 
@@ -171,14 +171,14 @@ public class SQLStatementVisitor implements StatementVisitor {
             return;
         }
 
-        logger.info("Coordinator node: select proccessed!");
+        logger.trace("Coordinator node: select proccessed!");
         this.result = new ExecuteSQLOnNodeResponse(result, error);
     }
 
     @Override
     public void visit(Delete delete) {
         String requestName = "delete from table";
-        logger.info("Coordinator node: delete request");
+        logger.trace("Coordinator node: delete request");
         // Get table name
         String tableName = delete.getTable().getName();
         logger.debug("Delete data from table " + tableName);
@@ -223,7 +223,7 @@ public class SQLStatementVisitor implements StatementVisitor {
     @Override
     public void visit(Update update) {
         String requestName = "update in table";
-        logger.info("Coordinator node: update request");
+        logger.trace("Coordinator node: update request");
 
         // Get table names
         List<String> tableNames = update.getTables().stream().map(Table::getName).collect(Collectors.toList());
@@ -285,7 +285,7 @@ public class SQLStatementVisitor implements StatementVisitor {
     @Override
     public void visit(Insert insert) {
         String requestName = "insert to table";
-        logger.info("Coordinator node: insert request");
+        logger.trace("Coordinator node: insert request");
         // Get table name
         String tableName = insert.getTable().getName();
         logger.debug("Insert data in table " + tableName);
@@ -473,7 +473,7 @@ public class SQLStatementVisitor implements StatementVisitor {
             this.result = new ExecuteSQLOnNodeResponse(errString, error);
             return;
         }
-        logger.info("Coordinator node: {} request END", requestName);
+        logger.trace("Coordinator node: {} request END", requestName);
         this.result = new ExecuteSQLOnNodeResponse(requestName + " SUCCESS", error);
     }
 
@@ -482,7 +482,7 @@ public class SQLStatementVisitor implements StatementVisitor {
             String tableName,
             String sql
     ) {
-        logger.info("Coordinator node: {} request START", requestName);
+        logger.trace("Coordinator node: {} request START", requestName);
 
         TableMetadataResponse tableMetadataResponse;
         try {
