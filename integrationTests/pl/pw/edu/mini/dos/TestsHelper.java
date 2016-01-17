@@ -190,7 +190,8 @@ public class TestsHelper {
         }
 
         for (int i = 0; i < dataCount; i++) {
-            String rowFromClient = convertDataToCommand(rows[i].split(", "), tableName, true);
+            String rowFromClient = convertDataToCommand(rows[i].split(", "), tableName);
+            logger.trace("rowFromClient = " + rowFromClient);
             int index = testData.insertTableCommands.indexOf(rowFromClient);
             assertTrue("Not found: " + rowFromClient, -1 < index); // exists
             assertTrue(index < dataCount); // in test's subset
@@ -205,12 +206,26 @@ public class TestsHelper {
 
         logger.trace("Send: " + sql);
         String result = client.executeSQL(sql + " ORDER BY 1, 2");
+        result = removeLastTwoColumns(result);
 
         logger.trace("Get:" + result);
         logger.trace("Expected:" + resultExpected);
         assertEquals("sql= " + sql, resultExpected, result);
 
-        return new String[] {resultExpected, result};
+        return new String[]{resultExpected, result};
+    }
+
+    public static String removeLastTwoColumns(String data) {
+        String[] rows = data.split(System.lineSeparator());
+
+        for (int i = 0; i < rows.length; i++) {
+            if (rows[i].length() < 1) i++;
+            int indexOfFirstComma = rows[i].lastIndexOf(",");
+            if (indexOfFirstComma == -1) continue;
+            int indexOfSecondComma = rows[i].lastIndexOf(",", indexOfFirstComma-1);
+            rows[i] = rows[i].substring(0, indexOfSecondComma) + "]";
+        }
+        return Helper.arrayToString(rows, System.lineSeparator());
     }
 
     public static void runQuery(
