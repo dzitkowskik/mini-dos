@@ -40,18 +40,26 @@ public class SimpleDeleteITest {
 
         // send command to Master
         for (String cmd : testData.createTableCommands) {
+            logger.info("Send to Master: " + cmd);
             runQuery(client, testDb, cmd);
         }
         for (int i = 0; i < settings.dataCount; i++) {
+            logger.info(String.format("#%d Send to Master: %s", i,
+                    testData.insertTableCommands.get(i)));
             runQuery(client, testDb, testData.insertTableCommands.get(i));
         }
         logger.trace("===== end adding data =====");
+
+        logger.info("Checking data...");
         String result = client.executeSQL("SELECT * FROM " + testData.getTableNames()[0]);
         logger.trace(result);
 
         checkDataCorrectness(result, testData.getTableNames()[0], testData, settings.dataCount);
+        logger.info("Data is OK.");
 
+        logger.info("Checking delete queries...");
         checkDelete(client, testDb, testData, settings);
+        logger.info("Test delete finished.");
 
         client.stopClient();
         logger.trace("Client end");
@@ -92,6 +100,7 @@ public class SimpleDeleteITest {
             }
 
             // execute query
+            logger.info(String.format("    #%d Send to Master: %s", i, sql));
             runQuery(client, testDb, sql);
 
         }

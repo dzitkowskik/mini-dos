@@ -48,6 +48,7 @@ public class SimpleSelectITest {
         Master master = new Master(getMyIpFromParams(args),
                 Integer.valueOf(getMasterPortFromParams(args)));
 
+        logger.info("Mocking Master...");
         // set my testLowBalancer
         TestNodeManager nodeManager = new TestNodeManager(replicationFactor);
         MasterDecapsulation.setNodeManager(master, nodeManager);
@@ -58,8 +59,10 @@ public class SimpleSelectITest {
         Thread pingThread = new Thread(new PingNodes(master, nodeManager, spanTime));
         pingThread.start();
         MasterDecapsulation.setPingThread(master, pingThread);
+        logger.info("Master mocked.");
 
         // wait
+        logger.info("Master is waiting for request...");
         Scanner scanner = new Scanner(System.in);
         scanner.hasNext();
 
@@ -77,18 +80,21 @@ public class SimpleSelectITest {
 
         // send command to Master
         for (String cmd : testData.createTableCommands) {
-            logger.trace("Send:" + cmd);
+            logger.info("Send to Master: " + cmd);
             client.executeSQL(cmd);
         }
         for (int i = 0; i < dataCount; i++) {
-            logger.trace("Send:" + testData.insertTableCommands.get(i));
+            logger.info(String.format("#%d Send to Master: %s", i,
+                    testData.insertTableCommands.get(i)));
             client.executeSQL(testData.insertTableCommands.get(i));
         }
 
+        logger.info("Checking data...");
         String result = client.executeSQL("SELECT * FROM " + testData.getTableNames()[0]);
         logger.trace(result);
 
         checkDataCorrectness(result, testData.getTableNames()[0], testData, dataCount);
+        logger.info("Data is OK.");
 
         client.stopClient();
         logger.trace("Client end");
@@ -99,6 +105,7 @@ public class SimpleSelectITest {
         try {
             node = new Node(getMasterIpFromParams(args),
                     getMasterPortFromParams(args), getMyIpFromParams(args));
+            logger.info("Node is waiting for request...");
 
             TestData testData = TestData.loadConfigTestDbFile(getMyParams(args)[0]);
             //int dataCount = testData.insertTableCommands.size();
@@ -126,6 +133,7 @@ public class SimpleSelectITest {
             }
 
             // check correctness and integrity of data
+            logger.info("Checking data...");
             int nodeId = getNodeIdFromIps(getMasterIpFromParams(args), getMyIpFromParams(args));
             logger.trace(String.valueOf(nodeId));
             List<Object[]> dataFromNode = getDataFromNodeDb(node, tableName);
@@ -135,6 +143,7 @@ public class SimpleSelectITest {
             List<Integer> indexes = getDataIndexesPerNode(nodeId, nodesCount, replicationFactor, dataCount);
             logger.trace(Helper.collectionToString(indexes));
             checkDataCorrectness(dataFromNode, tableName, testData);
+            logger.info("Data is OK.");
 
         } finally {
             if (node != null)

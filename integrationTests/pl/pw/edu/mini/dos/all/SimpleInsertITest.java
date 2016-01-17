@@ -48,6 +48,7 @@ public class SimpleInsertITest {
         Master master = new Master(getMyIpFromParams(args),
                 Integer.valueOf(getMasterPortFromParams(args)));
 
+        logger.info("Mocking Master...");
         // set my testLowBalancer
         TestNodeManager nodeManager = new TestNodeManager(replicationFactor);
         MasterDecapsulation.setNodeManager(master, nodeManager);
@@ -58,7 +59,9 @@ public class SimpleInsertITest {
         Thread pingThread = new Thread(new PingNodes(master, nodeManager, spanTime));
         pingThread.start();
         MasterDecapsulation.setPingThread(master, pingThread);
+        logger.info("Master mocked.");
 
+        logger.info("Master is waiting for request...");
         // wait
         Scanner scanner = new Scanner(System.in);
         scanner.hasNext();
@@ -77,17 +80,18 @@ public class SimpleInsertITest {
 
         // send command to Master
         for (String cmd : testData.createTableCommands) {
-            logger.trace("Send:" + cmd);
+            logger.info("Send to Master: " + cmd);
             client.executeSQL(cmd);
         }
         for (int i = 0; i < dataCount; i++) {
-            logger.trace("Send:" + testData.insertTableCommands.get(i));
+            logger.info(String.format("#%d Send to Master: %s", i,
+                    testData.insertTableCommands.get(i)));
             client.executeSQL(testData.insertTableCommands.get(i));
             Sleep(oneCmdTime);  // it's needed for prediction loadBalancer
         }
 
         client.stopClient();
-        logger.trace("Client end");
+        logger.info("Client end.");
     }
 
     public void testBasicInsert_Node(String[] args) throws Exception {
@@ -95,6 +99,7 @@ public class SimpleInsertITest {
         try {
             node = new Node(getMasterIpFromParams(args),
                     getMasterPortFromParams(args), getMyIpFromParams(args));
+            logger.info("Node is waiting for request...");
 
             TestData testData = TestData.loadConfigTestDbFile(getMyParams(args)[0]);
             //int dataCount = testData.insertTableCommands.size();
@@ -122,6 +127,7 @@ public class SimpleInsertITest {
             }
 
             // check correctness and integrity of data
+            logger.info("Checking data...");
             int nodeId = getNodeIdFromIps(getMasterIpFromParams(args), getMyIpFromParams(args));
             logger.trace(String.valueOf(nodeId));
             List<Object[]> dataFromNode = getDataFromNodeDb(node, tableName);
@@ -132,6 +138,7 @@ public class SimpleInsertITest {
             logger.trace(Helper.collectionToString(indexes));
             checkDataCorrectness(dataFromNode, tableName, testData);
             checkDataIntegrity(indexes, dataFromNode);
+            logger.info("Data is OK.");
 
         } finally {
             if (node != null)

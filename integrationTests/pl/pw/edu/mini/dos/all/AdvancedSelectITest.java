@@ -40,22 +40,29 @@ public class AdvancedSelectITest {
 
         // send cmd to Master and run cmd on local test database
         for (String cmd : testData.createTableCommands) {
+            logger.info("Send to Master: " + cmd);
             runQuery(client, testDb, cmd);
         }
         for (int i = 0; i < settings.dataCount; i++) {
+            logger.info(String.format("#%d Send to Master: %s", i,
+                    testData.insertTableCommands.get(i)));
             runQuery(client, testDb, testData.insertTableCommands.get(i));
         }
 
         // check all data
+        logger.info("Checking data...");
         String sqlGetAll = "SELECT * FROM " + testData.getTableNames()[0];
         String result = client.executeSQL(sqlGetAll);
         logger.trace(result);
 
         checkDataCorrectness(result, testData.getTableNames()[0], testData, settings.dataCount);
         checkQuery(client, testDb, sqlGetAll);
+        logger.info("Data is OK.");
 
         // test select with where randomly
+        logger.info("Checking select where quries...");
         checkWhere(client, testDb, testData, true, settings);
+        logger.info("Test select where finished.");
 
         client.stopClient();
         logger.trace("Client end");
@@ -92,6 +99,7 @@ public class AdvancedSelectITest {
             }
 
             // execute query
+            logger.info(String.format("    #%d Send to Master: %s", i, sql));
             String[] tmp = checkQuery(client, testDb, sql);
             /*String result = tmp[1];
 
