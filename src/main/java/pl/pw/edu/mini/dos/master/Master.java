@@ -277,7 +277,7 @@ public class Master
             logger.info("New task " + taskID + ". Coordinator node: " + node.getID());
             try {
                 result = node.getInterface().executeSQLOnNode(
-                        new ExecuteSQLOnNodeRequest(taskID, executeSQLRequest.getSql().toUpperCase()));
+                        new ExecuteSQLOnNodeRequest(taskID, executeSQLRequest.getSql()));
             } catch (RemoteException e) {
                 logger.error("Cannot execute sql in node");
                 continue;
