@@ -206,6 +206,7 @@ public class Master
         List<RegisteredNode> nodes = nodeManager.selectNodesInsert();
         if (nodes == null) {
             // Number of available nodes less than replication factor
+            logger.error("Cannot inert data, not enought nodes available.");
             return new InsertMetadataResponse(null, null, ErrorEnum.NOT_ENOUGH_NODES);
         }
         // Insert row metadata (RowId, TableId, NodesIds)
@@ -319,6 +320,12 @@ public class Master
         ExecuteSQLOnNodeResponse result = null;
         do {
             RegisteredNode node = nodeManager.selectCoordinatorNode();
+            if(node == null) {
+                // 0 nodes available
+                logger.error("No nodes avaible");
+                result = new ExecuteSQLOnNodeResponse("", ErrorEnum.NO_NODES_AVAILABLE);
+                break;
+            }
             Long taskID = taskManager.newTask(node.getID());
             logger.info("New task " + taskID + ". Coordinator node: " + node.getID());
             try {
@@ -373,8 +380,11 @@ public class Master
         dbManager.removeRecordsOfNode(node);
         // Send task to replicate data
         List<RegisteredNode> newNode = nodeManager.selectNodesInsert();
-        if(newNode != null && newNode.size() > 0){
+        if(newNode != null){
             replicateDataToNode(tablesRows, newNode.get(0));
+        } else {
+            logger.error("Data of node " + node.getID()
+                    + " has not been replicated. Not enough nodes available.");
         }
     }
 
