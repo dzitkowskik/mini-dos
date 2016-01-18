@@ -71,11 +71,11 @@ public class ImDBmanager {
             createTable += rs.getColumnsNames().get(c) + " " + rs.getColumnsTypes().get(c) + ", ";
         }
         // rowID
-        createTable += rs.getColumnsNames().get(c) + " " + rs.getColumnsTypes().get(c) + " PRIMARY KEY, ";
+        createTable += rs.getColumnsNames().get(c) + " " + rs.getColumnsTypes().get(c) + ", ";
         c++;
         // version
         createTable += rs.getColumnsNames().get(c) + " " + rs.getColumnsTypes().get(c);
-        createTable += ")WITHOUT ROWID;";
+        createTable += ");";
         logger.debug("Create received table: " + createTable);
 
         //Create table
