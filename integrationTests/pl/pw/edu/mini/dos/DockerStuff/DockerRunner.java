@@ -180,7 +180,7 @@ public class DockerRunner {
     }
 
     public void waitForThreads() {
-        logger.info("Waiting for threads...");
+        logger.trace("Waiting for threads...");
         for (Thread thread : threadList) {
             try {
                 thread.join();
@@ -191,7 +191,7 @@ public class DockerRunner {
     }
 
     public void stopThreads() {
-        logger.info("Killing all threads...");
+        logger.trace("Killing all threads...");
         String lastIp = nextIp;
 
         String ip = masterIp;
@@ -220,7 +220,7 @@ public class DockerRunner {
         } catch (IOException | InterruptedException e) {
             logger.error(e.getMessage());
         }
-        logger.info("Threads killed. NextIp=" + nextIp);
+        logger.trace("Threads killed. NextIp=" + nextIp);
     }
 
     String getCurrentIp() {
@@ -233,11 +233,11 @@ public class DockerRunner {
             List<String> out = BashRunner.runCommandForResult(cmd);
             Pattern pattern = Pattern.compile("\\b\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\b");
             Matcher matcher = pattern.matcher(out.get(1));
-            //logger.info("out[1]:" + out.get(1));
+            //logger.trace("out[1]:" + out.get(1));
             if (matcher.find()) {
-                //logger.info(matcher.group());
+                //logger.trace(matcher.group());
                 ip = matcher.group();
-                logger.info("Current ip = " + ip);
+                logger.trace("Current ip = " + ip);
             }
 
         } catch (Throwable t) {

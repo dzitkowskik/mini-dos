@@ -32,7 +32,7 @@ public class TestNodeManager extends NodeManager {
             RegisteredNode tmp = nodes.remove(0);
             nodes.add(tmp);
         }
-        logger.info(Helper.collectionToString(nodes));
+        logger.trace(Helper.collectionToString(nodes));
 
         j++;
         return nodes;

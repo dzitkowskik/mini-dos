@@ -23,13 +23,13 @@ public class NodeMasterSimpleITest {
     private static final Logger logger = LoggerFactory.getLogger(NodeMasterSimpleITest.class);
 
     public void testBasicCommunication_Node(String[] args) throws Exception {
-        logger.info("Node started");
+        logger.trace("Node started");
         Node node = new Node(getMasterIpFromParams(args),
                 getMasterPortFromParams(args), getMyIpFromParams(args));
 
         assertNotNull(node.master);
         node.stopNode();
-        logger.info("Node stopped.");
+        logger.trace("Node stopped.");
     }
 
     @Test

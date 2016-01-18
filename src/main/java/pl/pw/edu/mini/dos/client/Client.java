@@ -64,7 +64,7 @@ public class Client {
         }
 
         client.stopClient();
-        logger.info("Client stopped!");
+        logger.trace("Client stopped!");
     }
 
     public String executeSQL(String sql) {

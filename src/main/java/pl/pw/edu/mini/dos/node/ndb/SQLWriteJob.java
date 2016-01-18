@@ -26,7 +26,7 @@ public class SQLWriteJob implements Callable<GetSqlResultResponse> {
 
     @Override
     public GetSqlResultResponse call() throws Exception {
-        logger.info("Start executing SQLite write job");
+        logger.trace("Start executing SQLite write job");
         logger.debug("Run: " + request.getSql());
 
         String result = "";
@@ -56,10 +56,10 @@ public class SQLWriteJob implements Callable<GetSqlResultResponse> {
             // Commit or abort
             if (askToCommitResponse.isCommit()) {
                 conn.commit();
-                logger.info("DB commited");
+                logger.trace("DB commited");
             } else {
                 conn.rollback();
-                logger.info("DB rollbacked");
+                logger.trace("DB rollbacked");
             }
         } catch (RemoteException e) {
             logger.error("Error while asking to commit: {}", e.getMessage());
@@ -75,7 +75,7 @@ public class SQLWriteJob implements Callable<GetSqlResultResponse> {
                 errorCode = ErrorEnum.SQL_EXECUTION_ERROR;
             }
         }
-        logger.info("SQLite write job finished");
+        logger.trace("SQLite write job finished");
         logger.debug("Result: " + result);
         return new GetSqlResultResponse(result, errorCode);
     }

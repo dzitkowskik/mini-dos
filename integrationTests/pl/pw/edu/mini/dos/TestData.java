@@ -68,7 +68,7 @@ public class TestData {
 
     public String getRandomValueFromColumn(int columnIndex, int dataCount) {
         int rowId = rand.nextInt(dataCount);
-        logger.info("Random rowId= " + rowId);
+        logger.trace("Random rowId= " + rowId);
         return insertTableCommands.get(rowId).split("\"")[columnIndex * 2 + 1];
     }
 
@@ -95,7 +95,7 @@ public class TestData {
 
         URL path = Helper.getResources(TestData.class, filename);
         assertNotNull(path);
-        logger.info(path.getFile());
+        logger.trace(path.getFile());
         File file = new File(path.getFile());
 
         try {
@@ -110,7 +110,7 @@ public class TestData {
         } catch (IOException e) {
             logger.error(e.getMessage());
         }
-        logger.info(Helper.collectionToString(commands));
+        logger.trace(Helper.collectionToString(commands));
         return new TestData(commands);
     }
 

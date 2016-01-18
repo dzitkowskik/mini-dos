@@ -40,7 +40,7 @@ public class RMIServer {
         if (pathToPolicy != null) {
             System.setProperty("java.security.policy", pathToPolicy);
         }
-        logger.info("Set client.policy to " + pathToPolicy);
+        logger.trace("Set client.policy to " + pathToPolicy);
     }
 
     private void checkPermission() {
@@ -55,12 +55,12 @@ public class RMIServer {
         try {
             registry = LocateRegistry.getRegistry(host, registryPort);
             logger.debug(Arrays.toString(registry.list()));
-            logger.info("Registry obtained");
+            logger.trace("Registry obtained");
         } catch (Exception e) {
             try {
-                logger.info("Registry not found, creating registry");
+                logger.trace("Registry not found, creating registry");
                 registry = LocateRegistry.createRegistry(registryPort);
-                logger.info("Registry created");
+                logger.trace("Registry created");
             } catch (RemoteException e1) {
                 ErrorHandler.handleError(e1, true);
             }
@@ -70,7 +70,7 @@ public class RMIServer {
     public <T extends Remote> void startService(String serviceName, T service) {
         try {
             registry.rebind(serviceName, service);
-            logger.info(serviceName + " bound and listening for task...");
+            logger.trace(serviceName + " bound and listening for task...");
         } catch (RemoteException e) {
             ErrorHandler.handleError(e, false);
         }
@@ -80,7 +80,7 @@ public class RMIServer {
         try {
             registry.unbind(serviceName);
             UnicastRemoteObject.unexportObject(service, false);
-            logger.info("Service " + serviceName + " stopped.");
+            logger.trace("Service " + serviceName + " stopped.");
         } catch (RemoteException | NotBoundException e) {
             ErrorHandler.handleError(e, false);
         }

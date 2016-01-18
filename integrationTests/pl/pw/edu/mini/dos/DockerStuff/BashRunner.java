@@ -66,7 +66,7 @@ public class BashRunner {
     }
 
     public static int runCommand(String[] cmd, String prefix) throws IOException, InterruptedException {
-        logger.info("Executing " + Helper.arrayToString(cmd));
+        logger.trace("Executing " + Helper.arrayToString(cmd));
         Runtime rt = Runtime.getRuntime();
         Process proc = rt.exec(cmd);
         // any error message?
@@ -84,12 +84,12 @@ public class BashRunner {
         // any error???
         int exitVal = proc.waitFor();
         TestsHelper.Sleep(0, 100);
-        //logger.info("ExitValue: " + exitVal);
+        //logger.trace("ExitValue: " + exitVal);
         return exitVal;
     }
 
     public static List<String> runCommandForResult(String[] cmd) throws IOException, InterruptedException {
-        logger.info("Executing2 " + Helper.arrayToString(cmd));
+        logger.trace("Executing2 " + Helper.arrayToString(cmd));
         Runtime rt = Runtime.getRuntime();
         Process proc = rt.exec(cmd);
         // any error message?
@@ -106,7 +106,7 @@ public class BashRunner {
 
         // any error???
         int exitVal = proc.waitFor();
-        //logger.info("ExitValue: " + exitVal);
+        //logger.trace("ExitValue: " + exitVal);
         assertEquals(0, exitVal);
 
         return outputGobbler.out;

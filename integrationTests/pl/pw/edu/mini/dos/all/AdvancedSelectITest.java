@@ -35,8 +35,8 @@ public class AdvancedSelectITest {
         // load command
         TestData testData = TestData.loadConfigTestDbFile(configTestFilename1);
         TestDbManager testDb = new TestDbManager();
-        logger.info("cmd=" + testData);
-        logger.info("cmd.len=" + testData.insertTableCommands.size());
+        logger.trace("cmd=" + testData);
+        logger.trace("cmd.len=" + testData.insertTableCommands.size());
 
         // send cmd to Master and run cmd on local test database
         for (String cmd : testData.createTableCommands) {
@@ -49,7 +49,7 @@ public class AdvancedSelectITest {
         // check all data
         String sqlGetAll = "SELECT * FROM " + testData.getTableNames()[0];
         String result = client.executeSQL(sqlGetAll);
-        logger.info(result);
+        logger.trace(result);
 
         checkDataCorrectness(result, testData.getTableNames()[0], testData, settings.dataCount);
         checkQuery(client, testDb, sqlGetAll);
@@ -58,13 +58,13 @@ public class AdvancedSelectITest {
         checkWhere(client, testDb, testData, true, settings);
 
         client.stopClient();
-        logger.info("Client end");
+        logger.trace("Client end");
     }
 
     private void checkWhere(Client client, TestDbManager testDb, TestData testData,
                             boolean testGroupBy, Settings settings)
             throws SQLException {
-        logger.info("============================== Where tests ==============================");
+        logger.trace("============================== Where tests ==============================");
 
         long seed = 345;
         Random rand = new Random(seed);
@@ -100,7 +100,7 @@ public class AdvancedSelectITest {
                 checkGroupBy(client, testDb, testData, sql, tableName);
             }*/
         }
-        logger.info("============================= Where tests end =============================");
+        logger.trace("============================= Where tests end =============================");
     }
 
     // I had problem with group by, because databases have different way to group data

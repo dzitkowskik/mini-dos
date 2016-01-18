@@ -27,7 +27,7 @@ public class SQLReadJob implements Callable<GetSqlResultResponse> {
 
     @Override
     public GetSqlResultResponse call() throws Exception {
-        logger.info("Start executing SQLite read job");
+        logger.trace("Start executing SQLite read job");
         logger.debug("Run: " + request.getSql());
 
         String result = "";
@@ -51,7 +51,7 @@ public class SQLReadJob implements Callable<GetSqlResultResponse> {
                 errorCode = ErrorEnum.SQL_EXECUTION_ERROR;
             }
         }
-        logger.info("SQLite read job finished");
+        logger.trace("SQLite read job finished");
         logger.debug(rs == null ? "rs=null" : rs.toString());
         return new GetSqlResultResponse(result, rs, errorCode);
     }

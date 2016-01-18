@@ -97,12 +97,12 @@ public class TestsHelper {
             out = BashRunner.runCommandForResult(cmd);
             while (out.size() == 0) TestsHelper.Sleep(0, 100);
 
-            logger.info("out=" + out);
+            logger.trace("out=" + out);
             Pattern pattern = Pattern.compile("\\b\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\b");
             Matcher matcher = pattern.matcher(out.get(1));
-            //logger.info("out[1]:" + out.get(1));
+            //logger.trace("out[1]:" + out.get(1));
             if (matcher.find()) {
-                //logger.info(matcher.group());
+                //logger.trace(matcher.group());
                 ip = matcher.group();
             }
             if (!ipExpected.equals(ip)) {
@@ -110,7 +110,7 @@ public class TestsHelper {
                         " Check docker configuration.");
                 return false;
             } else {
-                logger.info("TestIp passed. (" + ip + " == " + ipExpected + ")");
+                logger.trace("TestIp passed. (" + ip + " == " + ipExpected + ")");
                 return true;
             }
         } catch (IOException | InterruptedException e) {
@@ -199,15 +199,15 @@ public class TestsHelper {
 
     public static String[] checkQuery(
             Client client, TestDbManager testDb, String sql) throws SQLException {
-        logger.info("Checking query: " + sql);
+        logger.trace("Checking query: " + sql);
         SerializableResultSet rs = testDb.executeQuery(sql + " ORDER BY 1, 2");
         String resultExpected = buildString(rs.getData());
 
-        logger.info("Send: " + sql);
+        logger.trace("Send: " + sql);
         String result = client.executeSQL(sql + " ORDER BY 1, 2");
 
-        logger.info("Get:" + result);
-        logger.info("Expected:" + resultExpected);
+        logger.trace("Get:" + result);
+        logger.trace("Expected:" + resultExpected);
         assertEquals("sql= " + sql, resultExpected, result);
 
         return new String[] {resultExpected, result};
@@ -215,10 +215,10 @@ public class TestsHelper {
 
     public static void runQuery(
             Client client, TestDbManager testDb, String sql) throws SQLException {
-        logger.info("Checking query: " + sql);
+        logger.trace("Checking query: " + sql);
         testDb.executeUpdate(sql);
 
-        logger.info("Send:" + sql);
+        logger.trace("Send:" + sql);
         client.executeSQL(sql);
     }
 
