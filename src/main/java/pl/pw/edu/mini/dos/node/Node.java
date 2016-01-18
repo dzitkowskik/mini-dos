@@ -59,7 +59,7 @@ public class Node extends UnicastRemoteObject
     public Node(String masterHost, String masterPort, String myIp, String dbName) throws RemoteException {
         System.setProperty("java.rmi.server.hostname", myIp);
 
-        this.dbName = dbName + ".db";
+        this.dbName = dbName;
         dbManager = new DBmanager(this.dbName); // Manager for persistent db
 
         // Create thread pool
@@ -85,6 +85,10 @@ public class Node extends UnicastRemoteObject
         try {
             if (args.length == 4) {
                 node = new Node(args[0], args[1], args[2], args[3]);
+            } else if (args.length == 3) {
+                node = new Node(args[0], args[1], args[2]);
+            } else if (args.length == 1) {
+                node = new Node(args[0]);
             } else {
                 node = new Node();
             }
@@ -133,7 +137,7 @@ public class Node extends UnicastRemoteObject
     private static String randomDbName(){
         Random r = new Random();
         int random = r.nextInt(1000);
-        return random + "node";
+        return random + "node.db";
     }
 
     public boolean isStop() {

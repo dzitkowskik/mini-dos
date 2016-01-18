@@ -229,12 +229,12 @@ public class ImDBmanager {
         SerializableResultSet resultSet = executeSelectRaw(select);
         boolean hasRowIDVersion =
                 resultSet.getColumnsNames().get(resultSet.getColumnCount() - 1).equals("version") &&
-                        resultSet.getColumnsNames().get(resultSet.getColumnCount() - 1).equals("row_id");
+                        resultSet.getColumnsNames().get(resultSet.getColumnCount() - 2).equals("row_id");
         // Build string
         String result = "\nData (" + resultSet.getData().size() + " rows):";
         for (Object[] o : resultSet.getData()) {
             if (hasRowIDVersion) {
-                o = Arrays.copyOfRange(o, 0, resultSet.getColumnCount() - 3);
+                o = Arrays.copyOfRange(o, 0, resultSet.getColumnCount() - 2);
             }
             result += "\n" + Arrays.toString(o);
         }
