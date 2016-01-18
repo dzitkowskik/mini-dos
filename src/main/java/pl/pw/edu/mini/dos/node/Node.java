@@ -46,7 +46,11 @@ public class Node extends UnicastRemoteObject
     private boolean stop = false;
 
     public Node() throws RemoteException {
-        this("127.0.0.1", "1099", "127.0.0.1", Node.randomDbName() + "");
+        this("127.0.0.1", "1099", "127.0.0.1", Node.randomDbName());
+    }
+
+    public Node(String masterHost, String masterPort, String myIp) throws RemoteException {
+        this(masterHost, masterPort, myIp, Node.randomDbName());
     }
 
     public Node(String masterHost, String masterPort, String myIp, String dbName) throws RemoteException {
