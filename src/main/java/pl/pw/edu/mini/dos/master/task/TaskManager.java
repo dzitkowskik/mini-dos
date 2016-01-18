@@ -1,7 +1,10 @@
 package pl.pw.edu.mini.dos.master.task;
 
-import pl.pw.edu.mini.dos.master.node.RegisteredNode;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import pl.pw.edu.mini.dos.master.backup.TaskManagerBackup;
 
+import java.io.*;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -9,6 +12,7 @@ import java.util.Map;
  * It manages all the tasks related with tasks.
  */
 public class TaskManager {
+    private static final Logger logger = LoggerFactory.getLogger(TaskManager.class);
     private Map<Long, Task> tasks;
     private Long nextID;
 
@@ -55,6 +59,46 @@ public class TaskManager {
      */
     public String select(Long taskID) {
         return tasks.get(taskID).toString() + "\n";
+    }
+
+    public void createBackup() {
+        synchronized (this) {
+            TaskManagerBackup backup = new TaskManagerBackup(tasks, nextID);
+            try {
+                File file = new File("backup_tasks.db");
+                FileOutputStream fos = new FileOutputStream(file);
+                ObjectOutputStream oos = new ObjectOutputStream(fos);
+                oos.writeObject(backup);
+                oos.flush();
+                oos.close();
+                fos.close();
+            } catch (IOException e) {
+                logger.error("Unable to backup tasks:" + e.getMessage());
+                return;
+            }
+            logger.trace("Tasks backup created!");
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    public void restoreBackup() {
+        synchronized (this) {
+            TaskManagerBackup backup;
+            try {
+                File file = new File("backup_tasks.db");
+                FileInputStream fis = new FileInputStream(file);
+                ObjectInputStream ois = new ObjectInputStream(fis);
+                backup = (TaskManagerBackup) ois.readObject();
+                ois.close();
+                fis.close();
+            } catch (IOException | ClassNotFoundException e) {
+                logger.error("Unable to backup tasks. " + e.getMessage());
+                return;
+            }
+            tasks = backup.getTasks();
+            nextID = backup.getNextID();
+            logger.trace("Tasks backup restored!");
+        }
     }
 }
 

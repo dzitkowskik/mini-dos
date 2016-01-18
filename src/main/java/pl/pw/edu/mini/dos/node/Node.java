@@ -39,7 +39,7 @@ public class Node extends UnicastRemoteObject
     private static final Config config = Config.getConfig();
 
     NodeMasterInterface master;
-    private DBmanager dbManager;
+    DBmanager dbManager;
     private ExecutorService workQueue;
     private Map<Long, Future<GetSqlResultResponse>> runningTasks;
     private int dbPrefix;
@@ -103,7 +103,7 @@ public class Node extends UnicastRemoteObject
         }
 
         node.stopNode();
-        logger.info("Node stopped!");
+        logger.trace("Node stopped!");
     }
 
     public void stopNode() {
@@ -136,7 +136,7 @@ public class Node extends UnicastRemoteObject
             Statement stmt = CCJSqlParserUtil.parse(executeSQLOnNodeRequest.getSql());
             SQLStatementVisitor visitor = new SQLStatementVisitor(master, this, taskId);
             stmt.accept(visitor);
-            logger.info("Sending result of query: " + visitor.getResult().getResult());
+            logger.trace("Sending result of query: " + visitor.getResult().getResult());
             return visitor.getResult();
         } catch (JSQLParserException e) {
             logger.error("Sql parsing error: {} - {}", e.getMessage(), e.getStackTrace());
@@ -175,7 +175,7 @@ public class Node extends UnicastRemoteObject
     @Override
     public ReplicateDataResponse replicateData(ReplicateDataRequest replicateDataRequest)
             throws RemoteException {
-        logger.info("Replicate data request");
+        logger.trace("Replicate data request");
         // Get the data
         List<String> tablesNames = new ArrayList<>(replicateDataRequest.getTablesRows().keySet());
 
@@ -276,16 +276,21 @@ public class Node extends UnicastRemoteObject
     }
 
     @Override
-    public ResetDataResponse resetData(ResetDataRequest resetDataRequest) throws RemoteException {
-        boolean ok;
-        ok = dbManager.dropTables(resetDataRequest.getTables());
-        ok &= dbManager.createTables(resetDataRequest.getCreateTableStatements());
-        return new ResetDataResponse(ok ? ErrorEnum.NO_ERROR : ErrorEnum.ANOTHER_ERROR);
+    public UpdateTablesResponse updateTables(UpdateTablesRequest updateTablesRequest) throws RemoteException {
+        boolean ok = dbManager.createTables(updateTablesRequest.getCreateTableStatements());
+        return new UpdateTablesResponse(ok ? ErrorEnum.NO_ERROR : ErrorEnum.ANOTHER_ERROR);
+    }
+
+    @Override
+    public UpdateMasterResponse updateMaster(UpdateMasterRequest updateMasterRequest) throws RemoteException {
+        this.master = updateMasterRequest.getMasterInterface();
+        return new UpdateMasterResponse(ErrorEnum.NO_ERROR);
     }
 
     @Override
     public ExecuteSqlResponse executeSql(ExecuteSqlRequest request) throws RemoteException {
-        logger.info("Got sql to execute: {}", request.getSql());
+        logger.trace("Got sql to execute: {}", request.getSql());
+
         // Create and shedule sqlite job to execute
         runningTasks.put(request.getTaskId(),
                 workQueue.submit(dbManager.newSQLJob(request)));
@@ -297,6 +302,7 @@ public class Node extends UnicastRemoteObject
             throws RemoteException, ExecutionException, InterruptedException {
         // Get runing task
         Future<GetSqlResultResponse> task = runningTasks.get(request.getTaskId());
+
         // Get result
         GetSqlResultResponse response = task.get();
         runningTasks.remove(request.getTaskId());
@@ -311,10 +317,10 @@ public class Node extends UnicastRemoteObject
         boolean error = TaskManager.getInstance().waitForCompletion(request.getTaskId());
         // Decide if order to commit or rollback
         if (error) {
-            logger.info("Coordinator: order to rollback");
+            logger.trace("Coordinator: order to rollback");
             return new AskToCommitResponse(false);
         } else {
-            logger.info("Coordinator: order to commit");
+            logger.trace("Coordinator: order to commit");
             return new AskToCommitResponse(true);
         }
     }

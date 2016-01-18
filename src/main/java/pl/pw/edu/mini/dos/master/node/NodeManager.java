@@ -5,8 +5,12 @@ import org.slf4j.LoggerFactory;
 import pl.pw.edu.mini.dos.communication.ErrorEnum;
 import pl.pw.edu.mini.dos.communication.masternode.KillNodeRequest;
 import pl.pw.edu.mini.dos.communication.masternode.MasterNodeInterface;
+import pl.pw.edu.mini.dos.master.backup.NodeManagerBackup;
 
+import java.io.*;
 import java.rmi.RemoteException;
+import java.rmi.server.RemoteServer;
+import java.rmi.server.ServerNotActiveException;
 import java.util.*;
 
 /**
@@ -14,10 +18,10 @@ import java.util.*;
  */
 public class NodeManager {
     private static final Logger logger = LoggerFactory.getLogger(NodeManager.class);
-    final Map<Integer, RegisteredNode> registeredNodes;
+    protected Map<Integer, RegisteredNode> registeredNodes;
     private Map<RegisteredNode, Integer> downNodes;
     private Integer nextNodeID;
-    private int replicationFactor;
+    protected int replicationFactor;
 
     public NodeManager(int replicationFactor) {
         this.registeredNodes = new HashMap<>();
@@ -32,7 +36,7 @@ public class NodeManager {
      * @param nodeInterface rmi interface of the node
      * @return ErrorEnum
      */
-    public ErrorEnum newNode(MasterNodeInterface nodeInterface) {
+    public synchronized ErrorEnum newNode(MasterNodeInterface nodeInterface) {
         // Create node
         RegisteredNode newNode = new RegisteredNode(nodeInterface);
 
@@ -44,12 +48,16 @@ public class NodeManager {
 
         // Register node
         Integer nodeId;
-        synchronized (registeredNodes) {
-            nodeId = nextNodeID++;
-            newNode.setID(nodeId);
-            registeredNodes.put(nodeId, newNode);
+        nodeId = nextNodeID++;
+        newNode.setID(nodeId);
+        registeredNodes.put(nodeId, newNode);
+        try {
+            logger.trace("Node registered. nNodes: " + registeredNodes.size()
+                    + "  ip=" + RemoteServer.getClientHost()
+                    + "  id=" + (registeredNodes.size() - 1));
+        } catch (ServerNotActiveException e) {
+            logger.error(e.getMessage());
         }
-        logger.info("Node registered. nNodes: " + registeredNodes.size());
         return ErrorEnum.NO_ERROR;
     }
 
@@ -57,8 +65,7 @@ public class NodeManager {
      * Return all UP and DOWN nodes.
      */
     public List<RegisteredNode> getAllNodes() {
-        List<RegisteredNode> nodes = new ArrayList<>(registeredNodes.values());
-        return nodes;
+        return new ArrayList<>(registeredNodes.values());
     }
 
     /**
@@ -70,8 +77,8 @@ public class NodeManager {
             if (!downNodes.containsKey(node)) {
                 nodes.add(node);
             } else {
-                // Node has been used during it was down -> need to reset data
-                node.setNeedResetData(true);
+                // Node has been used during it was down -> need to update tables
+                node.setNeedToUpdate(true);
             }
         }
         return nodes;
@@ -86,8 +93,8 @@ public class NodeManager {
             if (!downNodes.containsKey(node)) {
                 interfaces.add(node.getInterface());
             } else {
-                // Node has been used during it was down -> need to reset data
-                node.setNeedResetData(true);
+                // Node has been used during it was down -> need to update tables
+                node.setNeedToUpdate(true);
             }
         }
         return interfaces;
@@ -100,7 +107,7 @@ public class NodeManager {
         RegisteredNode node = registeredNodes.get(nodeID);
         if (downNodes.containsKey(node)) {
             // Node has been used during it was down -> need to reset data
-            node.setNeedResetData(true);
+            node.setNeedToUpdate(true);
             return null;
         }
         return node.getInterface();
@@ -134,9 +141,8 @@ public class NodeManager {
      * @return list of interfaces of nodes chosen
      */
     public synchronized List<RegisteredNode> selectNodesInsert() {
-        Random random = new Random(System.nanoTime());
-        List<RegisteredNode> nodes = new ArrayList<>(this.getNodes());
-        Collections.shuffle(nodes, random);
+        List<RegisteredNode> nodes = shuffle(new ArrayList<>(this.getNodes()));
+
         List<RegisteredNode> selectedNodes = new ArrayList<>(replicationFactor);
         Iterator<RegisteredNode> it = nodes.iterator();
         do {
@@ -171,6 +177,12 @@ public class NodeManager {
         logger.debug("Unregistering node " + node.getID() + " from NodeManager.");
         downNodes.remove(node);
         registeredNodes.remove(node.getID());
+    }
+
+    protected List<RegisteredNode> shuffle(List<RegisteredNode> nodes) {
+        Random random = new Random(System.nanoTime());
+        Collections.shuffle(nodes, random);
+        return nodes;
     }
 
     /**
@@ -217,11 +229,55 @@ public class NodeManager {
      */
     public String kill(Integer nodeID) {
         RegisteredNode node = registeredNodes.get(nodeID);
+        if(node == null){
+            return "Node not exist";
+        }
         try {
             node.getInterface().killNode(new KillNodeRequest());
         } catch (RemoteException e) {
             return "Error when killing node " + node.getID() + ": " + e.getMessage() + "\n";
         }
         return "Node " + node.getID() + " killed\n";
+    }
+
+    public void createBackup() {
+        synchronized (this) {
+            NodeManagerBackup backup = new NodeManagerBackup(registeredNodes, downNodes, nextNodeID);
+            try {
+                File file = new File("backup_nodes.db");
+                FileOutputStream fos = new FileOutputStream(file);
+                ObjectOutputStream oos = new ObjectOutputStream(fos);
+                oos.writeObject(backup);
+                oos.flush();
+                oos.close();
+                fos.close();
+            } catch (IOException e) {
+                logger.error("Unable to backup registered nodes:" + e.getMessage());
+                return;
+            }
+            logger.trace("Registered nodes backup created!");
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    public void restoreBackup() {
+        synchronized (this) {
+            NodeManagerBackup backup;
+            try {
+                File file = new File("backup_nodes.db");
+                FileInputStream fis = new FileInputStream(file);
+                ObjectInputStream ois = new ObjectInputStream(fis);
+                backup = (NodeManagerBackup) ois.readObject();
+                ois.close();
+                fis.close();
+            } catch (IOException | ClassNotFoundException e) {
+                logger.error("Unable to backup registered nodes. " + e.getMessage());
+                return;
+            }
+            registeredNodes = backup.getRegisteredNodes();
+            downNodes = backup.getDownNodes();
+            nextNodeID = backup.getNextNodeID();
+            logger.trace("Registered nodes backup restored!");
+        }
     }
 }

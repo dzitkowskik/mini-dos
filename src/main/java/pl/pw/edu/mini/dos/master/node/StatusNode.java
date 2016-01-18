@@ -1,9 +1,11 @@
 package pl.pw.edu.mini.dos.master.node;
 
+import java.io.Serializable;
+
 /**
  * Status of a node.
  */
-public class StatusNode {
+public class StatusNode implements Serializable {
     private boolean running;
     private double loadAverage;
     private long dbSize;

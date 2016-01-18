@@ -10,7 +10,6 @@ import net.sf.jsqlparser.schema.Table;
 import net.sf.jsqlparser.statement.select.*;
 
 import java.util.ArrayList;
-import java.util.Iterator;
 import java.util.List;
 
 public class SQLSelectTablesFinder implements SelectVisitor, FromItemVisitor,
@@ -28,8 +27,7 @@ public class SQLSelectTablesFinder implements SelectVisitor, FromItemVisitor,
         plainSelect.getFromItem().accept(this);
 
         if (plainSelect.getJoins() != null) {
-            for (Iterator joinsIt = plainSelect.getJoins().iterator(); joinsIt.hasNext();) {
-                Join join = (Join) joinsIt.next();
+            for (Join join : plainSelect.getJoins()) {
                 join.getRightItem().accept(this);
             }
         }

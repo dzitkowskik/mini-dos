@@ -6,9 +6,7 @@ import org.slf4j.LoggerFactory;
 import java.io.File;
 import java.net.MalformedURLException;
 import java.net.URL;
-import java.util.Collection;
-import java.util.Iterator;
-import java.util.Map;
+import java.util.*;
 
 public class Helper {
     private static final Logger logger = LoggerFactory.getLogger(Helper.class);
@@ -102,5 +100,13 @@ public class Helper {
             }
         }
         return configFileUrl;
+    }
+
+    public static String buildString(List<Object[]> data) {
+        String str = "\nData (" + data.size() + " rows):";
+        for (Object[] o : data) {
+            str += "\n" + Arrays.toString(o);
+        }
+        return str;
     }
 }

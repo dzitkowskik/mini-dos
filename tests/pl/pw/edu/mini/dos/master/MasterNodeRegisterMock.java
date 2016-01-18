@@ -19,38 +19,44 @@ public class MasterNodeRegisterMock implements MasterNodeInterface {
 
     @Override
     public ExecuteSQLOnNodeResponse executeSQLOnNode(ExecuteSQLOnNodeRequest executeSQLOnNodeRequest) throws RemoteException {
-        logger.info("executeSQLOnNode running...");
+        logger.trace("executeSQLOnNode running...");
         return new ExecuteSQLOnNodeResponse("String result from test", ErrorEnum.NO_ERROR);
     }
 
     @Override
     public ExecuteCreateTablesResponse createTables(ExecuteCreateTablesRequest executeCreateTablesRequest) throws RemoteException {
-        logger.info("createTables running...");
+        logger.trace("createTables running...");
         return new ExecuteCreateTablesResponse(ErrorEnum.NO_ERROR);
     }
 
     @Override
     public CheckStatusResponse checkStatus(CheckStatusRequest checkStatusRequest) throws RemoteException {
-        logger.info("checkStatus running...");
+        logger.trace("checkStatus running...");
         return new CheckStatusResponse(0, 0, 0);
     }
 
     @Override
     public KillNodeResponse killNode(KillNodeRequest killNodeRequest) throws RemoteException {
-        logger.info("killNode running...");
+        logger.trace("killNode running...");
         return new KillNodeResponse();
     }
 
     @Override
     public ReplicateDataResponse replicateData(ReplicateDataRequest replicateDataRequest)
             throws RemoteException {
-        logger.info("replicateData running...");
+        logger.trace("replicateData running...");
         return new ReplicateDataResponse(ErrorEnum.NO_ERROR);
     }
 
     @Override
-    public ResetDataResponse resetData(ResetDataRequest resetDataRequest) throws RemoteException {
-        logger.info("resetData running...");
-        return new ResetDataResponse(ErrorEnum.NO_ERROR);
+    public UpdateTablesResponse updateTables(UpdateTablesRequest updateTablesRequest) throws RemoteException {
+        logger.trace("updateTables running...");
+        return new UpdateTablesResponse(ErrorEnum.NO_ERROR);
+    }
+
+    @Override
+    public UpdateMasterResponse updateMaster(UpdateMasterRequest updateMasterRequest) throws RemoteException {
+        logger.trace("updateMaster running...");
+        return new UpdateMasterResponse(ErrorEnum.NO_ERROR);
     }
 }

@@ -84,9 +84,31 @@ public class SQLiteDb {
     public void close() {
         try {
             this.connection.close();
-            logger.info("Sqlite connection closed");
+            logger.trace("Sqlite connection closed");
         } catch (SQLException e) {
             logger.error("Error while closing sqlite connection: {}", e.getMessage());
         }
+    }
+
+    public void createBackup(String name){
+        try {
+            Statement st = connection.createStatement();
+            st.executeUpdate("backup to " + name);
+        } catch (SQLException e) {
+            logger.error("Unable to backup database");
+            return;
+        }
+        logger.trace("Dabatase backup created!");
+    }
+
+    public void restoreBackup(String name){
+        try {
+            Statement st = connection.createStatement();
+            st.executeUpdate("restore from " + name);
+        } catch (SQLException e) {
+            logger.error("Unable to restore backup");
+            return;
+        }
+        logger.trace("Dabatase backup restored!");
     }
 }

@@ -43,7 +43,7 @@ public class RMIClient implements Serializable {
         if (pathToPolicy != null) {
             System.setProperty("java.security.policy", pathToPolicy);
         }
-        logger.info("Set client.policy to " + pathToPolicy);
+        logger.trace("Set client.policy to " + pathToPolicy);
     }
 
     private void checkPermission() {

@@ -31,13 +31,15 @@ public class Master
         implements NodeMasterInterface, ClientMasterInterface, Serializable {
 
     private static final Logger logger = LoggerFactory.getLogger(Master.class);
-    private static final Config config = Config.getConfig();
+    static final Config config = Config.getConfig();
     private RMIServer server;
 
-    private Thread pingThread;
+    Thread pingThread;
     NodeManager nodeManager;
     private TaskManager taskManager;
     private DBmanager dbManager;
+    private int maxTaskRetryAttempts;
+
 
     public Master() throws RemoteException {
         this("127.0.0.1", 1099);
@@ -56,12 +58,15 @@ public class Master
         // RMI server
         server = new RMIServer(host, port);
         server.startService(Services.MASTER, this);
-        logger.info("Master listening at (" + host + ":" + port + ")");
+        logger.trace("Master listening at (" + host + ":" + port + ")");
 
         // Ping nodes periodically
         long spanTime = Long.parseLong(config.getProperty("spanPingingTime"));
         pingThread = new Thread(new PingNodes(this, nodeManager, spanTime));
         pingThread.start();
+
+        // Set max task retry attemps
+        maxTaskRetryAttempts = Integer.parseInt(config.getProperty("maxTaskRetryAttempts"));
     }
 
     /**
@@ -76,18 +81,38 @@ public class Master
         }
 
         Scanner scanner = new Scanner(System.in);
-        System.out.println("*Enter 'q' to stop master or 'd' to show the data of nodes:");
+        System.out.println("+===============================+");
+        System.out.println("|          M A S T E R          |");
+        System.out.println("+===============================+");
+        System.out.println("| Menu:                         |");
+        System.out.println("|    'q' -> Stop master         |");
+        System.out.println("|    'b' -> Create backup       |");
+        System.out.println("|    'r' -> Restore backup      |");
+        System.out.println("+===============================+");
+        System.out.print("ddbms> ");
+
+        whileLabel:
         while (scanner.hasNext()) {
             String text = scanner.nextLine().toLowerCase();
-            if (text.equals("q")) {
-                scanner.close();
-                break;
+            switch (text) {
+                case "q":
+                    scanner.close();
+                    break whileLabel;
+                case "b":
+                    master.createMasterBackup();
+                    break;
+                case "r":
+                    master.restoreMasterBackup();
+                    break;
+                default:
+                    master.parseCommand(text);
+                    break;
             }
-            master.parseCommand(text);
+            System.out.print("ddbms> ");
         }
 
         master.stopMaster();
-        logger.info("Master stopped!");
+        logger.trace("Master stopped!");
     }
 
     public void stopMaster() {
@@ -110,28 +135,54 @@ public class Master
                 // Tasks
                 if (matcher.group(1).equals("select")) {
                     if (matcher.group(2).equals("*")) {
-                        System.out.print(taskManager.select());
+                        String result = taskManager.select();
+                        System.out.println(result.equals("") ? "0 tasks" : result);
                     } else {
-                        System.out.print(taskManager.select(Long.parseLong(matcher.group(2))));
+                        String result = taskManager.select(Long.parseLong(matcher.group(2)));
+                        System.out.println(result.equals("") ? "0 tasks" : result);
                     }
                 }
             } else {
                 // Nodes
                 if (matcher.group(1).equals("select")) {
                     if (matcher.group(2).equals("*")) {
-                        System.out.print(nodeManager.select());
+                        String result = nodeManager.select();
+                        System.out.println(result.equals("") ? "0 nodes" : result);
                     } else {
-                        System.out.print(nodeManager.select(Integer.parseInt(matcher.group(2))));
+                        String result = nodeManager.select(Integer.parseInt(matcher.group(2)));
+                        System.out.println(result.equals("") ? "0 nodes" : result);
                     }
                 } else if (matcher.group(1).equals("kill")) {
                     if (matcher.group(2).equals("*")) {
-                        System.out.print(nodeManager.kill());
+                        System.out.println(nodeManager.kill());
                     } else {
-                        System.out.print(nodeManager.kill(Integer.parseInt(matcher.group(2))));
+                        System.out.println(nodeManager.kill(Integer.parseInt(matcher.group(2))));
                     }
                 }
             }
         }
+    }
+
+    public void createMasterBackup() {
+        dbManager.createBackup();
+        taskManager.createBackup();
+        nodeManager.createBackup();
+        System.out.println("Backup created!");
+    }
+
+    public void restoreMasterBackup() {
+        dbManager.restoreBackup();
+        taskManager.restoreBackup();
+        nodeManager.restoreBackup();
+        for(MasterNodeInterface node : nodeManager.getNodesInterfaces()){
+            try {
+                node.updateMaster(new UpdateMasterRequest(this));
+            } catch (RemoteException e) {
+                logger.error("Error at updating master interface in nodes");
+                return;
+            }
+        }
+        System.out.println("Backup restored!");
     }
 
     @Override
@@ -178,7 +229,7 @@ public class Master
             throws RemoteException {
         // Get create tables and node that have the data
         List<String> tables = selectMetadataRequest.getTables();
-        logger.info("Get metadata select request for tables: " + Helper.collectionToString(tables));
+        logger.trace("Get metadata select request for tables: " + Helper.collectionToString(tables));
         if (tables == null || tables.size() == 0) {
             return new SelectMetadataResponse(null, null, ErrorEnum.ANOTHER_ERROR);
         }
@@ -189,7 +240,7 @@ public class Master
             if (createTableStatements == null || nodesIDs == null) {
                 return new SelectMetadataResponse(null, null, ErrorEnum.TABLE_NOT_EXIST);
             }
-            logger.info("Nodes which have table " + table + ": " + Helper.collectionToString(nodesIDs));
+            logger.trace("Nodes which have table " + table + ": " + Helper.collectionToString(nodesIDs));
             List<NodeNodeInterface> nodesInterfaces = new ArrayList<>(nodesIDs.size());
             for (Integer nodeID : nodesIDs) {
                 NodeNodeInterface nodeInterface = (NodeNodeInterface) nodeManager.getNodeInterface(nodeID);
@@ -206,7 +257,26 @@ public class Master
     @Override
     public UpdateMetadataResponse updateMetadata(UpdateMetadataRequest updateMetadataRequest)
             throws RemoteException {
-        return null;
+        // Get nodes that have data from specified tables
+        Set<Integer> nodesIDs = new HashSet<>();
+        for (String table : updateMetadataRequest.getTables()) {
+            nodesIDs.addAll(dbManager.getNodesHaveTable(table));
+        }
+
+        if (nodesIDs.isEmpty()) {
+            return new UpdateMetadataResponse(null, ErrorEnum.TABLE_NOT_EXIST);
+        }
+
+        logger.trace("Nodes which have the data: " + Helper.collectionToString(nodesIDs));
+        List<NodeNodeInterface> nodesInterfaces = new ArrayList<>(nodesIDs.size());
+        for (Integer nodeID : nodesIDs) {
+            NodeNodeInterface nodeInterface = (NodeNodeInterface) nodeManager.getNodeInterface(nodeID);
+            if (nodeInterface != null) {
+                nodesInterfaces.add(nodeInterface);
+            }
+        }
+
+        return new UpdateMetadataResponse(nodesInterfaces, ErrorEnum.NO_ERROR);
     }
 
     @Override
@@ -217,7 +287,7 @@ public class Master
         if (nodesIDs == null) {
             return new DeleteMetadataResponse(null, ErrorEnum.TABLE_NOT_EXIST);
         }
-        logger.info("Nodes which have the data: " + Helper.collectionToString(nodesIDs));
+        logger.trace("Nodes which have the data: " + Helper.collectionToString(nodesIDs));
         List<NodeNodeInterface> nodesInterfaces = new ArrayList<>(nodesIDs.size());
         for (Integer nodeID : nodesIDs) {
             NodeNodeInterface nodeInterface = (NodeNodeInterface) nodeManager.getNodeInterface(nodeID);
@@ -244,16 +314,45 @@ public class Master
 
     @Override
     public ExecuteSQLResponse executeSQL(ExecuteSQLRequest executeSQLRequest) throws RemoteException {
-        RegisteredNode node = nodeManager.selectCoordinatorNode();
-        Long taskID = taskManager.newTask(node.getID());
-        ExecuteSQLOnNodeResponse result = node.getInterface().executeSQLOnNode(
-                new ExecuteSQLOnNodeRequest(taskID, executeSQLRequest.getSql().toUpperCase()));
-        if (result.getError().equals(ErrorEnum.NO_ERROR)) {
-            taskManager.setFinishedTask(taskID);
-        } else {
-            taskManager.setAbortedTask(taskID);
-        }
-        logger.info("Send response to client:" + result.getResult());
+        boolean finish = false;
+        int numRetry = 1;
+        ExecuteSQLOnNodeResponse result = null;
+        do {
+            RegisteredNode node = nodeManager.selectCoordinatorNode();
+            Long taskID = taskManager.newTask(node.getID());
+            logger.trace("New task " + taskID + ". Coordinator node: " + node.getID());
+            try {
+                result = node.getInterface().executeSQLOnNode(
+                        new ExecuteSQLOnNodeRequest(taskID, executeSQLRequest.getSql()));
+            } catch (RemoteException e) {
+                logger.error("Cannot execute sql in node");
+                continue;
+            }
+            switch (result.getError()) {
+                case NO_ERROR:
+                    logger.trace("Task finised");
+                    taskManager.setFinishedTask(taskID);
+                    finish = true;
+                    break;
+                case SQL_EXECUTION_ERROR:
+                case SQL_PARSING_ERROR:
+                case TABLE_NOT_EXIST:
+                    logger.error("Task aborted: user error");
+                    taskManager.setAbortedTask(taskID);
+                    finish = true;
+                    break;
+                default:
+                    taskManager.setAbortedTask(taskID);
+                    if (numRetry < maxTaskRetryAttempts) {
+                        ++numRetry;
+                        logger.error("Task aborted. Trying " + numRetry + " attempt...");
+                    } else {
+                        logger.error("Task aborted. Max retry attempts exceeded.");
+                        finish = true;
+                    }
+            }
+        } while (!finish);
+        logger.trace("Send response to client:" + result.getResult());
         return new ExecuteSQLResponse(result);
     }
 
@@ -266,19 +365,58 @@ public class Master
      */
     @SuppressWarnings("ConstantConditions")
     public void unregisterNode(RegisteredNode node) {
-        logger.info("Unregistering node " + node.getID());
-        // Get tables with data that node had
+        logger.trace("Unregistering node " + node.getID());
+        // Get tables and rowsIDs that node had
         Map<String, List<Long>> tablesRows = dbManager.getDataNodeHas(node);
         // Unregister node in master
         nodeManager.unregisterNode(node);
         dbManager.removeRecordsOfNode(node);
         // Send task to replicate data
+        List<RegisteredNode> newNode = nodeManager.selectNodesInsert();
+        if(newNode != null && newNode.size() > 0){
+            replicateDataToNode(tablesRows, newNode.get(0));
+        }
+    }
+
+    /**
+     * Send a request to a node to update all the tables it has. Master sends node
+     * all create tables statements and node create the tables it doesn't have.
+     *
+     * @param node node to update tables
+     */
+    @SuppressWarnings("ConstantConditions")
+    public void updateTablesNode(RegisteredNode node) {
+        logger.trace("Update tables of node " + node.getID());
+        // Send request to update the tables of node
+        List<String> createTables = dbManager.getCreateTableStatements();
+        UpdateTablesResponse response = null;
+        try {
+            response = node.getInterface().updateTables(new UpdateTablesRequest(createTables));
+        } catch (RemoteException e) {
+            logger.error("Cannot update tables: {}", e.getMessage());
+        }
+        if (response.getError().equals(ErrorEnum.NO_ERROR)) {
+            logger.trace("Tables from node " + node.getID() + " was updated successfully.");
+        } else {
+            logger.error("Error at updating tables: " + response.getError());
+        }
+    }
+
+    /**
+     * Replicate given data to a new node.
+     *
+     * @param data    map table -> rowsIDs
+     * @param newNode node where to replicate the data
+     * @return true if no errors
+     */
+    private boolean replicateDataToNode(Map<String, List<Long>> data, RegisteredNode newNode) {
         logger.debug("Replicate data that node had");
-        Long taskID = taskManager.newTask(node.getID());
+        // Start replicate data task
+        Long taskID = taskManager.newTask(newNode.getID());
         // Get nodes which have the data
-        logger.debug("Tables: " + Helper.collectionToString(tablesRows.keySet()));
+        logger.debug("Tables: " + Helper.collectionToString(data.keySet()));
         Map<String, List<NodeNodeInterface>> tableNodesInterfaces = new HashMap<>();
-        for (String table : tablesRows.keySet()) {
+        for (String table : data.keySet()) {
             List<Integer> nodesIDs = dbManager.getNodesHaveTable(table);
             logger.debug("Nodes which have table " + table + ": " + Helper.collectionToString(nodesIDs));
             List<NodeNodeInterface> nodesInterfaces = new ArrayList<>(nodesIDs.size());
@@ -290,44 +428,29 @@ public class Master
             }
             tableNodesInterfaces.put(table, nodesInterfaces);
         }
-        ReplicateDataResponse response = null;
-        RegisteredNode newNode = nodeManager.selectNodesInsert().get(0);
+        ReplicateDataResponse response;
         logger.debug("Replicate data in " + newNode.getID());
         try {
             response = newNode.getInterface().replicateData(
-                    new ReplicateDataRequest(taskID, tableNodesInterfaces, tablesRows,
-                            dbManager.getCreateTableStatements(new ArrayList<>(tablesRows.keySet()))));
+                    new ReplicateDataRequest(taskID, tableNodesInterfaces, data,
+                            dbManager.getCreateTableStatements(new ArrayList<>(data.keySet()))));
         } catch (RemoteException e) {
             logger.error("Cannot replicate data: {}", e.getMessage());
+            return false;
         }
-        if (response.getError().equals(ErrorEnum.NO_ERROR)) {
-            logger.info("Data from node " + node.getID() + " was replicated successfully.");
-        } else {
+        if (!response.getError().equals(ErrorEnum.NO_ERROR)) {
             logger.error("Error at replicating data: " + response.getError());
+            return false;
         }
-    }
-
-    /**
-     * Reset (delete) all the data of a node.
-     *
-     * @param node node
-     */
-    @SuppressWarnings("ConstantConditions")
-    public void resetDateNode(RegisteredNode node) {
-        logger.info("Reset data of node " + node.getID());
-        // Get all table names
-        List<String> tables = dbManager.getTableNames();
-        List<String> createTables = dbManager.getCreateTableStatements();
-        ResetDataResponse response = null;
-        try {
-            response = node.getInterface().resetData(new ResetDataRequest(tables, createTables));
-        } catch (RemoteException e) {
-            logger.error("Cannot replicate data: {}", e.getMessage());
+        // Insert row metadata (RowId, TableId, NodesIds)
+        List<Integer> nodesIds = new ArrayList<>();
+        nodesIds.add(newNode.getID());
+        for (String table : data.keySet()) {
+            for (Long rowId : data.get(table)) {
+                dbManager.insertRow(rowId, table, nodesIds);
+            }
         }
-        if (response.getError().equals(ErrorEnum.NO_ERROR)) {
-            logger.info("Data from node " + node.getID() + " was reset successfully.");
-        } else {
-            logger.error("Error at reset data: " + response.getError());
-        }
+        logger.trace("Data was replicated successfully.");
+        return true;
     }
 }
