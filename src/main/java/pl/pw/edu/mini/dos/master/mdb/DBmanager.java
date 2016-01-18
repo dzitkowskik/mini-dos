@@ -37,16 +37,16 @@ public class DBmanager {
     public void prepareDB() {
         String tablesTable = "" +
                 "CREATE TABLE tables(" +
-                "table_name			TEXT	PRIMARY KEY NOT NULL, " +
+                "table_name			TEXT	            NOT NULL, " +
                 "create_statement	TEXT				NOT NULL, " +
                 "next_row_id		INTEGER				NOT NULL" +
-                ")WITHOUT ROWID;";
+                ");";
         String rowsTable = "" +
                 "CREATE TABLE rows(" +
                 "row_id     INTEGER NOT NULL, " +
                 "table_name	TEXT	NOT NULL, " +
-                "node_id    INTEGER NOT NULL, " +
-                "FOREIGN KEY(table_name) REFERENCES tables(table_name));";
+                "node_id    INTEGER NOT NULL " +
+                ");";
 
         Statement st = null;
         try {
