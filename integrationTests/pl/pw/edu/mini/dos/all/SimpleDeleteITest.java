@@ -8,10 +8,12 @@ import pl.pw.edu.mini.dos.DockerStuff.DockerRunner;
 import pl.pw.edu.mini.dos.DockerStuff.DockerThread;
 import pl.pw.edu.mini.dos.Utils.SendDataHelper;
 import pl.pw.edu.mini.dos.TestData;
+import pl.pw.edu.mini.dos.Utils.Settings;
 import pl.pw.edu.mini.dos.Utils.TestDbManager;
 import pl.pw.edu.mini.dos.client.Client;
 
 import java.sql.SQLException;
+import java.util.Arrays;
 import java.util.Random;
 
 import static org.junit.Assert.assertEquals;
@@ -33,7 +35,7 @@ public class SimpleDeleteITest {
         Client client = new Client(getMasterIpFromParams(args),
                 getMasterPortFromParams(args), getMyIpFromParams(args));
 
-        Settings settings = Settings.getSettingsFromParams(getMyParams(args));
+        SDSettings settings = new SDSettings().getSettingsFromParams(getMyParams(args));
         // load command
         TestData testData = TestData.loadConfigTestDbFile(configTestFilename1);
         TestDbManager testDb = new TestDbManager();
@@ -44,14 +46,11 @@ public class SimpleDeleteITest {
 
         // send command to Master
         sendHelper.sendCreateQueries();
-        sendHelper.sendInsertQueriesForAllTables(settings.dataCount);
+        sendHelper.sendInsertQueriesForAllTables(settings.dataCounts);
         logger.trace("===== end adding data =====");
 
         logger.info("Checking data...");
-        String result = client.executeSQL("SELECT * FROM " + testData.getTableNames()[0]);
-        logger.trace(result);
-
-        checkDataCorrectness(result, testData.getTableNames()[0], testData, settings.dataCount);
+        checkDataCorrectnessForAllTable(client, testDb, testData, settings.dataCounts);
         logger.info("Data is OK.");
 
         logger.info("Checking delete queries...");
@@ -63,7 +62,7 @@ public class SimpleDeleteITest {
     }
 
     private void checkDelete(Client client, TestDbManager testDb,
-                             TestData testData, Settings settings) throws SQLException {
+                             TestData testData, SDSettings settings) throws SQLException {
         logger.trace("============================== Delete tests ==============================");
 
         long seed = 345;
@@ -75,7 +74,8 @@ public class SimpleDeleteITest {
         for (int i = 0; i < settings.deleteCommandCount; i++) {
 
             // get data
-            tableName = testData.getTableNames()[rand.nextInt(tableCount)];
+            int tableIndex = rand.nextInt(tableCount);
+            tableName = testData.getTableNames()[tableIndex];
             String[] colNames = testData.getColumnsNames(tableName);
 
             sql = String.format("SELECT * FROM %s", tableName);
@@ -87,13 +87,15 @@ public class SimpleDeleteITest {
             // build query
             int colIndex = rand.nextInt(colNames.length);
             sql += String.format(" %s = \"%s\"", colNames[colIndex],
-                    testData.getRandomValueFromColumn(tableName, colIndex, settings.dataCount));
+                    testData.getRandomValueFromColumn(
+                            tableName, colIndex, settings.dataCounts[tableIndex]));
 
             for (int w = 0; w < whereCount; w++) {
                 colIndex = rand.nextInt(colNames.length);
                 sql += (rand.nextBoolean() ? " AND" : " OR");
                 sql += String.format(" %s = \"%s\"", colNames[colIndex],
-                        testData.getRandomValueFromColumn(tableName, colIndex, settings.dataCount));
+                        testData.getRandomValueFromColumn(
+                                tableName, colIndex, settings.dataCounts[tableIndex]));
             }
 
             // execute query
@@ -108,7 +110,7 @@ public class SimpleDeleteITest {
         logger.trace("============================= Delete tests end =============================");
     }
 
-    public void testBasicDeleteSetUp(Settings settings) throws Exception {
+    public void testBasicDeleteSetUp(SDSettings settings) throws Exception {
         DockerRunner dockerRunner = DockerRunner.getInstance();
 
         // run Master
@@ -138,9 +140,10 @@ public class SimpleDeleteITest {
 
     @Test
     public void testBasicDeleteV1() throws Exception {
-        Settings settings = new Settings();
+        SDSettings settings = new SDSettings();
         settings.nodesCount = 4;
-        settings.dataCount = 5 * settings.nodesCount;
+        settings.dataCounts =
+                new Integer[] {5 * settings.nodesCount, 5 * settings.nodesCount};
         settings.deleteCommandCount = 10;
 
         testBasicDeleteSetUp(settings);
@@ -148,9 +151,10 @@ public class SimpleDeleteITest {
 
     @Test
     public void testBasicDeleteV2() throws Exception {
-        Settings settings = new Settings();
+        SDSettings settings = new SDSettings();
         settings.nodesCount = 10;
-        settings.dataCount = 20 * settings.nodesCount;
+        settings.dataCounts =
+                new Integer[] {20 * settings.nodesCount, 20 * settings.nodesCount};
         settings.deleteCommandCount = 100;
 
         testBasicDeleteSetUp(settings);
@@ -161,30 +165,24 @@ public class SimpleDeleteITest {
         DockerRunner.getInstance().stopThreads();
     }
 
-    static class Settings {
-        public int replicationFactor = 2;
-        public int nodesCount;
-        public int dataCount;
+    static class SDSettings extends Settings {
         public int deleteCommandCount;
 
-        public static Settings getSettingsFromParams(String[] myParams) {
-            Settings settings = new Settings();
-
-            settings.replicationFactor = Integer.parseInt(myParams[0]);
-            settings.nodesCount = Integer.parseInt(myParams[1]);
-            settings.dataCount = Integer.parseInt(myParams[2]);
-            settings.deleteCommandCount = Integer.parseInt(myParams[3]);
-
-            return settings;
+        @Override
+        public SDSettings getSettingsFromParams(String[] myParams) {
+            super.getSettingsFromParams(myParams);
+            deleteCommandCount = Integer.parseInt(myParams[defaultParamsCount]);
+            return this;
         }
 
+        @Override
         public String[] toArrayString() {
-            return new String[] {
-                    String.valueOf(replicationFactor),
-                    String.valueOf(nodesCount),
-                    String.valueOf(dataCount),
-                    String.valueOf(deleteCommandCount)
-            };
+            String[] oldResult = super.toArrayString();
+            String[] newResult = Arrays.copyOf(super.toArrayString(),
+                    oldResult.length + 1);
+            newResult[defaultParamsCount] = String.valueOf(deleteCommandCount);
+
+            return newResult;
         }
     }
 

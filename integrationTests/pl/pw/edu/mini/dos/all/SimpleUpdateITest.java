@@ -8,10 +8,12 @@ import pl.pw.edu.mini.dos.DockerStuff.DockerRunner;
 import pl.pw.edu.mini.dos.DockerStuff.DockerThread;
 import pl.pw.edu.mini.dos.Utils.SendDataHelper;
 import pl.pw.edu.mini.dos.TestData;
+import pl.pw.edu.mini.dos.Utils.Settings;
 import pl.pw.edu.mini.dos.Utils.TestDbManager;
 import pl.pw.edu.mini.dos.client.Client;
 
 import java.sql.SQLException;
+import java.util.Arrays;
 import java.util.Random;
 
 import static org.junit.Assert.assertEquals;
@@ -33,7 +35,7 @@ public class SimpleUpdateITest {
         Client client = new Client(getMasterIpFromParams(args),
                 getMasterPortFromParams(args), getMyIpFromParams(args));
 
-        Settings settings = Settings.getSettingsFromParams(getMyParams(args));
+        SUSettings settings = new SUSettings().getSettingsFromParams(getMyParams(args));
         // load command
         TestData testData = TestData.loadConfigTestDbFile(configTestFilename1);
         TestDbManager testDb = new TestDbManager();
@@ -44,14 +46,11 @@ public class SimpleUpdateITest {
 
         // send command to Master
         sendHelper.sendCreateQueries();
-        sendHelper.sendInsertQueriesForAllTables(settings.dataCount);
+        sendHelper.sendInsertQueriesForAllTables(settings.dataCounts);
         logger.trace("===== end adding data =====");
 
         logger.info("Checking data...");
-        String result = client.executeSQL("SELECT * FROM " + testData.getTableNames()[0]);
-        logger.trace(result);
-
-        checkDataCorrectness(result, testData.getTableNames()[0], testData, settings.dataCount);
+        checkDataCorrectnessForAllTable(client, testDb, testData, settings.dataCounts);
         logger.info("Data is OK.");
 
         logger.info("Checking update queries...");
@@ -63,7 +62,7 @@ public class SimpleUpdateITest {
     }
 
     private void checkUpdate(Client client, TestDbManager testDb,
-                             TestData testData, Settings settings) throws SQLException {
+                             TestData testData, SUSettings settings) throws SQLException {
         logger.trace("============================== Update tests ==============================");
 
         long seed = 456;
@@ -75,7 +74,8 @@ public class SimpleUpdateITest {
         for (int i = 0; i < settings.updateCommandCount; i++) {
 
             // get data
-            tableName = testData.getTableNames()[rand.nextInt(tableCount)];
+            int tableIndex = rand.nextInt(tableCount);
+            tableName = testData.getTableNames()[tableIndex];
             String[] colNames = testData.getColumnsNames(tableName);
 
             sql = String.format("SELECT * FROM %s", tableName);
@@ -88,26 +88,30 @@ public class SimpleUpdateITest {
             // set
             int colIndex = rand.nextInt(colNames.length);
             sql += String.format("%s = \"%s\"", colNames[colIndex],
-                    testData.getRandomValueFromColumn(tableName, colIndex, settings.dataCount));
+                    testData.getRandomValueFromColumn(
+                            tableName, colIndex, settings.dataCounts[tableIndex]));
 
             for (int w = 0; w < updateCount; w++) {
                 colIndex = rand.nextInt(colNames.length);
                 sql += ",";
                 sql += String.format(" %s = \"%s\"", colNames[colIndex],
-                        testData.getRandomValueFromColumn(tableName, colIndex, settings.dataCount));
+                        testData.getRandomValueFromColumn(
+                                tableName, colIndex, settings.dataCounts[tableIndex]));
             }
 
             // where
             colIndex = rand.nextInt(colNames.length);
             sql += String.format(" WHERE %s = \"%s\"", colNames[colIndex],
-                    testData.getRandomValueFromColumn(tableName, colIndex, settings.dataCount));
+                    testData.getRandomValueFromColumn(
+                            tableName, colIndex, settings.dataCounts[tableIndex]));
 
             int whereCount = rand.nextInt(2);
-            for (int w = 0; w < updateCount; w++) {
+            for (int w = 0; w < whereCount; w++) {
                 colIndex = rand.nextInt(colNames.length);
                 sql += (rand.nextBoolean() ? " AND" : " OR");
                 sql += String.format(" %s = \"%s\"", colNames[colIndex],
-                        testData.getRandomValueFromColumn(tableName, colIndex, settings.dataCount));
+                        testData.getRandomValueFromColumn(
+                                tableName, colIndex, settings.dataCounts[tableIndex]));
             }
 
             // execute query
@@ -122,7 +126,7 @@ public class SimpleUpdateITest {
         logger.trace("============================= Update tests end =============================");
     }
 
-    public void testBasicUpdateSetUp(Settings settings) throws Exception {
+    public void testBasicUpdateSetUp(SUSettings SUSettings) throws Exception {
         DockerRunner dockerRunner = DockerRunner.getInstance();
 
         // run Master
@@ -130,7 +134,7 @@ public class SimpleUpdateITest {
         Sleep(5);
 
         // run Nodes
-        DockerThread[] nodes = new DockerThread[settings.nodesCount];
+        DockerThread[] nodes = new DockerThread[SUSettings.nodesCount];
         for (int i = 0; i < nodes.length; i++) {
             nodes[i] = dockerRunner.runNodeInDocker("Node #" + i);
             Sleep(0, 500);
@@ -139,7 +143,7 @@ public class SimpleUpdateITest {
         Sleep(1);
         // run test on Client side
         DockerThread clientThread = dockerRunner.runTestInDocker
-                (SimpleUpdateITest.class, "testBasicUpdate_Client", settings.toArrayString(), "Client");
+                (SimpleUpdateITest.class, "testBasicUpdate_Client", SUSettings.toArrayString(), "Client");
 
         // wait for Client and Nodes end
         clientThread.join();
@@ -152,22 +156,24 @@ public class SimpleUpdateITest {
 
     @Test
     public void testBasicUpdateV1() throws Exception {
-        Settings settings = new Settings();
-        settings.nodesCount = 4;
-        settings.dataCount = 5 * settings.nodesCount;
-        settings.updateCommandCount = 10;
+        SUSettings SUSettings = new SUSettings();
+        SUSettings.nodesCount = 4;
+        SUSettings.dataCounts = new Integer[]{
+                5 * SUSettings.nodesCount, 5 * SUSettings.nodesCount};
+        SUSettings.updateCommandCount = 10;
 
-        testBasicUpdateSetUp(settings);
+        testBasicUpdateSetUp(SUSettings);
     }
 
     @Test
     public void testBasicUpdateV2() throws Exception {
-        Settings settings = new Settings();
-        settings.nodesCount = 10;
-        settings.dataCount = 10 * settings.nodesCount;
-        settings.updateCommandCount = 100;
+        SUSettings SUSettings = new SUSettings();
+        SUSettings.nodesCount = 10;
+        SUSettings.dataCounts = new Integer[]{
+                10 * SUSettings.nodesCount, 10 * SUSettings.nodesCount};
+        SUSettings.updateCommandCount = 100;
 
-        testBasicUpdateSetUp(settings);
+        testBasicUpdateSetUp(SUSettings);
     }
 
     @After
@@ -175,30 +181,24 @@ public class SimpleUpdateITest {
         DockerRunner.getInstance().stopThreads();
     }
 
-    static class Settings {
-        public int replicationFactor = 2;
-        public int nodesCount;
-        public int dataCount;
+    static class SUSettings extends Settings {
         public int updateCommandCount;
 
-        public static Settings getSettingsFromParams(String[] myParams) {
-            Settings settings = new Settings();
-
-            settings.replicationFactor = Integer.parseInt(myParams[0]);
-            settings.nodesCount = Integer.parseInt(myParams[1]);
-            settings.dataCount = Integer.parseInt(myParams[2]);
-            settings.updateCommandCount = Integer.parseInt(myParams[3]);
-
-            return settings;
+        @Override
+        public SUSettings getSettingsFromParams(String[] myParams) {
+            super.getSettingsFromParams(myParams);
+            updateCommandCount = Integer.parseInt(myParams[defaultParamsCount]);
+            return this;
         }
 
+        @Override
         public String[] toArrayString() {
-            return new String[] {
-                    String.valueOf(replicationFactor),
-                    String.valueOf(nodesCount),
-                    String.valueOf(dataCount),
-                    String.valueOf(updateCommandCount)
-            };
+            String[] oldResult = super.toArrayString();
+            String[] newResult = Arrays.copyOf(super.toArrayString(),
+                    oldResult.length + 1);
+            newResult[defaultParamsCount] = String.valueOf(updateCommandCount);
+
+            return newResult;
         }
     }
 

@@ -147,10 +147,9 @@ public class TestsHelper {
         }
     }
 
-    public static List<Integer> getDataIndexesPerNode(int nodeId, int nodesCount, int replicationFactor,
+    public static List<Integer> getDataIndexesPerNode(int nodeId, int nodesCount, TestNodeManager nodeManager,
                                                       int dataCount) {
         List<Integer> indexes = new ArrayList<>();
-        TestNodeManager nodeManager = new TestNodeManager(replicationFactor);
         List<RegisteredNode> nodes = createFakeNodeList(nodesCount);
 
         nodeManager.setRegisteredNodes(nodes);
@@ -176,6 +175,19 @@ public class TestsHelper {
             int rowIdFromNode = (int) dataFromNode.get(i)[dataFromNode.get(i).length - 2];
             int testRowId = indexes.get(i);
             assertEquals("i=" + i + " indexes[i]=" + indexes.get(i), testRowId, rowIdFromNode);
+        }
+    }
+
+    public static void checkDataCorrectnessForAllTable(
+            Client client, TestDbManager testDb, TestData testData, Integer[] dataCounts)
+            throws SQLException {
+        String[] tableNames = testData.getTableNames();
+        for (int i = 0; i < tableNames.length; i++) {
+            logger.trace("table=" + tableNames[i] + "  dataCount=" + dataCounts[i]);
+            String sqlGetAll = "SELECT * FROM " + testData.getTableNames()[i];
+            String dataFromClient = checkQuery(client, testDb, sqlGetAll)[1];
+            logger.trace(dataFromClient);
+            checkDataCorrectness(dataFromClient, tableNames[i], testData, dataCounts[i]);
         }
     }
 
@@ -210,7 +222,6 @@ public class TestsHelper {
         logger.trace("Send: " + sql);
         String result = client.executeSQL(sql + orderBy);
         result = removeLastTwoColumns(result);
-
         logger.trace("Get:" + result);
         logger.trace("Expected:" + resultExpected);
         assertEquals("sql= " + sql, resultExpected, result);
@@ -225,7 +236,7 @@ public class TestsHelper {
             if (rows[i].length() < 1) i++;
             int indexOfFirstComma = rows[i].lastIndexOf(",");
             if (indexOfFirstComma == -1) continue;
-            int indexOfSecondComma = rows[i].lastIndexOf(",", indexOfFirstComma-1);
+            int indexOfSecondComma = rows[i].lastIndexOf(",", indexOfFirstComma - 1);
             rows[i] = rows[i].substring(0, indexOfSecondComma) + "]";
         }
         return Helper.arrayToString(rows, System.lineSeparator());
@@ -241,12 +252,12 @@ public class TestsHelper {
     }
 
     // doesn't test which data should be, only correctness data
-    public static void checkDataCorrectness(
+    public static void checkDataCorrectnessOnNode(
             List<Object[]> dataFromNode, String tableName, TestData testData) {
         for (int i = 0; i < dataFromNode.size(); i++) {
-            String rowFromNode = convertDataToCommand(dataFromNode.get(i), tableName);
+            String rowFromNode = convertDataToCommand(dataFromNode.get(i), tableName, true);
             int rowId = (int) dataFromNode.get(i)[dataFromNode.get(i).length - 2];
-            assertEquals(testData.insertTableCommands.get(rowId), rowFromNode);
+            assertEquals(testData.insertTableCommands.get(tableName).get(rowId), rowFromNode);
         }
     }
 
@@ -278,7 +289,7 @@ public class TestsHelper {
         return convertDataToCommand(data, tableName, false);
     }
 
-    public static String convertDataToCommand(Object[] data, String tableName, boolean ifFromClient) {
+    public static String convertDataToCommand(Object[] data, String tableName, boolean ifFromNode) {
         if (data == null) return null;
         if (data.length == 0) return "";
 
@@ -286,7 +297,7 @@ public class TestsHelper {
         command.append(data[0].toString());
 
         // data form node: data.length - 2, because only client's data
-        int len = (ifFromClient ? data.length : data.length - 2);
+        int len = (ifFromNode ? data.length - 2 : data.length);
         for (int i = 1; i < len; i++) {
             command.append("\",\"");
             command.append(data[i]);

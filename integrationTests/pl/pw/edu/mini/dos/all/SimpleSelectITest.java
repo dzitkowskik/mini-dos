@@ -37,12 +37,12 @@ public class SimpleSelectITest {
 
     int replicationFactor = 2;
     int nodesCount = 10;
-    int dataCount = 3 * nodesCount;
+    Integer[] dataCounts = new Integer[]{3 * nodesCount, 3 * nodesCount};
 
-    int oneCmdTime = 1; // seconds
+    int oneCmdTime = 2; // seconds
     int nodeWaitingCount = 10;
     int nodeWaitingTime = Math.max((nodesCount - replicationFactor)
-            * oneCmdTime / (nodeWaitingCount - 1), 1);
+            * (oneCmdTime + 1) / (nodeWaitingCount - 1), 1);
 
     public void testBasicSelect_Master(String[] args) throws Exception {
         Master master = new Master(getMyIpFromParams(args),
@@ -83,14 +83,10 @@ public class SimpleSelectITest {
 
         // send command to Master
         sendHelper.sendCreateQueries();
-        sendHelper.sendInsertQueriesForAllTables(dataCount);
+        sendHelper.sendInsertQueriesForAllTables(dataCounts);
 
         logger.info("Checking data...");
-        String result = client.executeSQL("SELECT * FROM " + testData.getTableNames()[0]);
-        logger.trace(result);
-
-        checkDataCorrectness(result, testData.getTableNames()[0], testData, dataCount);
-        logger.info("Data is OK.");
+        checkDataCorrectnessForAllTable(client, testDb, testData, dataCounts);
 
         client.stopClient();
         logger.trace("Client end");
@@ -104,41 +100,51 @@ public class SimpleSelectITest {
             logger.info("Node is waiting for request...");
 
             TestData testData = TestData.loadConfigTestDbFile(getMyParams(args)[0]);
-            //int dataCount = testData.insertTableCommands.size();
 
             // now table not exists, so wait
             Sleep(15);
 
+            String[] tableNames = testData.getTableNames();
             // wait for coming data
-            String tableName = testData.getTableNames()[0];
-            int oldSize = -1;
-            int newSize = getNodeDbRowsCount(node, tableName);
-            int count = 0;
+            for (int i = 0; i < tableNames.length; i++) {
+                String tableName = tableNames[i];
+                int oldSize = -1;
+                int newSize = getNodeDbRowsCount(node, tableName);
+                int count = 0;
 
-            while (count < nodeWaitingCount) {
-                TestsHelper.Sleep(nodeWaitingTime);
+                while (count < nodeWaitingCount) {
+                    TestsHelper.Sleep(nodeWaitingTime);
 
-                if (oldSize < newSize)
-                    count = 0;
-                else
-                    count++;
+                    if (oldSize < newSize)
+                        count = 0;
+                    else
+                        count++;
 
-                oldSize = newSize;
-                newSize = getNodeDbRowsCount(node, tableName);
-                logger.trace("count=" + count + " oldSize=" + oldSize + " newSize=" + newSize);
+                    oldSize = newSize;
+                    newSize = getNodeDbRowsCount(node, tableName);
+                    logger.trace("tableName=" + tableName + " count=" + count + " oldSize="
+                            + oldSize + " newSize=" + newSize);
+                }
             }
 
             // check correctness and integrity of data
             logger.info("Checking data...");
             int nodeId = getNodeIdFromIps(getMasterIpFromParams(args), getMyIpFromParams(args));
             logger.trace(String.valueOf(nodeId));
-            List<Object[]> dataFromNode = getDataFromNodeDb(node, tableName);
-            for (Object[] row : dataFromNode) {
-                logger.trace(Helper.arrayToString(row));
+            TestNodeManager nodeManager = new TestNodeManager(replicationFactor);
+
+            for (int i = 0; i < tableNames.length; i++) {
+                String tableName = tableNames[i];
+                List<Object[]> dataFromNode = getDataFromNodeDb(node, tableName);
+                logger.trace("dataFromNode=" + dataFromNode);
+                for (Object[] row : dataFromNode) {
+                    logger.trace(Helper.arrayToString(row));
+                }
+                List<Integer> indexes = getDataIndexesPerNode(
+                        nodeId, nodesCount, nodeManager, dataCounts[i]);
+                logger.trace(Helper.collectionToString(indexes));
+                checkDataCorrectnessOnNode(dataFromNode, tableName, testData);
             }
-            List<Integer> indexes = getDataIndexesPerNode(nodeId, nodesCount, replicationFactor, dataCount);
-            logger.trace(Helper.collectionToString(indexes));
-            checkDataCorrectness(dataFromNode, tableName, testData);
             logger.info("Data is OK.");
 
         } finally {

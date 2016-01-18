@@ -42,13 +42,13 @@ public class SendDataHelper {
     }
 
     public void sendInsertQueriesForAllTables(int dataCount) throws SQLException {
-        int[] dataCounts = new int[testData.getTableNames().length];
+        Integer[] dataCounts = new Integer[testData.getTableNames().length];
         Arrays.fill(dataCounts, dataCount);
 
         sendInsertQueriesForAllTables(dataCounts);
     }
 
-    public void sendInsertQueriesForAllTables(int dataCount[]) throws SQLException {
+    public void sendInsertQueriesForAllTables(Integer dataCount[]) throws SQLException {
         String tableNames[] = testData.getTableNames();
         logger.trace("tableNames['family']=" + Helper.collectionToString(testData.insertTableCommands.get(tableNames[1])));
         for (int t = 0; t < dataCount.length; t++) {

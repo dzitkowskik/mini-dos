@@ -6,12 +6,14 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import pl.pw.edu.mini.dos.DockerStuff.DockerRunner;
 import pl.pw.edu.mini.dos.DockerStuff.DockerThread;
-import pl.pw.edu.mini.dos.Utils.SendDataHelper;
 import pl.pw.edu.mini.dos.TestData;
+import pl.pw.edu.mini.dos.Utils.SendDataHelper;
+import pl.pw.edu.mini.dos.Utils.Settings;
 import pl.pw.edu.mini.dos.Utils.TestDbManager;
 import pl.pw.edu.mini.dos.client.Client;
 
 import java.sql.SQLException;
+import java.util.Arrays;
 import java.util.Random;
 
 import static org.junit.Assert.assertEquals;
@@ -33,7 +35,7 @@ public class AdvancedSelectITest {
         Client client = new Client(getMasterIpFromParams(args),
                 getMasterPortFromParams(args), getMyIpFromParams(args));
 
-        Settings settings = Settings.getSettingsFromParams(getMyParams(args));
+        ASSettings settings = new ASSettings().getSettingsFromParams(getMyParams(args));
         // load command
         TestData testData = TestData.loadConfigTestDbFile(configTestFilename1);
         TestDbManager testDb = new TestDbManager();
@@ -44,20 +46,15 @@ public class AdvancedSelectITest {
 
         // send cmd to Master and run cmd on local test database
         sendHelper.sendCreateQueries();
-        sendHelper.sendInsertQueriesForAllTables(settings.dataCount);
+        sendHelper.sendInsertQueriesForAllTables(settings.dataCounts);
 
         // check all data
         logger.info("Checking data...");
-        String sqlGetAll = "SELECT * FROM " + testData.getTableNames()[0];
-        String result = client.executeSQL(sqlGetAll);
-        logger.trace(result);
-
-        checkDataCorrectness(result, testData.getTableNames()[0], testData, settings.dataCount);
-        checkQuery(client, testDb, sqlGetAll);
+        checkDataCorrectnessForAllTable(client, testDb, testData, settings.dataCounts);
         logger.info("Data is OK.");
 
         // test select with where randomly
-        logger.info("Checking select where quries...");
+        logger.info("Checking select where queries...");
         checkWhere(client, testDb, testData, true, settings);
         logger.info("Test select where finished.");
 
@@ -66,7 +63,7 @@ public class AdvancedSelectITest {
     }
 
     private void checkWhere(Client client, TestDbManager testDb, TestData testData,
-                            boolean testGroupBy, Settings settings)
+                            boolean testGroupBy, ASSettings settings)
             throws SQLException {
         logger.trace("============================== Where tests ==============================");
 
@@ -78,7 +75,8 @@ public class AdvancedSelectITest {
         for (int i = 0; i < settings.whereCommandCount; i++) {
 
             // get data
-            String tableName = testData.getTableNames()[rand.nextInt(tableCount)];
+            int tableIndex = rand.nextInt(tableCount);
+            String tableName = testData.getTableNames()[tableIndex];
             String[] colNames = testData.getColumnsNames(tableName);
             sql = String.format("SELECT * FROM %s WHERE", tableName);
             int whereCount = rand.nextInt(3);
@@ -86,13 +84,15 @@ public class AdvancedSelectITest {
             // build query
             int colIndex = rand.nextInt(colNames.length);
             sql += String.format(" %s = \"%s\"", colNames[colIndex],
-                    testData.getRandomValueFromColumn(tableName, colIndex, settings.dataCount));
+                    testData.getRandomValueFromColumn(
+                            tableName, colIndex, settings.dataCounts[tableIndex]));
 
             for (int w = 0; w < whereCount; w++) {
                 colIndex = rand.nextInt(colNames.length);
                 sql += (rand.nextBoolean() ? " AND" : " OR");
                 sql += String.format(" %s = \"%s\"", colNames[colIndex],
-                        testData.getRandomValueFromColumn(tableName, colIndex, settings.dataCount));
+                        testData.getRandomValueFromColumn(
+                                tableName, colIndex, settings.dataCounts[tableIndex]));
             }
 
             // execute query
@@ -119,7 +119,7 @@ public class AdvancedSelectITest {
         }
     }*/
 
-    public void testAdvancedSelectSetUp(Settings settings) throws Exception {
+    public void testAdvancedSelectSetUp(ASSettings settings) throws Exception {
         DockerRunner dockerRunner = DockerRunner.getInstance();
 
         // run Master
@@ -150,33 +150,36 @@ public class AdvancedSelectITest {
 
     @Test
     public void testAdvancedSelectV1() throws Exception {
-        Settings settings = new Settings();
+        ASSettings settings = new ASSettings();
         settings.whereCommandCount = 10;
         settings.replicationFactor = 2;
         settings.nodesCount = 4;
-        settings.dataCount = 2 * settings.nodesCount;
+        settings.dataCounts = new Integer[]{
+                2 * settings.nodesCount, 4 * settings.nodesCount};
 
         testAdvancedSelectSetUp(settings);
     }
 
     @Test
     public void testAdvancedSelectV2() throws Exception {
-        Settings settings = new Settings();
+        ASSettings settings = new ASSettings();
         settings.whereCommandCount = 0;
         settings.replicationFactor = 5;
         settings.nodesCount = 10;
-        settings.dataCount = 100 * settings.nodesCount;
+        settings.dataCounts = new Integer[]{
+                100 * settings.nodesCount, 30 * settings.nodesCount};
 
         testAdvancedSelectSetUp(settings);
     }
 
     @Test
     public void testAdvancedSelectV3() throws Exception {
-        Settings settings = new Settings();
+        ASSettings settings = new ASSettings();
         settings.whereCommandCount = 100;
         settings.replicationFactor = 2;
         settings.nodesCount = 10;
-        settings.dataCount = 10 * settings.nodesCount;
+        settings.dataCounts = new Integer[]{
+                10 * settings.nodesCount, 10 * settings.nodesCount};
 
         testAdvancedSelectSetUp(settings);
     }
@@ -187,30 +190,24 @@ public class AdvancedSelectITest {
     }
 
 
-    static class Settings {
+    static class ASSettings extends Settings {
         public int whereCommandCount = 300;
-        public int replicationFactor = 2;
-        public int nodesCount = 10;
-        public int dataCount = 10 * nodesCount;
 
-        public static Settings getSettingsFromParams(String[] myParams) {
-            Settings settings = new Settings();
-
-            settings.replicationFactor = Integer.parseInt(myParams[0]);
-            settings.nodesCount = Integer.parseInt(myParams[1]);
-            settings.dataCount = Integer.parseInt(myParams[2]);
-            settings.whereCommandCount = Integer.parseInt(myParams[3]);
-
-            return settings;
+        @Override
+        public ASSettings getSettingsFromParams(String[] myParams) {
+            super.getSettingsFromParams(myParams);
+            whereCommandCount = Integer.parseInt(myParams[defaultParamsCount]);
+            return this;
         }
 
+        @Override
         public String[] toArrayString() {
-            return new String[] {
-                    String.valueOf(replicationFactor),
-                    String.valueOf(nodesCount),
-                    String.valueOf(dataCount),
-                    String.valueOf(whereCommandCount)
-            };
+            String[] oldResult = super.toArrayString();
+            String[] newResult = Arrays.copyOf(super.toArrayString(),
+                    oldResult.length + 1);
+            newResult[defaultParamsCount] = String.valueOf(whereCommandCount);
+
+            return newResult;
         }
     }
 
