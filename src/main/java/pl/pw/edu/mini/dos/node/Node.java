@@ -327,6 +327,7 @@ public class Node extends UnicastRemoteObject
 
     @Override
     public AskToCommitResponse askToCommit(AskToCommitRequest request) throws RemoteException {
+        logger.trace("askToCommit method start...");
         // Update status of the subtask
         TaskManager.getInstance().updateSubTask(request.getTaskId(), request.getErrorType());
         // Wait untill all subtasks are done

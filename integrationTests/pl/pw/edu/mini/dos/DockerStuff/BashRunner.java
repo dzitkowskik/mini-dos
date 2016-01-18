@@ -3,7 +3,7 @@ package pl.pw.edu.mini.dos.DockerStuff;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import pl.pw.edu.mini.dos.Helper;
-import pl.pw.edu.mini.dos.TestsHelper;
+import pl.pw.edu.mini.dos.Utils.TestsHelper;
 
 import java.io.BufferedReader;
 import java.io.IOException;

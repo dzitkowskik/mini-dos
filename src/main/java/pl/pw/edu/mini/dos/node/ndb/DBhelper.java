@@ -98,6 +98,8 @@ public class DBhelper {
                         }
                     };
                     break;
+                default:
+                    logger.error("Type " + type + " not found!");
             }
         }
         return functions;

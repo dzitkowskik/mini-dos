@@ -6,11 +6,11 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import pl.pw.edu.mini.dos.DockerStuff.DockerRunner;
 import pl.pw.edu.mini.dos.DockerStuff.DockerThread;
-import pl.pw.edu.mini.dos.TestsHelper;
+import pl.pw.edu.mini.dos.Utils.TestsHelper;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
-import static pl.pw.edu.mini.dos.TestsHelper.*;
+import static pl.pw.edu.mini.dos.Utils.TestsHelper.*;
 
 /**
  * Created with IntelliJ IDEA.
