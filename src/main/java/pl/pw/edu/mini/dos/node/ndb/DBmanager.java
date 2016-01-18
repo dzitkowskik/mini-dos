@@ -2,7 +2,6 @@ package pl.pw.edu.mini.dos.node.ndb;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import pl.pw.edu.mini.dos.Config;
 import pl.pw.edu.mini.dos.communication.nodenode.ExecuteSqlRequest;
 import pl.pw.edu.mini.dos.communication.nodenode.GetSqlResultResponse;
 import pl.pw.edu.mini.dos.communication.nodenode.SerializableResultSet;
@@ -17,14 +16,12 @@ import java.util.function.Consumer;
  */
 public class DBmanager {
     private static final Logger logger = LoggerFactory.getLogger(DBmanager.class);
-    private static final Config config = Config.getConfig();
     private SQLiteDb db;
     private String pathToDBFile;
 
-    public DBmanager(int dbPrefix) {
+    public DBmanager(String dbName) {
         pathToDBFile = "jdbc:sqlite:";
-        // Random name of the db to not share db with other node
-        pathToDBFile += dbPrefix + config.getProperty("nodeDatabasePath");
+        pathToDBFile += dbName;
         this.db = SQLiteDb.getInstance();
     }
 

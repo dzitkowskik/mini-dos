@@ -42,19 +42,18 @@ public class Node extends UnicastRemoteObject
     DBmanager dbManager;
     private ExecutorService workQueue;
     private Map<Long, Future<GetSqlResultResponse>> runningTasks;
-    private int dbPrefix;
+    private String dbName;
     private boolean stop = false;
 
     public Node() throws RemoteException {
-        this("127.0.0.1", "1099", "127.0.0.1");
+        this("127.0.0.1", "1099", "127.0.0.1", Node.randomDbName() + "");
     }
 
-    public Node(String masterHost, String masterPort, String myIp) throws RemoteException {
-        System.setProperty("java.rmi.server.hostname", myIp);   // TODO: It's necessary?
+    public Node(String masterHost, String masterPort, String myIp, String dbName) throws RemoteException {
+        System.setProperty("java.rmi.server.hostname", myIp);
 
-        Random r = new Random();
-        dbPrefix = r.nextInt(1000);
-        dbManager = new DBmanager(dbPrefix); // Manager for persistent db
+        this.dbName = dbName + ".db";
+        dbManager = new DBmanager(this.dbName); // Manager for persistent db
 
         // Create thread pool
         int workerThreads = Integer.parseInt(config.getProperty("nodeWorkerThreads"));
@@ -72,13 +71,13 @@ public class Node extends UnicastRemoteObject
     }
 
     /**
-     * @param args = {"localhost", "1099", "localhost"}
+     * @param args = {"localhost", "1099", "localhost", "dbName"}
      */
     public static void main(String[] args) {
         Node node;
         try {
-            if (args.length == 3) {
-                node = new Node(args[0], args[1], args[2]);
+            if (args.length == 4) {
+                node = new Node(args[0], args[1], args[2], args[3]);
             } else {
                 node = new Node();
             }
@@ -124,6 +123,12 @@ public class Node extends UnicastRemoteObject
         }
     }
 
+    private static String randomDbName(){
+        Random r = new Random();
+        int random = r.nextInt(1000);
+        return random + "node";
+    }
+
     public boolean isStop() {
         return stop;
     }
@@ -158,7 +163,7 @@ public class Node extends UnicastRemoteObject
     @Override
     public CheckStatusResponse checkStatus(CheckStatusRequest checkStatusRequest)
             throws RemoteException {
-        Stats stats = new Stats(dbPrefix);
+        Stats stats = new Stats(dbName);
         return new CheckStatusResponse(
                 stats.getSystemLoad(),
                 stats.getDbSize(),

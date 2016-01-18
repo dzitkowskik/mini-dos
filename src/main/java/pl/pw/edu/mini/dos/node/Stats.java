@@ -1,24 +1,20 @@
 package pl.pw.edu.mini.dos.node;
 
-import pl.pw.edu.mini.dos.Config;
-
 import java.io.File;
 import java.lang.management.ManagementFactory;
 import java.lang.management.OperatingSystemMXBean;
 
 public class Stats {
-    private static final Config config = Config.getConfig();
     private static final OperatingSystemMXBean systemMXBean
             = ManagementFactory.getPlatformMXBean(OperatingSystemMXBean.class);
-    private int dbPrefix;
+    private String dbName;
 
-    public Stats(int dbPrefix) {
-        this.dbPrefix = dbPrefix;
+    public Stats(String dbName) {
+        this.dbName = dbName;
     }
 
     public long getDbSize() {
-        String pathToDBFile = dbPrefix + config.getProperty("nodeDatabasePath");
-        File file = new File(pathToDBFile);
+        File file = new File(dbName);
         return file.length();
     }
 
