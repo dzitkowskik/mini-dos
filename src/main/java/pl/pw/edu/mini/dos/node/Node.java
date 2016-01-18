@@ -49,6 +49,9 @@ public class Node extends UnicastRemoteObject
         this("127.0.0.1", "1099", "127.0.0.1", Node.randomDbName());
     }
 
+    public Node(String dbName) throws RemoteException {
+        this("127.0.0.1", "1099", "127.0.0.1", dbName);
+    }
     public Node(String masterHost, String masterPort, String myIp) throws RemoteException {
         this(masterHost, masterPort, myIp, Node.randomDbName());
     }
