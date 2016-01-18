@@ -221,7 +221,7 @@ public class TestsHelper {
 
         logger.trace("Send: " + sql);
         String result = client.executeSQL(sql + orderBy);
-        result = removeLastTwoColumns(result);
+        //result = removeLastTwoColumns(result);
         logger.trace("Get:" + result);
         logger.trace("Expected:" + resultExpected);
         assertEquals("sql= " + sql, resultExpected, result);
