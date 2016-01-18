@@ -6,8 +6,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import pl.pw.edu.mini.dos.DockerStuff.DockerRunner;
 import pl.pw.edu.mini.dos.DockerStuff.DockerThread;
-import pl.pw.edu.mini.dos.TestData;
 import pl.pw.edu.mini.dos.Utils.SendDataHelper;
+import pl.pw.edu.mini.dos.TestData;
 import pl.pw.edu.mini.dos.Utils.Settings;
 import pl.pw.edu.mini.dos.Utils.TestDbManager;
 import pl.pw.edu.mini.dos.client.Client;
@@ -26,16 +26,16 @@ import static pl.pw.edu.mini.dos.Utils.TestsHelper.*;
  * Time: 8:30 AM
  * To change this template use File | Settings | File Templates.
  */
-public class AdvancedSelectITest {
-    private static final Logger logger = LoggerFactory.getLogger(AdvancedSelectITest.class);
+public class SimpleDeleteITest {
+    private static final Logger logger = LoggerFactory.getLogger(SimpleDeleteITest.class);
 
     String configTestFilename1 = "testDbConfig.txt";
 
-    public void testAdvancedSelect_Client(String[] args) throws Exception {
+    public void testBasicDelete_Client(String[] args) throws Exception {
         Client client = new Client(getMasterIpFromParams(args),
                 getMasterPortFromParams(args), getMyIpFromParams(args));
 
-        ASSettings settings = new ASSettings().getSettingsFromParams(getMyParams(args));
+        SDSettings settings = new SDSettings().getSettingsFromParams(getMyParams(args));
         // load command
         TestData testData = TestData.loadConfigTestDbFile(configTestFilename1);
         TestDbManager testDb = new TestDbManager();
@@ -44,41 +44,44 @@ public class AdvancedSelectITest {
         logger.trace("cmd=" + testData);
         logger.trace("cmd.len=" + testData.insertTableCommands.size());
 
-        // send cmd to Master and run cmd on local test database
+        // send command to Master
         sendHelper.sendCreateQueries();
         sendHelper.sendInsertQueriesForAllTables(settings.dataCounts);
+        logger.trace("===== end adding data =====");
 
-        // check all data
         logger.info("Checking data...");
         checkDataCorrectnessForAllTable(client, testDb, testData, settings.dataCounts);
         logger.info("Data is OK.");
 
-        // test select with where randomly
-        logger.info("Checking select where queries...");
-        checkWhere(client, testDb, testData, true, settings);
-        logger.info("Test select where finished.");
+        logger.info("Checking delete queries...");
+        checkDelete(client, testDb, testData, settings);
+        logger.info("Test delete finished.");
 
         client.stopClient();
         logger.trace("Client end");
     }
 
-    private void checkWhere(Client client, TestDbManager testDb, TestData testData,
-                            boolean testGroupBy, ASSettings settings)
-            throws SQLException {
-        logger.trace("============================== Where tests ==============================");
+    private void checkDelete(Client client, TestDbManager testDb,
+                             TestData testData, SDSettings settings) throws SQLException {
+        logger.trace("============================== Delete tests ==============================");
 
         long seed = 345;
         Random rand = new Random(seed);
         String sql = "";
         int tableCount = testData.getTableNames().length;
+        String tableName = "";
 
-        for (int i = 0; i < settings.whereCommandCount; i++) {
+        for (int i = 0; i < settings.deleteCommandCount; i++) {
 
             // get data
             int tableIndex = rand.nextInt(tableCount);
-            String tableName = testData.getTableNames()[tableIndex];
+            tableName = testData.getTableNames()[tableIndex];
             String[] colNames = testData.getColumnsNames(tableName);
-            sql = String.format("SELECT * FROM %s WHERE", tableName);
+
+            sql = String.format("SELECT * FROM %s", tableName);
+            checkQuery(client, testDb, sql);
+
+            sql = String.format("DELETE FROM %s WHERE", tableName);
             int whereCount = rand.nextInt(3);
 
             // build query
@@ -97,29 +100,17 @@ public class AdvancedSelectITest {
 
             // execute query
             logger.info(String.format("    #%d Send to Master: %s", i, sql));
-            String[] tmp = checkQuery(client, testDb, sql);
-            /*String result = tmp[1];
+            runQuery(client, testDb, sql);
 
-            // there are more than 1 line in result  & testGroupBy
-            if (result.split(System.lineSeparator()).length > 1 && testGroupBy) {
-                checkGroupBy(client, testDb, testData, sql, tableName);
-            }*/
         }
-        logger.trace("============================= Where tests end =============================");
+
+        sql = String.format("SELECT * FROM %s", tableName);
+        checkQuery(client, testDb, sql);
+
+        logger.trace("============================= Delete tests end =============================");
     }
 
-    // I had problem with group by, because databases have different way to group data
-    //   - I got different data in different order etc
-    /*private void checkGroupBy(Client client, TestDbManager testDb, TestData testData,
-                              String sql, String tableName) throws SQLException {
-        String[] colNames = testData.getColumnsNames(tableName);
-        String sqlBase = sql + " GROUP BY ";
-        for (String col : colNames) {
-            checkQuery(client, testDb, sqlBase + col);
-        }
-    }*/
-
-    public void testAdvancedSelectSetUp(ASSettings settings) throws Exception {
+    public void testBasicDeleteSetUp(SDSettings settings) throws Exception {
         DockerRunner dockerRunner = DockerRunner.getInstance();
 
         // run Master
@@ -136,7 +127,7 @@ public class AdvancedSelectITest {
         Sleep(1);
         // run test on Client side
         DockerThread clientThread = dockerRunner.runTestInDocker
-                (AdvancedSelectITest.class, "testAdvancedSelect_Client", settings.toArrayString(), "Client");
+                (SimpleDeleteITest.class, "testBasicDelete_Client", settings.toArrayString(), "Client");
 
         // wait for Client and Nodes end
         clientThread.join();
@@ -147,41 +138,26 @@ public class AdvancedSelectITest {
         assertEquals(0, clientThread.exitVal);
     }
 
-
     @Test
-    public void testAdvancedSelectV1() throws Exception {
-        ASSettings settings = new ASSettings();
-        settings.whereCommandCount = 10;
-        settings.replicationFactor = 2;
+    public void testBasicDeleteV1() throws Exception {
+        SDSettings settings = new SDSettings();
         settings.nodesCount = 4;
-        settings.dataCounts = new Integer[]{
-                2 * settings.nodesCount, 4 * settings.nodesCount};
+        settings.dataCounts =
+                new Integer[] {5 * settings.nodesCount, 5 * settings.nodesCount};
+        settings.deleteCommandCount = 10;
 
-        testAdvancedSelectSetUp(settings);
+        testBasicDeleteSetUp(settings);
     }
 
     @Test
-    public void testAdvancedSelectV2() throws Exception {
-        ASSettings settings = new ASSettings();
-        settings.whereCommandCount = 0;
-        settings.replicationFactor = 5;
+    public void testBasicDeleteV2() throws Exception {
+        SDSettings settings = new SDSettings();
         settings.nodesCount = 10;
-        settings.dataCounts = new Integer[]{
-                100 * settings.nodesCount, 30 * settings.nodesCount};
+        settings.dataCounts =
+                new Integer[] {20 * settings.nodesCount, 20 * settings.nodesCount};
+        settings.deleteCommandCount = 100;
 
-        testAdvancedSelectSetUp(settings);
-    }
-
-    @Test
-    public void testAdvancedSelectV3() throws Exception {
-        ASSettings settings = new ASSettings();
-        settings.whereCommandCount = 100;
-        settings.replicationFactor = 2;
-        settings.nodesCount = 10;
-        settings.dataCounts = new Integer[]{
-                10 * settings.nodesCount, 10 * settings.nodesCount};
-
-        testAdvancedSelectSetUp(settings);
+        testBasicDeleteSetUp(settings);
     }
 
     @After
@@ -189,14 +165,13 @@ public class AdvancedSelectITest {
         DockerRunner.getInstance().stopThreads();
     }
 
-
-    static class ASSettings extends Settings {
-        public int whereCommandCount = 300;
+    static class SDSettings extends Settings {
+        public int deleteCommandCount;
 
         @Override
-        public ASSettings getSettingsFromParams(String[] myParams) {
+        public SDSettings getSettingsFromParams(String[] myParams) {
             super.getSettingsFromParams(myParams);
-            whereCommandCount = Integer.parseInt(myParams[defaultParamsCount]);
+            deleteCommandCount = Integer.parseInt(myParams[defaultParamsCount]);
             return this;
         }
 
@@ -205,7 +180,7 @@ public class AdvancedSelectITest {
             String[] oldResult = super.toArrayString();
             String[] newResult = Arrays.copyOf(super.toArrayString(),
                     oldResult.length + 1);
-            newResult[defaultParamsCount] = String.valueOf(whereCommandCount);
+            newResult[defaultParamsCount] = String.valueOf(deleteCommandCount);
 
             return newResult;
         }

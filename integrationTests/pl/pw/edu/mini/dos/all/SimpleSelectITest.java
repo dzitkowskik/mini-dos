@@ -4,12 +4,12 @@ import org.junit.After;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import pl.pw.edu.mini.dos.Config;
+import pl.pw.edu.mini.dos.*;
 import pl.pw.edu.mini.dos.DockerStuff.DockerRunner;
 import pl.pw.edu.mini.dos.DockerStuff.DockerThread;
-import pl.pw.edu.mini.dos.Helper;
-import pl.pw.edu.mini.dos.TestData;
-import pl.pw.edu.mini.dos.TestsHelper;
+import pl.pw.edu.mini.dos.Utils.SendDataHelper;
+import pl.pw.edu.mini.dos.Utils.TestDbManager;
+import pl.pw.edu.mini.dos.Utils.TestsHelper;
 import pl.pw.edu.mini.dos.client.Client;
 import pl.pw.edu.mini.dos.master.Master;
 import pl.pw.edu.mini.dos.master.MasterDecapsulation;
@@ -21,7 +21,7 @@ import java.util.List;
 import java.util.Scanner;
 
 import static org.junit.Assert.assertEquals;
-import static pl.pw.edu.mini.dos.TestsHelper.*;
+import static pl.pw.edu.mini.dos.Utils.TestsHelper.*;
 
 /**
  * Created with IntelliJ IDEA.
@@ -37,17 +37,18 @@ public class SimpleSelectITest {
 
     int replicationFactor = 2;
     int nodesCount = 10;
-    int dataCount = 3 * nodesCount;
+    Integer[] dataCounts = new Integer[]{3 * nodesCount, 3 * nodesCount};
 
-    int oneCmdTime = 1; // seconds
+    int oneCmdTime = 2; // seconds
     int nodeWaitingCount = 10;
     int nodeWaitingTime = Math.max((nodesCount - replicationFactor)
-            * oneCmdTime / (nodeWaitingCount - 1), 1);
+            * (oneCmdTime + 1) / (nodeWaitingCount - 1), 1);
 
     public void testBasicSelect_Master(String[] args) throws Exception {
         Master master = new Master(getMyIpFromParams(args),
                 Integer.valueOf(getMasterPortFromParams(args)));
 
+        logger.info("Mocking Master...");
         // set my testLowBalancer
         TestNodeManager nodeManager = new TestNodeManager(replicationFactor);
         MasterDecapsulation.setNodeManager(master, nodeManager);
@@ -58,8 +59,10 @@ public class SimpleSelectITest {
         Thread pingThread = new Thread(new PingNodes(master, nodeManager, spanTime));
         pingThread.start();
         MasterDecapsulation.setPingThread(master, pingThread);
+        logger.info("Master mocked.");
 
         // wait
+        logger.info("Master is waiting for request...");
         Scanner scanner = new Scanner(System.in);
         scanner.hasNext();
 
@@ -72,23 +75,18 @@ public class SimpleSelectITest {
 
         // load command
         TestData testData = TestData.loadConfigTestDbFile(configTestFilename1);
+        TestDbManager testDb = new TestDbManager();
+        SendDataHelper sendHelper = new SendDataHelper(testData, client, testDb);
+
         logger.trace("cmd=" + testData);
         logger.trace("cmd.len=" + testData.insertTableCommands.size());
 
         // send command to Master
-        for (String cmd : testData.createTableCommands) {
-            logger.trace("Send:" + cmd);
-            client.executeSQL(cmd);
-        }
-        for (int i = 0; i < dataCount; i++) {
-            logger.trace("Send:" + testData.insertTableCommands.get(i));
-            client.executeSQL(testData.insertTableCommands.get(i));
-        }
+        sendHelper.sendCreateQueries();
+        sendHelper.sendInsertQueriesForAllTables(dataCounts);
 
-        String result = client.executeSQL("SELECT * FROM " + testData.getTableNames()[0]);
-        logger.trace(result);
-
-        checkDataCorrectness(result, testData.getTableNames()[0], testData, dataCount);
+        logger.info("Checking data...");
+        checkDataCorrectnessForAllTable(client, testDb, testData, dataCounts);
 
         client.stopClient();
         logger.trace("Client end");
@@ -99,42 +97,55 @@ public class SimpleSelectITest {
         try {
             node = new Node(getMasterIpFromParams(args),
                     getMasterPortFromParams(args), getMyIpFromParams(args));
+            logger.info("Node is waiting for request...");
 
             TestData testData = TestData.loadConfigTestDbFile(getMyParams(args)[0]);
-            //int dataCount = testData.insertTableCommands.size();
 
             // now table not exists, so wait
             Sleep(15);
 
+            String[] tableNames = testData.getTableNames();
             // wait for coming data
-            String tableName = testData.getTableNames()[0];
-            int oldSize = -1;
-            int newSize = getNodeDbRowsCount(node, tableName);
-            int count = 0;
+            for (int i = 0; i < tableNames.length; i++) {
+                String tableName = tableNames[i];
+                int oldSize = -1;
+                int newSize = getNodeDbRowsCount(node, tableName);
+                int count = 0;
 
-            while (count < nodeWaitingCount) {
-                TestsHelper.Sleep(nodeWaitingTime);
+                while (count < nodeWaitingCount) {
+                    TestsHelper.Sleep(nodeWaitingTime);
 
-                if (oldSize < newSize)
-                    count = 0;
-                else
-                    count++;
+                    if (oldSize < newSize)
+                        count = 0;
+                    else
+                        count++;
 
-                oldSize = newSize;
-                newSize = getNodeDbRowsCount(node, tableName);
-                logger.trace("count=" + count + " oldSize=" + oldSize + " newSize=" + newSize);
+                    oldSize = newSize;
+                    newSize = getNodeDbRowsCount(node, tableName);
+                    logger.trace("tableName=" + tableName + " count=" + count + " oldSize="
+                            + oldSize + " newSize=" + newSize);
+                }
             }
 
             // check correctness and integrity of data
+            logger.info("Checking data...");
             int nodeId = getNodeIdFromIps(getMasterIpFromParams(args), getMyIpFromParams(args));
             logger.trace(String.valueOf(nodeId));
-            List<Object[]> dataFromNode = getDataFromNodeDb(node, tableName);
-            for (Object[] row : dataFromNode) {
-                logger.trace(Helper.arrayToString(row));
+            TestNodeManager nodeManager = new TestNodeManager(replicationFactor);
+
+            for (int i = 0; i < tableNames.length; i++) {
+                String tableName = tableNames[i];
+                List<Object[]> dataFromNode = getDataFromNodeDb(node, tableName);
+                logger.trace("dataFromNode=" + dataFromNode);
+                for (Object[] row : dataFromNode) {
+                    logger.trace(Helper.arrayToString(row));
+                }
+                List<Integer> indexes = getDataIndexesPerNode(
+                        nodeId, nodesCount, nodeManager, dataCounts[i]);
+                logger.trace(Helper.collectionToString(indexes));
+                checkDataCorrectnessOnNode(dataFromNode, tableName, testData);
             }
-            List<Integer> indexes = getDataIndexesPerNode(nodeId, nodesCount, replicationFactor, dataCount);
-            logger.trace(Helper.collectionToString(indexes));
-            checkDataCorrectness(dataFromNode, tableName, testData);
+            logger.info("Data is OK.");
 
         } finally {
             if (node != null)

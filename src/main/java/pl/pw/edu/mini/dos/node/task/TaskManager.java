@@ -46,6 +46,7 @@ public class TaskManager {
      * @param subTaskError subtask status
      */
     public void updateSubTask(Long taskId, ErrorEnum subTaskError) {
+        logger.trace("updateSubTask method start");
         Task task;
         synchronized (tasks) {
             task = tasks.get(taskId);
@@ -106,7 +107,7 @@ public class TaskManager {
             this.error = subTaskError;
         }
 
-        public void subTaskCompleted(){
+        public synchronized void subTaskCompleted(){
             completedSubTasks++;
         }
     }

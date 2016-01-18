@@ -9,6 +9,7 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.net.URL;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Random;
 
@@ -22,36 +23,39 @@ import static org.junit.Assert.assertNotNull;
  * To change this template use File | Settings | File Templates.
  */
 public class TestData {
-    public List<String> createTableCommands, insertTableCommands;
+    public HashMap<String, String> createTableCommands;
+    public HashMap<String, List<String>> insertTableCommands;
     private static final Logger logger = LoggerFactory.getLogger(TestData.class);
     private int seed = 123;
     private Random rand = new Random(seed);
 
     public TestData(List<String> commands) {
-        createTableCommands = new ArrayList<>();
-        insertTableCommands = new ArrayList<>();
+        createTableCommands = new HashMap<>();
+        insertTableCommands = new HashMap<>();
 
         for (String command : commands) {
             if (command.toUpperCase().contains("CREATE TABLE")) {
-                createTableCommands.add(command);
+                String tableName = command.split(" ")[2];
+                createTableCommands.put(tableName, command);
             } else if (command.toUpperCase().contains("INSERT")) {
-                insertTableCommands.add(command);
+                String tableName = command.split(" ")[2];
+                if (!insertTableCommands.containsKey(tableName)) {
+                    insertTableCommands.put(tableName, new ArrayList<>());
+                }
+                insertTableCommands.get(tableName).add(command);
             }
         }
     }
 
     public String[] getTableNames() {
-        String[] tableNames = new String[createTableCommands.size()];
-        for (int i = 0; i < tableNames.length; i++) {
-            tableNames[i] = createTableCommands.get(i).split(" ")[2];
-        }
+        String[] tableNames = createTableCommands.keySet().toArray(new String[1]);
         return tableNames;
     }
 
     public List<String> getAllCommands() {
         ArrayList<String> all = new ArrayList<>();
-        all.addAll(createTableCommands);
-        all.addAll(insertTableCommands);
+        all.addAll(createTableCommands.values());
+        insertTableCommands.values().forEach(all::addAll);
 
         return all;
     }
@@ -61,29 +65,28 @@ public class TestData {
         return Helper.collectionToString(getAllCommands(), "\n\t");
     }
 
-    public String getRandomValueFromColumn(int columnIndex) {
+    public String getRandomValueFromColumn(String tableName, int columnIndex) {
         int rowId = rand.nextInt(insertTableCommands.size());
-        return insertTableCommands.get(rowId).split("\"")[columnIndex * 2 + 1];
+        return insertTableCommands.get(tableName)
+                .get(rowId).split("\"")[columnIndex * 2 + 1];
     }
 
-    public String getRandomValueFromColumn(int columnIndex, int dataCount) {
+    public String getRandomValueFromColumn(String tableName,
+                                           int columnIndex, int dataCount) {
         int rowId = rand.nextInt(dataCount);
         logger.trace("Random rowId= " + rowId);
-        return insertTableCommands.get(rowId).split("\"")[columnIndex * 2 + 1];
+        return insertTableCommands.get(tableName)
+                .get(rowId).split("\"")[columnIndex * 2 + 1];
     }
 
     public String[] getColumnsNames(String tableName) {
-        String[] colNames = null;
+        String[] colNames;
 
-        for (String createTableCommand : createTableCommands) {
-            if (createTableCommand.indexOf(tableName) < 15) {
-                String[] tmp = createTableCommand.split("`");
-                colNames = new String[(tmp.length - 2) / 2];
-                for (int i = 0; i < colNames.length; i++) {
-                    colNames[i] = tmp[2 * i + 1];
-                }
-                break;
-            }
+        String createTableCommand = createTableCommands.get(tableName);
+        String[] tmp = createTableCommand.split("`");
+        colNames = new String[(tmp.length - 2) / 2];
+        for (int i = 0; i < colNames.length; i++) {
+            colNames[i] = tmp[2 * i + 1];
         }
 
         return colNames;
