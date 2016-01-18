@@ -4,12 +4,10 @@ import org.junit.After;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import pl.pw.edu.mini.dos.Config;
+import pl.pw.edu.mini.dos.*;
 import pl.pw.edu.mini.dos.DockerStuff.DockerRunner;
 import pl.pw.edu.mini.dos.DockerStuff.DockerThread;
-import pl.pw.edu.mini.dos.Helper;
-import pl.pw.edu.mini.dos.TestData;
-import pl.pw.edu.mini.dos.TestsHelper;
+import pl.pw.edu.mini.dos.Utils.TestsHelper;
 import pl.pw.edu.mini.dos.client.Client;
 import pl.pw.edu.mini.dos.master.Master;
 import pl.pw.edu.mini.dos.master.MasterDecapsulation;
@@ -21,7 +19,7 @@ import java.util.List;
 import java.util.Scanner;
 
 import static org.junit.Assert.assertEquals;
-import static pl.pw.edu.mini.dos.TestsHelper.*;
+import static pl.pw.edu.mini.dos.Utils.TestsHelper.*;
 
 /**
  * Created with IntelliJ IDEA.
@@ -79,15 +77,18 @@ public class SimpleInsertITest {
         logger.trace("cmd.len=" + testData.insertTableCommands.size());
 
         // send command to Master
-        for (String cmd : testData.createTableCommands) {
+        for (String cmd : testData.createTableCommands.values()) {
             logger.info("Send to Master: " + cmd);
             client.executeSQL(cmd);
         }
-        for (int i = 0; i < dataCount; i++) {
-            logger.info(String.format("#%d Send to Master: %s", i,
-                    testData.insertTableCommands.get(i)));
-            client.executeSQL(testData.insertTableCommands.get(i));
-            Sleep(oneCmdTime);  // it's needed for prediction loadBalancer
+        for (String tableName :
+                testData.getTableNames()) {
+            for (int i = 0; i < dataCount; i++) {
+                logger.info(String.format("#%d Send to Master: %s", i,
+                        testData.insertTableCommands.get(i)));
+                client.executeSQL(testData.insertTableCommands.get(tableName).get(i));
+                Sleep(oneCmdTime);  // it's needed for prediction loadBalancer
+            }
         }
 
         client.stopClient();

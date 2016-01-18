@@ -1,10 +1,11 @@
-package pl.pw.edu.mini.dos;
+package pl.pw.edu.mini.dos.Utils;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import pl.pw.edu.mini.dos.DockerStuff.BashRunner;
 import pl.pw.edu.mini.dos.DockerStuff.DockerRunner;
-import pl.pw.edu.mini.dos.all.TestDbManager;
+import pl.pw.edu.mini.dos.Helper;
+import pl.pw.edu.mini.dos.TestData;
 import pl.pw.edu.mini.dos.client.Client;
 import pl.pw.edu.mini.dos.communication.nodenode.ExecuteSqlRequest;
 import pl.pw.edu.mini.dos.communication.nodenode.GetSqlResultResponse;
@@ -192,7 +193,7 @@ public class TestsHelper {
         for (int i = 0; i < dataCount; i++) {
             String rowFromClient = convertDataToCommand(rows[i].split(", "), tableName);
             logger.trace("rowFromClient = " + rowFromClient);
-            int index = testData.insertTableCommands.indexOf(rowFromClient);
+            int index = testData.insertTableCommands.get(tableName).indexOf(rowFromClient);
             assertTrue("Not found: " + rowFromClient, -1 < index); // exists
             assertTrue(index < dataCount); // in test's subset
         }

@@ -6,14 +6,16 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import pl.pw.edu.mini.dos.DockerStuff.DockerRunner;
 import pl.pw.edu.mini.dos.DockerStuff.DockerThread;
+import pl.pw.edu.mini.dos.Utils.SendDataHelper;
 import pl.pw.edu.mini.dos.TestData;
+import pl.pw.edu.mini.dos.Utils.TestDbManager;
 import pl.pw.edu.mini.dos.client.Client;
 
 import java.sql.SQLException;
 import java.util.Random;
 
 import static org.junit.Assert.assertEquals;
-import static pl.pw.edu.mini.dos.TestsHelper.*;
+import static pl.pw.edu.mini.dos.Utils.TestsHelper.*;
 
 /**
  * Created with IntelliJ IDEA.
@@ -41,19 +43,14 @@ public class SimpleAlterTableITest {
         // load command
         TestData testData = TestData.loadConfigTestDbFile(configTestFilename1);
         TestDbManager testDb = new TestDbManager();
+        SendDataHelper sendHelper = new SendDataHelper(testData, client, testDb);
+
         logger.trace("cmd=" + testData);
         logger.trace("cmd.len=" + testData.insertTableCommands.size());
 
         // send cmd to Master and run cmd on local test database
-        for (String cmd : testData.createTableCommands) {
-            logger.info("Send to Master: " + cmd);
-            runQuery(client, testDb, cmd);
-        }
-        for (int i = 0; i < settings.dataCount; i++) {
-            logger.info(String.format("#%d Send to Master: %s", i,
-                    testData.insertTableCommands.get(i)));
-            runQuery(client, testDb, testData.insertTableCommands.get(i));
-        }
+        sendHelper.sendCreateQueries();
+        sendHelper.sendInsertQueriesForAllTables(settings.dataCount);
 
         // check all data
         logger.info("Checking data...");
