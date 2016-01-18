@@ -208,7 +208,7 @@ public class DBmanager {
      * @param nodeIds   list of nodes ids where data will be insert
      * @return rowid
      */
-    public Long insertRow(String tableName, List<Integer> nodeIds) {
+    public synchronized Long insertRow(String tableName, List<Integer> nodeIds) {
         ResultSet rs = null;
         Long rowId;
         try {
@@ -233,7 +233,8 @@ public class DBmanager {
         return rowId;
     }
 
-    public void insertRow(Long rowId, String tableName, List<Integer> nodeIds) {
+    public synchronized void insertRow(
+            Long rowId, String tableName, List<Integer> nodeIds) {
         try {
             // Insert row
             for (Integer nodeId : nodeIds) {
