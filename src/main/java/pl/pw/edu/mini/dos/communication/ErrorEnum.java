@@ -1,7 +1,5 @@
 package pl.pw.edu.mini.dos.communication;
 
-import java.util.Objects;
-
 public enum ErrorEnum {
     NO_ERROR("No errors"),
     ANOTHER_ERROR("Error"),
@@ -15,7 +13,8 @@ public enum ErrorEnum {
     TABLE_NOT_EXIST("Error at inserting data becouse the table doesn't exist"),
     // SYSTEM
     REGISTRING_TABLE_ERROR("The table cannot be registered in master"),
-    NOT_ENOUGH_NODES("The number of nodes available is less than replication factor");
+    NOT_ENOUGH_NODES("The number of nodes available is less than replication factor"),
+    NO_NODES_AVAILABLE("The number of nodes available is 0");
 
     private final String description;
 

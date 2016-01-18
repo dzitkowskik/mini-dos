@@ -63,6 +63,7 @@ public class NodeManager {
 
     /**
      * Return all UP and DOWN nodes.
+     * @return list with nodes UP and DOWN. Empty list if no nodes.
      */
     public List<RegisteredNode> getAllNodes() {
         return new ArrayList<>(registeredNodes.values());
@@ -70,6 +71,7 @@ public class NodeManager {
 
     /**
      * Return all UP nodes.
+     * @return list with nodes UP. Empty list if no nodes.
      */
     public List<RegisteredNode> getNodes() {
         List<RegisteredNode> nodes = new ArrayList<>();
@@ -125,9 +127,13 @@ public class NodeManager {
      */
     public synchronized RegisteredNode selectCoordinatorNode() {
         Random random = new Random(System.nanoTime());
+        int nNodes = registeredNodes.size();
         RegisteredNode node;
         do {
-            int r = random.nextInt(registeredNodes.size());
+            if(nNodes == 0){
+                return null;
+            }
+            int r = random.nextInt(nNodes);
             node = registeredNodes.get((new ArrayList<>(registeredNodes.keySet())).get(r));
         } while (node.isDown());
         return node;
@@ -142,6 +148,9 @@ public class NodeManager {
      */
     public synchronized List<RegisteredNode> selectNodesInsert() {
         List<RegisteredNode> nodes = shuffle(new ArrayList<>(this.getNodes()));
+        if(nodes.size() == 0) {
+            return null; // No nodes
+        }
 
         List<RegisteredNode> selectedNodes = new ArrayList<>(replicationFactor);
         Iterator<RegisteredNode> it = nodes.iterator();
