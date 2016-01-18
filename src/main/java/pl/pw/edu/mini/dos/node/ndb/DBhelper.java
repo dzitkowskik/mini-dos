@@ -5,9 +5,7 @@ import org.slf4j.LoggerFactory;
 import pl.pw.edu.mini.dos.Helper;
 
 import java.math.BigDecimal;
-import java.sql.Blob;
-import java.sql.PreparedStatement;
-import java.sql.SQLException;
+import java.sql.*;
 import java.util.List;
 import java.util.function.Consumer;
 
@@ -44,7 +42,11 @@ public class DBhelper {
                 case "INT8":
                     functions[i] = x -> {
                         try {
-                            st.setLong(col, Long.parseLong(x.toString()));
+                            if (x == null) {
+                                st.setNull(col, Types.INTEGER);
+                            } else {
+                                st.setLong(col, Long.parseLong(x.toString()));
+                            }
                         } catch (SQLException e) {
                             logger.error("Col: " + col + ", Value: " + x + " E: " + e.getMessage());
                         }
