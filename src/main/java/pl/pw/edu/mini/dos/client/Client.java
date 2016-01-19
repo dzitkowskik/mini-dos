@@ -10,6 +10,8 @@ import pl.pw.edu.mini.dos.communication.clientmaster.ExecuteSQLResponse;
 
 import java.net.URISyntaxException;
 import java.rmi.RemoteException;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Scanner;
 
 public class Client {
@@ -40,31 +42,63 @@ public class Client {
         }
 
         Scanner scanner = new Scanner(System.in);
-        System.out.println("Type the query or enter 'q' to exit:");
+        System.out.println("+===============================+");
+        System.out.println("|          C L I E N T          |");
+        System.out.println("+===============================+");
+        System.out.println("| Menu:                         |");
+        System.out.println("|    'q' -> Quit client         |");
+        System.out.println("|    's' -> Insert sample data  |");
+        System.out.println("|                               |");
+        System.out.println("| Insert SQL query...           |");
+        System.out.println("+===============================+");
         System.out.print("ddbms> ");
+        label:
         while (scanner.hasNext()) {
             String command = scanner.nextLine();
 
-            if (command.equals("q")) {
-                scanner.close();
-                break;
-            }
+            switch (command) {
+                case "q":
+                    scanner.close();
+                    break label;
+                case "s":
+                    for (String c : getSampleData()) {
+                        System.out.println(c);
+                        System.out.println(client.executeSQL(c));
+                    }
+                    System.out.print("ddbms> ");
+                    break;
+                default:
+                    while (!command.contains(";")) { // Multiline commands
+                        System.out.print("  ...> ");
+                        if (scanner.hasNext()) {
+                            command += " " + scanner.nextLine();
+                        }
+                    }
+                    logger.debug("Command: " + command);
 
-            while (!command.contains(";")) { // Multiline commands
-                System.out.print("  ...> ");
-                if (scanner.hasNext()) {
-                    command += " " + scanner.nextLine();
-                }
+                    String result = client.executeSQL(command);
+                    System.out.println("Result: " + result);
+                    System.out.print("ddbms> ");
+                    break;
             }
-            logger.debug("Command: " + command);
-
-            String result = client.executeSQL(command);
-            System.out.println("Result: " + result);
-            System.out.print("ddbms> ");
         }
 
         client.stopClient();
         logger.trace("Client stopped!");
+    }
+
+    public static List<String> getSampleData() {
+        List<String> sampleData = new ArrayList<>();
+        sampleData.add("CREATE TABLE T1(ID1 INTEGER, ID2 INTEGER);");
+        sampleData.add("INSERT INTO T1 VALUES(4,1);");
+        sampleData.add("INSERT INTO T1 VALUES(3,1);");
+        sampleData.add("INSERT INTO T1 VALUES(2,2);");
+        sampleData.add("INSERT INTO T1 VALUES(6,2);");
+        sampleData.add("CREATE TABLE T2(ID1 INTEGER, ID2 INTEGER);");
+        sampleData.add("INSERT INTO T2 (ID1, ID2) VALUES(1,9);");
+        sampleData.add("INSERT INTO T2 (ID1, ID2) VALUES(2,10);");
+        sampleData.add("SELECT T1.ID1, T1.ID2, T2.ID2 FROM T1 INNER JOIN T2 ON T1.ID2=T2.ID1;");
+        return sampleData;
     }
 
     public String executeSQL(String sql) {
