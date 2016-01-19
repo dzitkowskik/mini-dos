@@ -330,8 +330,6 @@ public class SQLStatementVisitor implements StatementVisitor {
             }
         }
 
-
-
         // Register task and subtasks
         int numSubTasks = insertMetadataResponse.getNodes().size();
         TaskManager.getInstance().add(taskId, numSubTasks);

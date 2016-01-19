@@ -37,9 +37,9 @@ public class DBmanager {
     public void prepareDB() {
         String tablesTable = "" +
                 "CREATE TABLE tables(" +
-                "table_name			TEXT	            NOT NULL, " +
-                "create_statement	TEXT				NOT NULL, " +
-                "next_row_id		INTEGER				NOT NULL" +
+                "table_name			TEXT	NOT NULL, " +
+                "create_statement	TEXT	NOT NULL, " +
+                "next_row_id		INTEGER	NOT NULL" +
                 ");";
         String rowsTable = "" +
                 "CREATE TABLE rows(" +
@@ -71,9 +71,11 @@ public class DBmanager {
                 "INSERT INTO tables (table_name, create_statement, next_row_id) " +
                 "VALUES (?,?,0);";
         String nextRowIdSelect = "" +
-                "SELECT next_row_id FROM tables WHERE table_name=?;";
+                "SELECT next_row_id FROM tables WHERE table_name=? " +
+                "AND create_statement LIKE 'create%';";
         String incrementRowIdUpdate = "" +
-                "UPDATE tables SET next_row_id = next_row_id + 1 WHERE table_name=?;";
+                "UPDATE tables SET next_row_id = next_row_id + 1 WHERE table_name=? " +
+                "AND create_statement LIKE 'create%';";
         String newRowInsert = "" +
                 "INSERT OR REPLACE INTO rows (row_id, table_name, node_id)" +
                 "VALUES (?,?,?);";
@@ -208,7 +210,7 @@ public class DBmanager {
      * @param nodeIds   list of nodes ids where data will be insert
      * @return rowid
      */
-    public Long insertRow(String tableName, List<Integer> nodeIds) {
+    public synchronized Long insertRow(String tableName, List<Integer> nodeIds) {
         ResultSet rs = null;
         Long rowId;
         try {
@@ -233,7 +235,7 @@ public class DBmanager {
         return rowId;
     }
 
-    public void insertRow(Long rowId, String tableName, List<Integer> nodeIds) {
+    public synchronized void insertRow(Long rowId, String tableName, List<Integer> nodeIds) {
         try {
             // Insert row
             for (Integer nodeId : nodeIds) {
