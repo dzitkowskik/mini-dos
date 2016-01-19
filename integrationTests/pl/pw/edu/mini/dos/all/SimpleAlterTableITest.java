@@ -92,7 +92,8 @@ public class SimpleAlterTableITest {
                 String newColName = "NewColName" + rand.nextInt(10000);
                 String newColType = colType[rand.nextInt(colType.length)];
                 sql = String.format("ALTER TABLE %s %s %s %s", tableName,
-                        (rand.nextBoolean() ? "ADD" : "ADD COLUMN"), // "ADD" <=> "ADD COLUMN"
+                        "ADD COLUMN",
+                        //(rand.nextBoolean() ? "ADD" : "ADD COLUMN"), // "ADD" <=> "ADD COLUMN"
                         newColName, newColType);
             } else {    // RENAME
                 String newName = tableName + rand.nextInt(1000);
