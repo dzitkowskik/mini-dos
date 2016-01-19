@@ -16,7 +16,7 @@ import java.util.List;
  * Time: 8:34 AM
  * To change this template use File | Settings | File Templates.
  */
-public class TestNodeManager extends NodeManager {
+public class TestNodeManager extends FlexibleNodeManager {
     private static final Logger logger = LoggerFactory.getLogger(TestNodeManager.class);
 
     int j = 0;
@@ -36,13 +36,6 @@ public class TestNodeManager extends NodeManager {
 
         j++;
         return nodes;
-    }
-
-    public void setRegisteredNodes(List<RegisteredNode> nodes) {
-        registeredNodes.clear();
-        for (RegisteredNode node : nodes) {
-            registeredNodes.put(node.getID(), node);
-        }
     }
 
 }

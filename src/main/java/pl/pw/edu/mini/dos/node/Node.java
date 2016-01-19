@@ -6,6 +6,7 @@ import net.sf.jsqlparser.statement.Statement;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import pl.pw.edu.mini.dos.Config;
+import pl.pw.edu.mini.dos.Helper;
 import pl.pw.edu.mini.dos.communication.ErrorEnum;
 import pl.pw.edu.mini.dos.communication.ErrorHandler;
 import pl.pw.edu.mini.dos.communication.Services;
@@ -163,6 +164,8 @@ public class Node extends UnicastRemoteObject
     @Override
     public ExecuteCreateTablesResponse createTables(
             ExecuteCreateTablesRequest executeCreateTablesRequest) throws RemoteException {
+        logger.trace("createTables start, " +
+                Helper.collectionToString(executeCreateTablesRequest.getCreateTableStatements()));
         boolean ok = dbManager.createTables(
                 executeCreateTablesRequest.getCreateTableStatements());
         if (!ok) {

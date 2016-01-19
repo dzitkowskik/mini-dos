@@ -1,6 +1,8 @@
 package pl.pw.edu.mini.dos.master.node;
 
 
+import java.util.Map;
+
 /**
  * Created with IntelliJ IDEA.
  * User: asd
@@ -11,6 +13,10 @@ package pl.pw.edu.mini.dos.master.node;
 public class NodeOnMasterDecapsulation {
     public static void getStatusNode(RegisteredNode registeredNode, StatusNode statusNode) {
         registeredNode.statusNode = statusNode;
+    }
+
+    public static Map<Integer, RegisteredNode> getRegisteredNodes(NodeManager nodeManager) {
+        return nodeManager.registeredNodes;
     }
 
 }

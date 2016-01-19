@@ -304,6 +304,8 @@ public class Master
     @Override
     public TableMetadataResponse tableMetadata(TableMetadataRequest tableMetadataRequest)
             throws RemoteException {
+        logger.trace("tableMetadata start, table = " +
+                tableMetadataRequest.getTable());
         List<NodeNodeInterface> nodesInterfaces =
                 (List<NodeNodeInterface>) (List<?>) nodeManager.getNodesInterfaces();
         return new TableMetadataResponse(

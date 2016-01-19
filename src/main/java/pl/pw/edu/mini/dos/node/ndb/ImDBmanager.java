@@ -2,6 +2,7 @@ package pl.pw.edu.mini.dos.node.ndb;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import pl.pw.edu.mini.dos.Helper;
 import pl.pw.edu.mini.dos.communication.nodenode.SerializableResultSet;
 
 import java.sql.*;
@@ -121,7 +122,8 @@ public class ImDBmanager {
     }
 
     public boolean mergeVersionsOfTable(String table, List<String> versions, List<String> columnsNames) {
-        logger.debug("Merging diferent version into " + table);
+        logger.debug("Merging diferent version into " + table
+                + " , columnsNames=" + Helper.collectionToString(columnsNames));
         // Build create table
         String createStatement = "CREATE TABLE " + table + "_tmp AS";
         createStatement += " SELECT ";

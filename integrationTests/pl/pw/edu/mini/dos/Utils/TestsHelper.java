@@ -97,6 +97,7 @@ public class TestsHelper {
         try {
             out = BashRunner.runCommandForResult(cmd);
             while (out.size() == 0) TestsHelper.Sleep(0, 100);
+            TestsHelper.Sleep(0, 100);
 
             logger.trace("out=" + out);
             Pattern pattern = Pattern.compile("\\b\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\b");
