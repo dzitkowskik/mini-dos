@@ -29,8 +29,6 @@ public class TwoPhaseCommitTest {
     private Master master;
     private Node node1;
     private Node node2;
-    @Mock
-    private NodeNodeInterface coordinatorNode;
 
     @org.junit.Before
     public void setUp() throws Exception {
