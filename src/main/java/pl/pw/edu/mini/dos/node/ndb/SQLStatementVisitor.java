@@ -205,7 +205,8 @@ public class SQLStatementVisitor implements StatementVisitor {
         TaskManager.getInstance().add(taskId, numSubTasks);
 
         // Delete data from nodes that have any data from specified table
-        sendRequests(deleteMetadataResponse.getNodes(), delete.toString(), requestName);
+        sendRequests(deleteMetadataResponse.getNodes(), delete.toString()
+                + " AND " + taskId + " > version", requestName);
 
         // Wait for completiton of subtasks
         TaskManager.getInstance().waitForCompletion(taskId);
