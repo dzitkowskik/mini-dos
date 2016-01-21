@@ -14,6 +14,10 @@ public class MasterDecapsulation {
         master.nodeManager = nodeManager;
     }
 
+    public static NodeManager getNodeManager(Master master) {
+        return master.nodeManager;
+    }
+
     public static Thread getPingThread(Master master) {
         return master.pingThread;
     }
