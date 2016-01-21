@@ -88,6 +88,9 @@ public class Master
         System.out.println("|    'q' -> Stop master         |");
         System.out.println("|    'b' -> Create backup       |");
         System.out.println("|    'r' -> Restore backup      |");
+        System.out.println("|                               |");
+        System.out.println("|     select (*|n) from nodes;  |");
+        System.out.println("|     kill   (*|n) from nodes;  |");
         System.out.println("+===============================+");
         System.out.print("ddbms> ");
 

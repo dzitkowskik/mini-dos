@@ -99,7 +99,12 @@ public class Node extends UnicastRemoteObject
         }
 
         BufferedReader scanner = new BufferedReader(new InputStreamReader(System.in));
-        System.out.println("*Enter 'q' to stop node.");
+        System.out.println("+===============================+");
+        System.out.println("|             N O D E           |");
+        System.out.println("+===============================+");
+        System.out.println("| Menu:                         |");
+        System.out.println("|    'q' -> Stop node           |");
+        System.out.println("+===============================+");
         try {
             while (!node.isStop()) {
                 if (scanner.ready()) {

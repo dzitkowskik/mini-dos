@@ -36,6 +36,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutionException;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 public class SQLStatementVisitor implements StatementVisitor {
@@ -310,9 +312,24 @@ public class SQLStatementVisitor implements StatementVisitor {
 
         // Add rowID and version columss
         String insertStatement = insert.toString();
-        insertStatement = insertStatement.substring(0, insertStatement.lastIndexOf(')'));
-        insertStatement += "," + insertMetadataResponse.getRowId();
-        insertStatement += "," + taskId + ");";
+        String insertRegEx = "^(insert|INSERT)[\\s]+(into|INTO)[\\s]+(?<table>.*?)[\\s]*(\\([\\s]*(?<columns>.*?)[\\s]*\\))?[\\s]+(values|VALUES)[\\s]*\\((?<values>.*?)[\\s]*\\)$";
+        Pattern selectTask = Pattern.compile(insertRegEx);
+        Matcher matcher = selectTask.matcher(insertStatement);
+        if (matcher.find()) {
+            if (matcher.group(4) == null || matcher.group(4) == "") {
+                insertStatement = insertStatement.substring(0, insertStatement.lastIndexOf(')'));
+                insertStatement += "," + insertMetadataResponse.getRowId();
+                insertStatement += "," + taskId + ");";
+            } else {
+                String a = insertStatement.substring(0, insertStatement.indexOf(')'));
+                String b = insertStatement.substring(insertStatement.indexOf(')'), insertStatement.lastIndexOf(')'));
+                insertStatement = a;
+                insertStatement += ", row_id, version";
+                insertStatement += b;
+                insertStatement += "," + insertMetadataResponse.getRowId();
+                insertStatement += "," + taskId + ");";
+            }
+        }
 
         // Register task and subtasks
         int numSubTasks = insertMetadataResponse.getNodes().size();
